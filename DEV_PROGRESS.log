@@ -1,14 +1,16 @@
 # DEVELOPMENT PROGRESS LOG
 
-## Current Milestone: Project Initialization
+## Current Milestone: Tier 1 - Pilot Foundation
 - [x] GDX-Liftoff Setup
 - [x] Knowledge Base Created (25 files)
-- [x] Tier 1 Pilot Movement System
-- [x] Procedural Render System (Basic Ship)
-- [ ] Procedural Starfield System (In Progress)
-- [ ] On-Screen Joystick (In Progress)
+- [x] Tier 1 Pilot Movement System (WASD + Joystick)
+- [x] Procedural Render System (ShapeDrawer Ship)
+- [x] Procedural Starfield System (Parallax + UV Shift)
+- [x] Tier 1 Kinetic Weaponry (Firing Logic + Lifespan)
+- [ ] Sensor Radius / Fog of War (Next)
+- [ ] Procedural Enemy Spawning (Pending)
 
 ## Current Global Stats
 - **Active Tier:** 1/48
 - **Active Epoch:** 1/4
-- **Build Version:** 0.0.1 (Pre-Alpha)
+- **Build Version:** 0.0.2 (Pre-Alpha)

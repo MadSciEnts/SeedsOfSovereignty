@@ -20,6 +20,7 @@ class SovereigntyGame : KtxGame<KtxScreen>() {
     private val batch by lazy { SpriteBatch() }
     private val camera by lazy { OrthographicCamera() }
     private val viewport by lazy { ExtendViewport(1280f, 720f, camera) }
+    private val uiViewport by lazy { ExtendViewport(1280f, 720f) }
 
     private val whitePixel by lazy {
         val pixmap = Pixmap(1, 1, Pixmap.Format.RGBA8888)
@@ -70,23 +71,35 @@ class SovereigntyGame : KtxGame<KtxScreen>() {
             injectables {
                 add(batch)
                 add(camera)
-                add(viewport)
+                add("gameViewport", viewport)
+                add("uiViewport", uiViewport)
                 add(drawer)
             }
             systems {
                 add(ClearScreenSystem())
                 add(PlayerInputSystem())
+                add(WeaponSystem())
+                add(LifeSpanSystem())
+                add(EnemySpawnSystem(camera))
+                add(EnemyAISystem())
+                add(CombatSystem())
+                add(CollectionSystem())
+                add(EvolutionSystem())
+                add(SensorSystem())
                 add(MoveSystem())
                 add(CameraSystem(camera))
                 add(StarfieldSystem(batch, camera, starTextures))
                 add(RenderSystem(batch, camera, drawer))
+                add(RadarRenderSystem(batch, drawer, uiViewport))
+                add(HUDSystem(batch, drawer, uiViewport))
+                add(OriginSystem())
             }
         }
     }
 
     override fun create() {
         KtxAsync.initiate()
-        addScreen(PlayScreen(world, viewport))
+        addScreen(PlayScreen(world, viewport, uiViewport))
         setScreen<PlayScreen>()
     }
 
