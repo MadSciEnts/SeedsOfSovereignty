@@ -2,29 +2,23 @@
 
 
 
-\## 1. The Seed Protocol
+\## 1. Floating Origin Protocol
 
-\- \*\*Global Seed:\*\* A single Long integer determines the entire galaxy's layout.
+\- \*\*The Jitter Problem:\*\* Floating point precision fails at large distances from `(0,0)`.
 
-\- \*\*Local Entropy:\*\* Every entity (Ship, Station, Star) derives its "Visual DNA" from its unique ID + the Global Seed.
-
-\- \*\*Consistency:\*\* Re-generating the same ID must always produce the same visual result.
+\- \*\*The Snap:\*\* If `abs(player.position) > 10,000`, the `OriginSystem` snaps all entities back: `entity.pos -= player.pos`. The player is reset to `(0,0)`, and a global `worldOffset` counter is incremented.
 
 
 
-\## 2. Symmetry \& Hull Generation
+\## 2. Camera Leash (Lerp)
 
-\- \*\*Reflective Symmetry:\*\* Ships must be generated on a central axis (X or Y).
+\- \*\*Formula:\*\* $Cam\_{next} = Cam\_{current} + (Target - Cam\_{current}) \\times speed \\times delta$
 
-\- \*\*Recursive Subdivision:\*\* Start with a primitive (Rectangle/Triangle), then "grow" detail by subdividing edges based on a noise function.
-
-\- \*\*The "Greeble" Factor:\*\* Add small, non-functional rectangular "bits" to surfaces to imply mechanical complexity.
+\- \*\*Lead Offset:\*\* The camera target is not the player, but `player.pos + (player.velocity \* 0.5s)`. This allows the player to see "ahead" in the direction of travel.
 
 
 
-\## 3. Movement Physics ($f(t)$)
+\## 3. Procedural Distribution
 
-\- \*\*Thruster Sway:\*\* Use Sine waves for engine flicker: $Intensity = \\sin(time \\times frequency) \\times amplitude$.
-
-\- \*\*Inertia Scaling:\*\* $Velocity\_{new} = Velocity\_{old} + (Thrust \\times Delta) - (Drag \\times Velocity\_{old})$.
+\- Use a \*\*Coordinate-Based Hash\*\*: `Seed(x, y)` generates the same asteroid field every time the player returns to the same coordinates, without needing to save every rock in a database.
 

@@ -13,7 +13,9 @@ class SovereigntyGame : KtxGame<KtxScreen>() {
     // Fleks World will hold our ECS logic
     private val world: World by lazy {
         configureWorld {
-            inject(batch)
+            injectables {
+                add(batch)
+            }
             // Systems will be registered here (e.g., MoveSystem, RenderSystem)
         }
     }

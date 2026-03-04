@@ -4,31 +4,27 @@
 
 \## 1. Core Loop
 
-\- \*\*Objective:\*\* Survive procedural dogfights, harvest "Essence," and upgrade the hull DNA.
+\- \*\*Objective:\*\* Exploration and survival. Navigate the "Void" to discover procedural wrecks, Essence clusters, and outposts.
 
-\- \*\*Combat:\*\* Twitch-based movement, shield management, and directional firing.
+\- \*\*Combat:\*\* Twitch-based movement across vast distances. No screen-edge wrapping.
 
 
 
-\## 2. Tier Milestones
+\## 2. World Geometry \& Exploration
 
-\- \*\*T1–T3 (Fledgling):\*\* Basic thrusters, single-shot projectile. Focus: Learning to fly.
+\- \*\*Coordinate Plane:\*\* Space is a continuous Cartesian plane. Entities move freely using `float` coordinates.
 
-\- \*\*T4–T6 (Hunter):\*\* Secondary hardpoints unlocked. Introduction of "Dash" mechanics.
+\- \*\*Sensor Radius:\*\* Objects are hidden by default. The player ship has a "Sensor Radius" (Component-driven). Entities are only "discovered" (made visible/active) when within this radius.
 
-\- \*\*T7–T9 (Vanguard):\*\* Heavy plating, procedural beam weapons. Introduction of specialized enemy formations.
-
-\- \*\*T10–T12 (Elite):\*\* Experimental DNA strands. Finale: The "Gatekeeper" Boss fight to earn the first Fleet Command Core.
+\- \*\*Procedural Horizon:\*\* Obstacles and enemies spawn in a ring just beyond the camera's view, based on the player's movement vector.
 
 
 
 \## 3. Technical Specs for Epoch I
 
-\- \*\*Physics:\*\* High maneuverability, low inertia.
+\- \*\*Camera:\*\* Dynamic "Leash" follow-lock. The camera follows the player with Linear Interpolation (Lerp) to provide a sense of weight and speed.
 
-\- \*\*Camera:\*\* Tight follow-lock on the player ship.
+\- \*\*World Bounds:\*\* Theoretically infinite. Use a "Floating Origin" (resetting world to 0,0) when the player exceeds 10,000 units to maintain precision.
 
-\- \*\*World:\*\* Open-sector maps with procedural asteroids and pirate outposts.
-
-\- \*\*Input:\*\* Virtual Joystick (Left), Fire/Dash buttons (Right).
+\- \*\*Viewport:\*\* `ExtendViewport` is used to maintain aspect ratio while revealing more of the universe on wider screens.
 
