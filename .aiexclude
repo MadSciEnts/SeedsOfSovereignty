@@ -1,0 +1,35 @@
+# .aiexclude - Context filter for Gemini in Android Studio
+
+# --- Build & Output (The AI doesn't need to see compiled junk) ---
+/build/
+/*/build/
+.gradle/
+.idea/
+*.class
+*.dex
+*.apk
+*.flat
+
+# --- Assets (Exclude large binary files to save context window) ---
+# We want the AI to know the filenames exist, but not read their binary data.
+/assets/**/*.png
+/assets/**/*.jpg
+/assets/**/*.mp3
+/assets/**/*.ogg
+/assets/**/*.wav
+/assets/**/*.ttf
+
+# --- Local & Sensitive Data ---
+local.properties
+*.keystore
+*.jks
+google-services.json
+
+# --- Documentation Archive ---
+# Exclude historical logs if they get too long to prevent "memory drift"
+/HISTORY_ARCHIVE.log
+
+# --- Android Specifics ---
+captures/
+.externalNativeBuild/
+.cxx/
