@@ -1,3 +1,5 @@
+package com.srw.seedsofsovereignty.component
+
 import com.github.quillraven.fleks.Component
 import com.github.quillraven.fleks.ComponentType
 import com.badlogic.gdx.math.Vector2
@@ -10,8 +12,8 @@ data class PositionComponent(val pos: Vector2 = Vector2()) : Component<PositionC
 
 // Current speed and direction
 data class VelocityComponent(
-    val v: Vector2 = Vector2(), 
-    val acceleration: Float = 500f, 
+    val v: Vector2 = Vector2(),
+    val acceleration: Float = 500f,
     val friction: Float = 2.5f
 ) : Component<VelocityComponent> {
     override fun type() = VelocityComponent

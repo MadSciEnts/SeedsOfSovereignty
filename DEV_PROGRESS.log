@@ -3,10 +3,12 @@
 ## Current Milestone: Project Initialization
 - [x] GDX-Liftoff Setup
 - [x] Knowledge Base Created (25 files)
-- [ ] Tier 1 Pilot Movement System (Pending)
-- [ ] Procedural Starfield Shader (Pending)
+- [x] Tier 1 Pilot Movement System
+- [x] Procedural Render System (Basic Ship)
+- [ ] Procedural Starfield System (In Progress)
+- [ ] On-Screen Joystick (In Progress)
 
 ## Current Global Stats
-- **Active Tier:** 0/48
-- **Active Epoch:** 0/4
+- **Active Tier:** 1/48
+- **Active Epoch:** 1/4
 - **Build Version:** 0.0.1 (Pre-Alpha)
