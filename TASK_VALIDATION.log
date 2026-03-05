@@ -1,0 +1,11 @@
+# TASK VALIDATION LOG
+
+## Verified Implementation (Live File Check)
+- [x] **Undock Cooldown:** Added `undockCooldown` to `DockingComponent`. `StationSystem` now skips logic if cooldown > 0.
+- [x] **Directional Push:** `undockButton` listener in `PlayScreen` applies `-400f` impulse to ship velocity.
+- [x] **Enemy Retreat:** `EnemyAISystem` updated. If player is near station, enemies switch to `RETREATING` state and flee.
+- [x] **Aperture Buttons:** `PlayScreen` now adds `repairButton` and `undockButton` to `uiStage`.
+
+## Refactoring Protocol
+- [ ] Refactor `Systems.kt` into domain-specific files (Next).
+- [ ] Refactor `Components.kt` into domain-specific files (Next).
