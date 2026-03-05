@@ -82,14 +82,17 @@ class SovereigntyGame : KtxGame<KtxScreen>() {
                 add(EnemySpawnSystem(camera))
                 add(StarfieldSystem(batch, camera, starTextures))
 
-                // INPUT & LOGIC
+                // INPUT & AI LOGIC
                 add(PlayerInputSystem())
+                add(EnemyAISystem())
+                add(DroneSystem())
+
+                // PHYSICS
                 add(MoveSystem())
                 add(CameraSystem(camera))
 
                 // COMBAT
                 add(WeaponSystem())
-                add(DroneSystem())
                 add(CombatSystem())
                 add(LifeSpanSystem())
 

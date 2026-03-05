@@ -55,7 +55,8 @@ class EnemySpawnSystem(
     private val camera: OrthographicCamera
 ) : IntervalSystem(interval = Fixed(2f)) {
     override fun onTick() {
-        val player = world.family { all(PlayerComponent, EvolutionComponent) }.firstOrNull() ?: return
+        val playerFamily = world.family { all(PlayerComponent, EvolutionComponent) }
+        val player = playerFamily.firstOrNull() ?: return
         val currentTier = player[EvolutionComponent].currentTier
         val playerPos = player[PositionComponent].pos
         val stationFamily = world.family { all(StationComponent, PositionComponent) }

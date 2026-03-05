@@ -51,9 +51,11 @@ class MoveSystem : IteratingSystem(family { all(PositionComponent, VelocityCompo
         val pos = entity[PositionComponent]
         val vel = entity[VelocityComponent]
 
+        // Apply velocity to position
         pos.pos.x += vel.v.x * deltaTime
         pos.pos.y += vel.v.y * deltaTime
 
+        // Damping/Friction logic
         val frictionFactor = if (entity.has(EssenceComponent)) 0.5f else vel.friction
         if (!entity.has(ProjectileComponent)) {
             vel.v.scl(1f - (frictionFactor * deltaTime))

@@ -31,7 +31,6 @@ class PlayScreen(
     private val fireButton: TextButton
     private val testEvolveButton: TextButton
 
-    // Station HUD Buttons
     private val repairButton: TextButton
     private val undockButton: TextButton
 
@@ -96,7 +95,6 @@ class PlayScreen(
 
         moveJoystick = Touchpad(10f, skin, "default").apply { setSize(200f, 200f) }
         aimJoystick = Touchpad(10f, skin, "aim").apply { setSize(200f, 200f) }
-
         fireButton = TextButton("FIRE", skin).apply { setSize(200f, 200f) }
 
         repairButton = TextButton("REPAIR SHIP", skin, "station").apply {
@@ -109,14 +107,25 @@ class PlayScreen(
             isVisible = false
             addListener(object : ChangeListener() {
                 override fun changed(event: ChangeEvent?, actor: Actor?) {
-                    val player = world.family { all(PlayerComponent, DockingComponent) }.firstOrNull()
+                    val player = world.family { all(PlayerComponent, DockingComponent, PositionComponent) }.firstOrNull()
                     player?.let { p ->
                         with(world) {
                             val docking = p[DockingComponent]
-                            docking.isDocked = false
-                            // Kick the ship away slightly so it doesn't immediately re-dock
+                            val pos = p[PositionComponent].pos
                             val vel = p[VelocityComponent].v
-                            vel.set(-200f, -200f)
+
+                            docking.isDocked = false
+                            docking.undockCooldown = 3f // Mandatory wait before re-docking
+
+                            // Push away from station
+                            docking.nearestStation?.let { station ->
+                                val sPos = station[PositionComponent].pos
+                                val pushDir = com.badlogic.gdx.math.Vector2(pos).sub(sPos).nor()
+                                if (pushDir.isZero) pushDir.set(1f, 1f).nor()
+                                vel.set(pushDir).scl(500f)
+                            } ?: run {
+                                vel.set(-300f, -300f)
+                            }
                         }
                     }
                 }
@@ -151,7 +160,6 @@ class PlayScreen(
 
     override fun render(delta: Float) {
         val inputSystem = world.system<PlayerInputSystem>()
-
         val playerFamily = world.family { all(PlayerComponent, EvolutionComponent, DockingComponent, ApertureComponent) }
         val player = playerFamily.firstOrNull()
 
@@ -160,11 +168,8 @@ class PlayScreen(
                 val currentTier = player[EvolutionComponent].currentTier
                 val docking = player[DockingComponent]
                 val aperture = player[ApertureComponent]
-
-                // Tier-based controls
                 val isTwinStickTier = currentTier >= 4
 
-                // Toggle UI based on Docking State
                 if (docking.isDocked && aperture.state == ApertureComponent.State.OPEN) {
                     moveJoystick.isVisible = false
                     aimJoystick.isVisible = false
@@ -198,15 +203,11 @@ class PlayScreen(
     override fun resize(width: Int, height: Int) {
         viewport.update(width, height)
         uiViewport.update(width, height, true)
-
         moveJoystick.setPosition(50f, 50f)
         aimJoystick.setPosition(uiStage.width - aimJoystick.width - 50f, 50f)
         fireButton.setPosition(uiStage.width - fireButton.width - 50f, 50f)
-
-        // Station buttons centered in the Aperture
         repairButton.setPosition(uiStage.width / 2f - repairButton.width / 2f, uiStage.height / 2f + 20f)
         undockButton.setPosition(uiStage.width / 2f - undockButton.width / 2f, uiStage.height / 2f - 100f)
-
         testEvolveButton.setPosition(uiStage.width / 2f - testEvolveButton.width / 2f, uiStage.height - 70f)
     }
 

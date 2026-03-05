@@ -110,6 +110,9 @@ class DroneSystem : IteratingSystem(family { all(DroneComponent, PositionCompone
         var minDistSq = Float.MAX_VALUE
 
         enemyFamily.forEach { enemy ->
+            val enemyComp = enemy[EnemyComponent]
+            if (enemyComp.state == EnemyComponent.State.RETREATING) return@forEach
+
             val ePos = enemy[PositionComponent].pos
             val d2 = pos.dst2(ePos)
             if (d2 < minDistSq) {
@@ -139,6 +142,43 @@ class LifeSpanSystem : IteratingSystem(family { all(LifeSpanComponent) }) {
         life.remaining -= deltaTime
         if (life.remaining <= 0f) {
             world -= entity
+        }
+    }
+}
+
+class EnemyAISystem : IteratingSystem(family { all(EnemyComponent, PositionComponent, VelocityComponent) }) {
+    private val playerFamily by lazy { world.family { all(PlayerComponent, PositionComponent) } }
+    private val stationFamily by lazy { world.family { all(StationComponent, PositionComponent) } }
+    private val steerForce = Vector2()
+
+    override fun onTickEntity(entity: Entity) {
+        val enemyPos = entity[PositionComponent].pos
+        val vel = entity[VelocityComponent]
+        val enemy = entity[EnemyComponent]
+
+        val player = playerFamily.firstOrNull() ?: return
+        val playerPos = player[PositionComponent].pos
+        val playerDocking = if (player.has(DockingComponent)) player[DockingComponent] else null
+
+        // Safe Haven Check: Retreat if player is docked OR if enemy itself is near a station
+        var shouldRetreat = playerDocking?.isDocked == true
+        if (!shouldRetreat) {
+            stationFamily.forEach { station ->
+                if (enemyPos.dst2(station[PositionComponent].pos) < 250000f) shouldRetreat = true // 500u station aura
+            }
+        }
+
+        if (shouldRetreat) {
+            enemy.state = EnemyComponent.State.RETREATING
+            // Steer AWAY from player
+            steerForce.set(enemyPos).sub(playerPos).nor().scl(vel.acceleration * deltaTime)
+            vel.v.add(steerForce)
+            if (enemyPos.dst2(playerPos) > 1000000f) world -= entity // Despawn far away
+        } else {
+            enemy.state = EnemyComponent.State.HUNTING
+            // Steer TOWARD player
+            steerForce.set(playerPos).sub(enemyPos).nor().scl(vel.acceleration * deltaTime)
+            vel.v.add(steerForce)
         }
     }
 }
