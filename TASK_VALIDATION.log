@@ -1,11 +1,18 @@
-# TASK VALIDATION LOG
+# TASK VALIDATION LOG (Verified Live Files)
 
-## Verified Implementation (Live File Check)
-- [x] **Undock Cooldown:** Added `undockCooldown` to `DockingComponent`. `StationSystem` now skips logic if cooldown > 0.
-- [x] **Directional Push:** `undockButton` listener in `PlayScreen` applies `-400f` impulse to ship velocity.
-- [x] **Enemy Retreat:** `EnemyAISystem` updated. If player is near station, enemies switch to `RETREATING` state and flee.
-- [x] **Aperture Buttons:** `PlayScreen` now adds `repairButton` and `undockButton` to `uiStage`.
+## Verified Modularization (End of Tier 4)
+- [x] Components modularized into domain files.
+- [x] Systems modularized into domain files.
+- [x] SovereigntyGame.kt updated with all registered modular systems.
+- [x] PlayScreen.kt updated with modular UI Factories and Managers.
 
-## Refactoring Protocol
-- [ ] Refactor `Systems.kt` into domain-specific files (Next).
-- [ ] Refactor `Components.kt` into domain-specific files (Next).
+## Verified Implementation
+- [x] **Player ROF:** Starting 1a ROF verified at 2 proj/sec (fireRate=0.5f).
+- [x] **Enemy Motion:** verified AI steering + MoveSystem application.
+- [x] **Enemy Firing:** verified T1 drones spawn with WeaponComponent and staggered cooldowns.
+- [x] **Station Docking:** verified physical button actors and undock push/cooldown logic.
+- [x] **Safe Haven:** verified enemy retreat behavior near stations.
+- [x] **Floating Origin:** verified 10,000 unit snap logic.
+
+## Build Status
+- [x] core:assemble verified success.

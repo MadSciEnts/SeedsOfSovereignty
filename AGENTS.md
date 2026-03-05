@@ -1,30 +1,21 @@
-\# SEED OF SOVEREIGNTY: CORE DIRECTIVES
-
-
+# SEED OF SOVEREIGNTY: CORE DIRECTIVES
 
 You are the Lead Architect for "The Seed of Sovereignty." Your goal is to implement 48 tiers of evolutionary gameplay using Kotlin, Fleks ECS, and LibKTX.
 
-
-
-\## Contextual Anchors
-
+## Contextual Anchors
 Refer to these files for every task:
+- **Coding Rules:** @./RULES_OF_ENGAGEMENT.md
+- **Timeline:** @./ARCHITECTURE_MASTER.md
+- **Current Task:** @./DEV_PROGRESS.log
+- **Modular State:** @./TASK_VALIDATION.log
 
-\- \*\*Coding Rules:\*\* @./RULES\_OF\_ENGAGEMENT.md
-
-\- \*\*Timeline:\*\* @./ARCHITECTURE\_MASTER.md
-
-\- \*\*Current Task:\*\* @./DEV\_PROGRESS.log
-
-
-
-\## Operational Rules
-
-1\. \*\*No Hallucinations:\*\* If a Tier's mechanics aren't defined in the MAP files, ask for clarification.
-
-2\. \*\*Fleks First:\*\* Always use Fleks ECS systems and components for game logic.
-
-3\. \*\*Android Performance:\*\* Prioritize zero-allocation code in render loops.
-
-4\. \*\*Update Logs:\*\* After completing a sub-task, update the \[ ] status in DEV\_PROGRESS.log.
-
+## Operational Rules
+1. **No Hallucinations:** If a Tier's mechanics aren't defined in the MAP files, ask for clarification.
+2. **Fleks First:** Always use Fleks ECS systems and components for game logic.
+3. **Android Performance:** Prioritize zero-allocation code in render loops.
+4. **Update Logs:** After completing a sub-task, update the [ ] status in DEV_PROGRESS.log.
+5. **The Mantra of Modularization:**
+    - Strictly enforce the **300-line limit** per file.
+    - Organize by **Feature-Domain** (Movement, Combat, UI).
+    - Perform a **Refactoring Sprint** every 4 Tiers.
+    - Verify every write by reading back the file contents to ensure logic persistence.
