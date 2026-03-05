@@ -1,16 +1,13 @@
 package com.srw.seedsofsovereignty
 
-import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.OrthographicCamera
-import com.badlogic.gdx.graphics.Pixmap
-import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
-import com.badlogic.gdx.graphics.g2d.TextureRegion
 import com.badlogic.gdx.utils.viewport.ExtendViewport
 import com.github.quillraven.fleks.World
 import com.github.quillraven.fleks.configureWorld
 import com.srw.seedsofsovereignty.screen.PlayScreen
 import com.srw.seedsofsovereignty.system.*
+import com.srw.seedsofsovereignty.ui.AssetFactory
 import ktx.app.KtxGame
 import ktx.app.KtxScreen
 import ktx.async.KtxAsync
@@ -22,48 +19,8 @@ class SovereigntyGame : KtxGame<KtxScreen>() {
     private val viewport by lazy { ExtendViewport(1280f, 720f, camera) }
     private val uiViewport by lazy { ExtendViewport(1280f, 720f) }
 
-    private val whitePixel by lazy {
-        val pixmap = Pixmap(1, 1, Pixmap.Format.RGBA8888)
-        pixmap.setColor(Color.WHITE)
-        pixmap.fill()
-        val texture = Texture(pixmap)
-        pixmap.dispose()
-        TextureRegion(texture)
-    }
-
-    private val starTextures by lazy {
-        val layers = mutableListOf<Texture>()
-        val sizes = listOf(1024, 1024, 1024)
-        val starCounts = listOf(200, 150, 100)
-
-        sizes.forEachIndexed { index, size ->
-            val pixmap = Pixmap(size, size, Pixmap.Format.RGBA8888)
-            pixmap.setColor(0f, 0f, 0f, 0f)
-            pixmap.fill()
-
-            for (i in 0 until starCounts[index]) {
-                val brightness = 0.5f + (Math.random() * 0.5f).toFloat()
-                val x = (Math.random() * size).toInt()
-                val y = (Math.random() * size).toInt()
-
-                pixmap.setColor(brightness, brightness, brightness, 1f)
-                pixmap.drawPixel(x, y)
-                pixmap.setColor(brightness, brightness, brightness, 0.4f)
-                pixmap.drawPixel(x + 1, y)
-                pixmap.drawPixel(x - 1, y)
-                pixmap.drawPixel(x, y + 1)
-                pixmap.drawPixel(x, y - 1)
-            }
-
-            val tex = Texture(pixmap, true)
-            tex.setWrap(Texture.TextureWrap.Repeat, Texture.TextureWrap.Repeat)
-            tex.setFilter(Texture.TextureFilter.MipMapLinearLinear, Texture.TextureFilter.Linear)
-            layers.add(tex)
-            pixmap.dispose()
-        }
-        layers
-    }
-
+    private val whitePixel by lazy { AssetFactory.createWhitePixel() }
+    private val starTextures by lazy { AssetFactory.createStarLayers() }
     private val drawer by lazy { ShapeDrawer(batch, whitePixel) }
 
     private val world: World by lazy {
@@ -91,7 +48,7 @@ class SovereigntyGame : KtxGame<KtxScreen>() {
                 add(MoveSystem())
                 add(CameraSystem(camera))
 
-                // COMBAT
+                // COMBAT & CLEANUP
                 add(WeaponSystem())
                 add(CombatSystem())
                 add(LifeSpanSystem())
