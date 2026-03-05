@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
+import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.ui.Skin
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton
@@ -25,22 +26,23 @@ class PlayScreen(
 
     private val uiStage = Stage(uiViewport)
     private val skin: Skin
-    private val joystick: Touchpad
+    private val moveJoystick: Touchpad
+    private val aimJoystick: Touchpad
     private val fireButton: TextButton
+    private val testEvolveButton: TextButton
 
     init {
-        // Create our Tier 1 Ship Entity
         world.entity {
             it += PlayerComponent()
             it += PositionComponent().apply { pos.set(0f, 0f) }
-            it += OrientationComponent() // ADDED: Missing component
+            it += OrientationComponent()
             it += VelocityComponent()
-            it += WeaponComponent(fireRate = 1.0f) // Start with 1 shot/sec (Tier 1a)
+            it += WeaponComponent(fireRate = 1.0f)
             it += SensorComponent(radius = 1000f)
             it += EvolutionComponent(currentTier = 1, subTier = 1, essenceCollected = 0, essenceRequired = 5)
+            it += DockingComponent()
         }
 
-        // Setup UI Skin
         skin = skin {
             val pixmap = Pixmap(1, 1, Pixmap.Format.RGBA8888).apply {
                 setColor(Color.WHITE)
@@ -50,6 +52,7 @@ class PlayScreen(
             pixmap.dispose()
 
             this["white"] = whiteTex
+            this["default"] = BitmapFont()
 
             touchpad("default") {
                 background = this@skin.newDrawable("white", Color(0.2f, 0.2f, 0.2f, 0.5f))
@@ -59,16 +62,29 @@ class PlayScreen(
                 }
             }
 
+            touchpad("aim") {
+                background = this@skin.newDrawable("white", Color(0.4f, 0.2f, 0.2f, 0.3f))
+                knob = this@skin.newDrawable("white", Color(1f, 0.2f, 0.2f, 0.6f)).apply {
+                    minWidth = 30f
+                    minHeight = 30f
+                }
+            }
+
             textButton("default") {
                 up = this@skin.newDrawable("white", Color(0.4f, 0.2f, 0.2f, 0.5f))
                 down = this@skin.newDrawable("white", Color(0.8f, 0.2f, 0.2f, 0.8f))
-                font = com.badlogic.gdx.graphics.g2d.BitmapFont()
+                font = this@skin.getFont("default")
+            }
+
+            textButton("debug") {
+                up = this@skin.newDrawable("white", Color(0.2f, 0.4f, 0.2f, 0.5f))
+                down = this@skin.newDrawable("white", Color(0.2f, 0.8f, 0.2f, 0.8f))
+                font = this@skin.getFont("default")
             }
         }
 
-        joystick = Touchpad(10f, skin).apply {
-            setSize(200f, 200f)
-        }
+        moveJoystick = Touchpad(10f, skin, "default").apply { setSize(200f, 200f) }
+        aimJoystick = Touchpad(10f, skin, "aim").apply { setSize(200f, 200f) }
 
         fireButton = TextButton("FIRE", skin).apply {
             setSize(200f, 200f)
@@ -77,16 +93,55 @@ class PlayScreen(
             })
         }
 
-        uiStage.addActor(joystick)
+        testEvolveButton = TextButton("DEV: EVOLVE", skin, "debug").apply {
+            setSize(150f, 50f)
+            addListener(object : ChangeListener() {
+                override fun changed(event: ChangeEvent?, actor: Actor?) {
+                    val family = world.family { all(PlayerComponent, EvolutionComponent) }
+                    if (family.numEntities > 0) {
+                        val player = family.first()
+                        with(world) {
+                            val evo = player[EvolutionComponent]
+                            evo.essenceCollected = evo.essenceRequired
+                        }
+                    }
+                }
+            })
+        }
+
+        uiStage.addActor(moveJoystick)
+        uiStage.addActor(aimJoystick)
         uiStage.addActor(fireButton)
+        uiStage.addActor(testEvolveButton)
 
         Gdx.input.inputProcessor = uiStage
     }
 
     override fun render(delta: Float) {
         val inputSystem = world.system<PlayerInputSystem>()
-        inputSystem.joystickVector.set(joystick.knobPercentX, joystick.knobPercentY)
-        inputSystem.isFiringRequested = fireButton.isPressed
+
+        // Find player's current tier
+        val playerFamily = world.family { all(PlayerComponent, EvolutionComponent) }
+        val player = playerFamily.firstOrNull()
+        val currentTier = if (player != null) {
+            with(world) { player[EvolutionComponent].currentTier }
+        } else 1
+
+        // Dynamic UI Visibility based on Tier
+        val isTwinStickTier = currentTier >= 4
+        aimJoystick.isVisible = isTwinStickTier
+        fireButton.isVisible = !isTwinStickTier
+
+        // Update Input System
+        inputSystem.joystickVector.set(moveJoystick.knobPercentX, moveJoystick.knobPercentY)
+
+        if (isTwinStickTier) {
+            inputSystem.aimVector.set(aimJoystick.knobPercentX, aimJoystick.knobPercentY)
+            inputSystem.isFiringRequested = !inputSystem.aimVector.isZero
+        } else {
+            inputSystem.aimVector.set(0f, 0f)
+            inputSystem.isFiringRequested = fireButton.isPressed
+        }
 
         world.update(delta)
 
@@ -98,9 +153,10 @@ class PlayScreen(
         viewport.update(width, height)
         uiViewport.update(width, height, true)
 
-        // Reposition UI elements
-        joystick.setPosition(50f, 50f)
+        moveJoystick.setPosition(50f, 50f)
+        aimJoystick.setPosition(uiStage.width - aimJoystick.width - 50f, 50f)
         fireButton.setPosition(uiStage.width - fireButton.width - 50f, 50f)
+        testEvolveButton.setPosition(uiStage.width / 2f - testEvolveButton.width / 2f, uiStage.height - 70f)
     }
 
     override fun dispose() {

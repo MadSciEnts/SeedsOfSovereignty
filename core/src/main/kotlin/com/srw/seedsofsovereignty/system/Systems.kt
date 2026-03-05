@@ -59,11 +59,14 @@ class StarfieldSystem(
 class PlayerInputSystem : IteratingSystem(family { all(PlayerComponent, VelocityComponent) }) {
     private val moveForce = Vector2()
     val joystickVector = Vector2()
+    val aimVector = Vector2()
     var isFiringRequested = false
 
     override fun onTickEntity(entity: Entity) {
         val vel = entity[VelocityComponent]
         val orientation = entity[OrientationComponent]
+        val evo = if (entity.has(EvolutionComponent)) entity[EvolutionComponent] else null
+
         moveForce.set(joystickVector)
 
         if (Gdx.input.isKeyPressed(Keys.W) || Gdx.input.isKeyPressed(Keys.UP)) moveForce.y += 1f
@@ -75,8 +78,17 @@ class PlayerInputSystem : IteratingSystem(family { all(PlayerComponent, Velocity
             moveForce.nor().scl(vel.acceleration * deltaTime)
             vel.v.add(moveForce)
 
-            // Retain orientation based on last joystick movement
-            orientation.angleRad = moveForce.angleRad()
+            if ((evo?.currentTier ?: 1) < 4) {
+                orientation.angleRad = moveForce.angleRad()
+            }
+        }
+
+        if ((evo?.currentTier ?: 1) >= 4) {
+            if (!aimVector.isZero) {
+                orientation.angleRad = aimVector.angleRad()
+            } else if (!moveForce.isZero) {
+                orientation.angleRad = moveForce.angleRad()
+            }
         }
 
         if (entity.has(WeaponComponent)) {
@@ -92,6 +104,9 @@ class WeaponSystem : IteratingSystem(family { all(WeaponComponent, PositionCompo
         val vel = entity[VelocityComponent].v
         val angleRad = entity[OrientationComponent].angleRad
 
+        val evo = if (entity.has(EvolutionComponent)) entity[EvolutionComponent] else null
+        val tier = evo?.currentTier ?: 1
+
         if (weapon.cooldown > 0f) {
             weapon.cooldown -= deltaTime
         }
@@ -99,16 +114,13 @@ class WeaponSystem : IteratingSystem(family { all(WeaponComponent, PositionCompo
         if (weapon.isFiring && weapon.cooldown <= 0f) {
             weapon.cooldown = weapon.fireRate
 
-            // Handle alternating and multiple barrels
             for (i in 0 until weapon.barrels) {
-                // If alternating, only fire one per tick
-                if (weapon.barrels > 1 && weapon.barrels == 2 && i != weapon.currentBarrel) continue
+                if (weapon.barrels == 2 && i != weapon.currentBarrel) continue
 
                 world.entity { e ->
                     e += PositionComponent().apply {
                         this.pos.set(pos)
-                        // Offset based on barrel
-                        if (weapon.barrels == 2 || weapon.barrels == 3) {
+                        if (weapon.barrels >= 2) {
                             val offset = if (i == 0) -10f else if (i == 1) 10f else 0f
                             val ox = MathUtils.cos(angleRad + MathUtils.PI/2f) * offset
                             val oy = MathUtils.sin(angleRad + MathUtils.PI/2f) * offset
@@ -118,13 +130,64 @@ class WeaponSystem : IteratingSystem(family { all(WeaponComponent, PositionCompo
                     e += VelocityComponent().apply {
                         this.v.set(1000f, 0f).setAngleRad(angleRad).add(vel)
                     }
-                    e += ProjectileComponent()
+                    e += ProjectileComponent(
+                        tier = tier,
+                        damage = when(tier) {
+                            1 -> 10f
+                            2 -> 25f
+                            3 -> 15f
+                            4 -> 40f
+                            else -> 10f
+                        }
+                    )
                     e += LifeSpanComponent(remaining = 1.5f)
                 }
             }
 
             if (weapon.barrels > 1) {
                 weapon.currentBarrel = (weapon.currentBarrel + 1) % weapon.barrels
+            }
+        }
+    }
+}
+
+class DroneSystem : IteratingSystem(family { all(DroneComponent, PositionComponent, OrientationComponent) }) {
+    private val enemyFamily by lazy { world.family { all(EnemyComponent, PositionComponent) } }
+
+    override fun onTickEntity(entity: Entity) {
+        val drone = entity[DroneComponent]
+        val pos = entity[PositionComponent].pos
+        val orientation = entity[OrientationComponent]
+
+        drone.orbitAngle += drone.orbitSpeed * deltaTime
+        val ownerPos = drone.owner[PositionComponent].pos
+        pos.set(
+            ownerPos.x + MathUtils.cos(drone.orbitAngle) * drone.orbitRadius,
+            ownerPos.y + MathUtils.sin(drone.orbitAngle) * drone.orbitRadius
+        )
+
+        var nearestEnemy: Entity? = null
+        var minDistSq = Float.MAX_VALUE
+
+        enemyFamily.forEach { enemy ->
+            val ePos = enemy[PositionComponent].pos
+            val d2 = pos.dst2(ePos)
+            if (d2 < minDistSq) {
+                minDistSq = d2
+                nearestEnemy = enemy
+            }
+        }
+
+        nearestEnemy?.let { enemy ->
+            val ePos = enemy[PositionComponent].pos
+            orientation.angleRad = Vector2(ePos).sub(pos).angleRad()
+
+            if (entity.has(WeaponComponent)) {
+                entity[WeaponComponent].isFiring = true
+            }
+        } ?: run {
+            if (entity.has(WeaponComponent)) {
+                entity[WeaponComponent].isFiring = false
             }
         }
     }
@@ -158,7 +221,10 @@ class EnemySpawnSystem(
     private val camera: OrthographicCamera
 ) : IntervalSystem(interval = Fixed(2f)) {
     override fun onTick() {
+        val player = world.family { all(PlayerComponent, EvolutionComponent) }.firstOrNull() ?: return
+        val currentTier = player[EvolutionComponent].currentTier
         val enemyCount = world.family { all(EnemyComponent) }.numEntities
+
         if (enemyCount < 5) {
             val spawnRadius = 600f
             val angle = MathUtils.random(0f, MathUtils.PI2)
@@ -167,8 +233,42 @@ class EnemySpawnSystem(
 
             world.entity {
                 it += PositionComponent().apply { pos.set(spawnX, spawnY) }
-                it += VelocityComponent().apply { acceleration = 150f; friction = 1.0f }
-                it += EnemyComponent(health = 20f)
+                it += VelocityComponent().apply {
+                    acceleration = when(currentTier) {
+                        1 -> 150f
+                        2 -> 250f
+                        3 -> 200f
+                        else -> 300f
+                    }
+                    friction = 1.0f
+                }
+                it += EnemyComponent(
+                    health = when(currentTier) {
+                        1 -> 20f
+                        2 -> 40f
+                        3 -> 60f
+                        4 -> 100f
+                        else -> 20f
+                    },
+                    type = when(currentTier) {
+                        1 -> "Swarm"
+                        2 -> "Reaper"
+                        3 -> "Phantom"
+                        else -> "Apex"
+                    }
+                )
+            }
+        }
+    }
+}
+
+class StationSpawnSystem : IntervalSystem(interval = Fixed(10f)) {
+    override fun onTick() {
+        if (world.family { all(StationComponent) }.numEntities == 0) {
+            world.entity {
+                it += PositionComponent().apply { pos.set(1500f, 1500f) }
+                it += StationComponent(name = "Nexus Prime", radius = 200f)
+                it += VisibleComponent() // Always visible on radar for now
             }
         }
     }
@@ -195,12 +295,13 @@ class CombatSystem : IteratingSystem(family { all(ProjectileComponent, PositionC
 
     override fun onTickEntity(entity: Entity) {
         val projPos = entity[PositionComponent].pos
+        val projComp = entity[ProjectileComponent]
 
         enemyFamily.forEach { enemy ->
             val enemyPos = enemy[PositionComponent].pos
             if (projPos.dst2(enemyPos) < 1600f) {
                 val enemyComp = enemy[EnemyComponent]
-                enemyComp.health -= 10f
+                enemyComp.health -= projComp.damage
                 world -= entity
 
                 if (enemyComp.health <= 0f) {
@@ -221,8 +322,8 @@ class CombatSystem : IteratingSystem(family { all(ProjectileComponent, PositionC
 
 class CollectionSystem : IteratingSystem(family { all(PlayerComponent, PositionComponent, EvolutionComponent) }) {
     private val essenceFamily by lazy { world.family { all(EssenceComponent, PositionComponent, VelocityComponent) } }
-    private val pullRadiusSq = 40000f // 200px pull radius
-    private val collectRadiusSq = 900f // 30px hard collection
+    private val pullRadiusSq = 40000f
+    private val collectRadiusSq = 900f
 
     override fun onTickEntity(entity: Entity) {
         val playerPos = entity[PositionComponent].pos
@@ -251,6 +352,8 @@ class CollectionSystem : IteratingSystem(family { all(PlayerComponent, PositionC
 }
 
 class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionComponent, WeaponComponent, VelocityComponent) }) {
+    private val droneFamily by lazy { world.family { all(DroneComponent) } }
+
     override fun onTickEntity(entity: Entity) {
         val evo = entity[EvolutionComponent]
         val weapon = entity[WeaponComponent]
@@ -261,24 +364,43 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
             evo.essenceCollected = 0
             evo.essenceRequired = (evo.essenceRequired * 1.5f).toInt()
 
-            when (evo.subTier) {
-                2 -> { // Tier 1b
-                    weapon.fireRate = 0.5f // 2 per second
+            when (evo.currentTier) {
+                1 -> {
+                    when (evo.subTier) {
+                        2 -> weapon.fireRate = 0.5f
+                        3 -> { weapon.fireRate = 0.33f; weapon.barrels = 2 }
+                        4 -> { weapon.fireRate = 0.25f; weapon.barrels = 3 }
+                        5 -> { evo.currentTier = 2; evo.subTier = 1; weapon.fireRate = 0.2f; weapon.barrels = 1; vel.acceleration += 150f }
+                    }
                 }
-                3 -> { // Tier 1c
-                    weapon.fireRate = 0.33f // 3 per second total
-                    weapon.barrels = 2
+                2 -> {
+                    when (evo.subTier) {
+                        2 -> weapon.fireRate = 0.15f
+                        3 -> { weapon.fireRate = 0.12f; weapon.barrels = 2 }
+                        4 -> { weapon.fireRate = 0.1f; weapon.barrels = 4 }
+                        5 -> { evo.currentTier = 3; evo.subTier = 1; weapon.barrels = 1; vel.acceleration += 100f }
+                    }
                 }
-                4 -> { // Tier 1d
-                    weapon.fireRate = 0.25f // 4 per second total
-                    weapon.barrels = 3
-                }
-                5 -> { // Evolution to Tier 2
-                    evo.currentTier = 2
-                    evo.subTier = 1
-                    weapon.fireRate = 0.1f
-                    weapon.barrels = 1 // Resets or changes based on T2 design
-                    vel.acceleration += 100f
+                3 -> {
+                    val droneCount = droneFamily.numEntities
+                    if (droneCount < evo.subTier) {
+                        for (i in 0 until (evo.subTier - droneCount)) {
+                            world.entity { d ->
+                                d += PositionComponent()
+                                d += OrientationComponent()
+                                d += DroneComponent(owner = entity, orbitAngle = i * MathUtils.PI2 / 4f, orbitRadius = 60f + i * 10f)
+                                d += WeaponComponent(fireRate = 0.5f)
+                                d += VelocityComponent()
+                            }
+                        }
+                    }
+
+                    if (evo.subTier >= 5) {
+                        evo.currentTier = 4
+                        evo.subTier = 1
+                        weapon.fireRate = 0.1f
+                        weapon.barrels = 1
+                    }
                 }
             }
         }
@@ -351,23 +473,36 @@ class RenderSystem(
         if (entity.has(VisibleComponent) || entity.has(PlayerComponent) || entity.has(ProjectileComponent) || entity.has(EssenceComponent)) {
             if (entity.has(PlayerComponent)) {
                 val angleRad = if (entity.has(OrientationComponent)) entity[OrientationComponent].angleRad else MathUtils.PI / 2f
-                val tier = if (entity.has(EvolutionComponent)) entity[EvolutionComponent].currentTier else 1
-                drawPlayerShip(pos.x, pos.y, angleRad, tier)
+                val evo = if (entity.has(EvolutionComponent)) entity[EvolutionComponent] else null
+                drawPlayerShip(pos.x, pos.y, angleRad, evo?.currentTier ?: 1, evo?.subTier ?: 1)
             } else if (entity.has(ProjectileComponent)) {
+                val proj = entity[ProjectileComponent]
                 val vel = entity[VelocityComponent].v
-                drawProjectile(pos.x, pos.y, vel.angleRad())
+                drawProjectile(pos.x, pos.y, vel.angleRad(), proj.tier)
             } else if (entity.has(EnemyComponent)) {
-                drawEnemy(pos.x, pos.y)
+                val enemy = entity[EnemyComponent]
+                drawEnemy(pos.x, pos.y, enemy.type)
             } else if (entity.has(EssenceComponent)) {
                 drawEssence(pos.x, pos.y)
+            } else if (entity.has(DroneComponent)) {
+                val angleRad = entity[OrientationComponent].angleRad
+                drawDrone(pos.x, pos.y, angleRad)
+            } else if (entity.has(StationComponent)) {
+                drawStation(pos.x, pos.y)
             } else {
                 drawDetectedObject(pos.x, pos.y)
             }
         }
     }
 
-    private fun drawPlayerShip(x: Float, y: Float, rotation: Float, tier: Int) {
-        val size = if (tier >= 2) 20f else 16f
+    private fun drawPlayerShip(x: Float, y: Float, rotation: Float, tier: Int, subTier: Int) {
+        val size = when(tier) {
+            1 -> 16f
+            2 -> 20f
+            3 -> 24f
+            4 -> 30f
+            else -> 16f
+        }
         val cos = MathUtils.cos(rotation)
         val sin = MathUtils.sin(rotation)
 
@@ -380,12 +515,47 @@ class RenderSystem(
         val x3 = x + size * MathUtils.cos(rotation - angleOffset)
         val y3 = y + size * MathUtils.sin(rotation - angleOffset)
 
-        drawer.setColor(if (tier >= 2) Color.VIOLET else Color.CYAN)
+        val color = when(tier) {
+            1 -> Color.CYAN
+            2 -> Color.VIOLET
+            3 -> Color.GOLD
+            4 -> Color.ORANGE
+            else -> Color.CYAN
+        }
+        drawer.setColor(color)
         drawer.line(x1, y1, x2, y2, 2f)
         drawer.line(x2, y2, x3, y3, 2f)
         drawer.line(x3, y3, x1, y1, 2f)
 
-        if (tier >= 2) {
+        drawer.setColor(Color.WHITE)
+        if (tier == 1) {
+            when (subTier) {
+                2 -> drawWeaponPoint(x + 10f * cos, y + 10f * sin, rotation, 4f)
+                3 -> {
+                    val s1 = rotation + MathUtils.PI / 2f
+                    val s2 = rotation - MathUtils.PI / 2f
+                    drawWeaponPoint(x + 8f * MathUtils.cos(s1), y + 8f * MathUtils.sin(s1), rotation, 4f)
+                    drawWeaponPoint(x + 8f * MathUtils.cos(s2), y + 8f * MathUtils.sin(s2), rotation, 4f)
+                }
+                4 -> {
+                    val s1 = rotation + MathUtils.PI / 2f
+                    val s2 = rotation - MathUtils.PI / 2f
+                    drawWeaponPoint(x + 10f * cos, y + 10f * sin, rotation, 4f)
+                    drawWeaponPoint(x + 8f * MathUtils.cos(s1), y + 8f * MathUtils.sin(s1), rotation, 4f)
+                    drawWeaponPoint(x + 8f * MathUtils.cos(s2), y + 8f * MathUtils.sin(s2), rotation, 4f)
+                }
+            }
+        } else if (tier == 4) {
+            drawer.setColor(Color.GOLD)
+            drawer.filledCircle(x, y, 6f)
+            drawer.setColor(Color.WHITE)
+            drawer.line(x, y, x + 12f * cos, y + 12f * sin, 3f)
+        }
+
+        if (tier >= 3) {
+            drawer.setColor(color)
+            drawer.circle(x, y, size * 0.8f, 1.5f)
+        } else if (tier >= 2) {
             drawer.line(x, y, x - size * 0.5f * cos, y - size * 0.5f * sin, 2f)
         }
 
@@ -393,20 +563,90 @@ class RenderSystem(
         drawer.filledCircle(x, y, 3f)
     }
 
-    private fun drawProjectile(x: Float, y: Float, rotation: Float) {
-        drawer.setColor(Color.WHITE)
-        val length = 8f
+    private fun drawWeaponPoint(x: Float, y: Float, rotation: Float, size: Float) {
         val cos = MathUtils.cos(rotation)
         val sin = MathUtils.sin(rotation)
-        drawer.line(x, y, x + length * cos, y + length * sin, 1.5f)
+        val x1 = x + size * cos
+        val y1 = y + size * sin
+        val x2 = x + size * MathUtils.cos(rotation + 2.4f)
+        val y2 = y + size * MathUtils.sin(rotation + 2.4f)
+        val x3 = x + size * MathUtils.cos(rotation - 2.4f)
+        val y3 = y + size * MathUtils.sin(rotation - 2.4f)
+        drawer.line(x1, y1, x2, y2, 1f)
+        drawer.line(x2, y2, x3, y3, 1f)
+        drawer.line(x3, y3, x1, y1, 1f)
     }
 
-    private fun drawEnemy(x: Float, y: Float) {
-        drawer.setColor(Color.RED)
-        drawer.circle(x, y, 15f, 2f)
-        drawer.setColor(Color.ORANGE)
-        drawer.line(x - 10f, y, x + 10f, y, 1f)
-        drawer.line(x, y - 10f, x, y + 10f, 1f)
+    private fun drawDrone(x: Float, y: Float, rotation: Float) {
+        drawer.setColor(Color.GOLD)
+        drawer.circle(x, y, 6f, 1.5f)
+        val cos = MathUtils.cos(rotation)
+        val sin = MathUtils.sin(rotation)
+        drawer.line(x, y, x + 8f * cos, y + 8f * sin, 1f)
+    }
+
+    private fun drawProjectile(x: Float, y: Float, rotation: Float, tier: Int) {
+        when (tier) {
+            1 -> {
+                drawer.setColor(Color.YELLOW)
+                val length = 8f
+                val cos = MathUtils.cos(rotation)
+                val sin = MathUtils.sin(rotation)
+                drawer.line(x, y, x + length * cos, y + length * sin, 1.5f)
+            }
+            2 -> {
+                drawer.setColor(Color.VIOLET)
+                val length = 12f
+                val cos = MathUtils.cos(rotation)
+                val sin = MathUtils.sin(rotation)
+                drawer.line(x, y, x + length * cos, y + length * sin, 3f)
+            }
+            3 -> {
+                drawer.setColor(Color.GOLD)
+                val length = 10f
+                val cos = MathUtils.cos(rotation)
+                val sin = MathUtils.sin(rotation)
+                drawer.filledCircle(x, y, 3f)
+                drawer.line(x, y, x + length * cos, y + length * sin, 2f)
+            }
+            4 -> {
+                drawer.setColor(Color.ORANGE)
+                drawer.filledCircle(x, y, 4f)
+                drawer.setColor(Color.WHITE)
+                drawer.circle(x, y, 6f, 1f)
+            }
+            else -> {
+                drawer.setColor(Color.WHITE)
+                val length = 8f
+                val cos = MathUtils.cos(rotation)
+                val sin = MathUtils.sin(rotation)
+                drawer.line(x, y, x + length * cos, y + length * sin, 1.5f)
+            }
+        }
+    }
+
+    private fun drawEnemy(x: Float, y: Float, type: String) {
+        when (type) {
+            "Reaper" -> {
+                drawer.setColor(Color.PURPLE)
+                drawer.circle(x, y, 18f, 3f)
+                drawer.setColor(Color.RED)
+                drawer.circle(x, y, 10f, 2f)
+            }
+            "Phantom" -> {
+                drawer.setColor(Color.TEAL)
+                drawer.rectangle(x-10f, y-10f, 20f, 20f, 2f)
+                drawer.setColor(Color.RED)
+                drawer.filledCircle(x, y, 4f)
+            }
+            else -> {
+                drawer.setColor(Color.RED)
+                drawer.circle(x, y, 15f, 2f)
+                drawer.setColor(Color.ORANGE)
+                drawer.line(x - 10f, y, x + 10f, y, 1f)
+                drawer.line(x, y - 10f, x, y + 10f, 1f)
+            }
+        }
     }
 
     private fun drawEssence(x: Float, y: Float) {
@@ -416,6 +656,19 @@ class RenderSystem(
         drawer.filledCircle(x, y, pulse)
         drawer.setColor(Color.WHITE)
         drawer.circle(x, y, pulse, 1f)
+    }
+
+    private fun drawStation(x: Float, y: Float) {
+        drawer.setColor(Color.CYAN)
+        drawer.circle(x, y, 150f, 4f)
+        drawer.setColor(Color.DARK_GRAY)
+        drawer.filledRectangle(x - 60f, y - 60f, 120f, 120f)
+        drawer.setColor(Color.WHITE)
+        drawer.rectangle(x - 60f, y - 60f, 120f, 120f, 2f)
+
+        drawer.setColor(Color.CYAN)
+        drawer.line(x - 60f, y, x + 60f, y, 1f)
+        drawer.line(x, y - 60f, x, y + 60f, 1f)
     }
 
     private fun drawDetectedObject(x: Float, y: Float) {
@@ -474,6 +727,8 @@ class RadarRenderSystem(
                     drawer.setColor(Color.RED)
                 } else if (target.has(EssenceComponent)) {
                     drawer.setColor(Color.CYAN)
+                } else if (target.has(StationComponent)) {
+                    drawer.setColor(Color.CYAN)
                 } else {
                     drawer.setColor(Color.WHITE)
                 }
@@ -515,6 +770,92 @@ class HUDSystem(
 
         drawer.setColor(Color.WHITE)
         drawer.rectangle(x, y, barWidth, barHeight, 1f)
+    }
+}
+
+class StationSystem : IteratingSystem(family { all(PlayerComponent, PositionComponent, DockingComponent) }) {
+    private val stationFamily by lazy { world.family { all(StationComponent, PositionComponent) } }
+
+    override fun onTickEntity(entity: Entity) {
+        val playerPos = entity[PositionComponent].pos
+        val docking = entity[DockingComponent]
+
+        var nearest: Entity? = null
+        var minDistSq = Float.MAX_VALUE
+
+        stationFamily.forEach { station ->
+            val sPos = station[PositionComponent].pos
+            val d2 = playerPos.dst2(sPos)
+            if (d2 < minDistSq) {
+                minDistSq = d2
+                nearest = station
+            }
+        }
+
+        docking.nearestStation = nearest
+        docking.proximity = if (nearest != null) Math.sqrt(minDistSq.toDouble()).toFloat() else Float.MAX_VALUE
+
+        if (docking.proximity < 100f) {
+            docking.isDocked = true
+            entity[VelocityComponent].v.set(0f, 0f)
+        } else {
+            docking.isDocked = false
+        }
+    }
+}
+
+class ApertureSystem(
+    private val batch: SpriteBatch,
+    private val drawer: ShapeDrawer,
+    private val uiViewport: Viewport
+) : IteratingSystem(family { all(PlayerComponent, DockingComponent, ApertureComponent) }) {
+
+    override fun onTick() {
+        batch.use(uiViewport.camera.combined) {
+            super.onTick()
+        }
+    }
+
+    override fun onTickEntity(entity: Entity) {
+        val docking = entity[DockingComponent]
+        val aperture = entity[ApertureComponent]
+
+        if (docking.isDocked) {
+            if (aperture.state == ApertureComponent.State.CLOSED) aperture.state = ApertureComponent.State.OPENING
+        } else {
+            if (aperture.state == ApertureComponent.State.OPEN) aperture.state = ApertureComponent.State.CLOSING
+        }
+
+        val speed = 2f
+        when (aperture.state) {
+            ApertureComponent.State.OPENING -> {
+                aperture.openProgress += speed * deltaTime
+                if (aperture.openProgress >= 1f) {
+                    aperture.openProgress = 1f
+                    aperture.state = ApertureComponent.State.OPEN
+                }
+            }
+            ApertureComponent.State.CLOSING -> {
+                aperture.openProgress -= speed * deltaTime
+                if (aperture.openProgress <= 0f) {
+                    aperture.openProgress = 0f
+                    aperture.state = ApertureComponent.State.CLOSED
+                }
+            }
+            else -> {}
+        }
+
+        if (aperture.openProgress > 0f) {
+            val barHeight = (uiViewport.worldHeight / 2f) * (1f - aperture.openProgress)
+            drawer.setColor(0f, 0f, 0f, 0.8f)
+
+            drawer.filledRectangle(0f, uiViewport.worldHeight - barHeight, uiViewport.worldWidth, barHeight)
+            drawer.filledRectangle(0f, 0f, uiViewport.worldWidth, barHeight)
+
+            drawer.setColor(Color.CYAN)
+            drawer.line(0f, uiViewport.worldHeight - barHeight, uiViewport.worldWidth, uiViewport.worldHeight - barHeight, 2f)
+            drawer.line(0f, barHeight, uiViewport.worldWidth, barHeight, 2f)
+        }
     }
 }
 

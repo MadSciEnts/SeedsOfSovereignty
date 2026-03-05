@@ -4,6 +4,7 @@ import com.github.quillraven.fleks.Component
 import com.github.quillraven.fleks.ComponentType
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.math.MathUtils
+import com.github.quillraven.fleks.Entity
 
 // The physical location in the infinite void
 data class PositionComponent(val pos: Vector2 = Vector2()) : Component<PositionComponent> {
@@ -35,7 +36,7 @@ class PlayerComponent : Component<PlayerComponent> {
 
 // Weapon state for an entity
 data class WeaponComponent(
-    var fireRate: Float = 1.0f, // Delay between shots (combined)
+    var fireRate: Float = 1.0f,
     var cooldown: Float = 0f,
     var isFiring: Boolean = false,
     var barrels: Int = 1,
@@ -45,13 +46,16 @@ data class WeaponComponent(
     companion object : ComponentType<WeaponComponent>()
 }
 
-// Marker for projectiles
-class ProjectileComponent : Component<ProjectileComponent> {
+// Marker for projectiles with tier and damage info
+data class ProjectileComponent(
+    var tier: Int = 1,
+    var damage: Float = 10f
+) : Component<ProjectileComponent> {
     override fun type() = ProjectileComponent
     companion object : ComponentType<ProjectileComponent>()
 }
 
-// Entity lifespan (for bullets, effects, etc)
+// Entity lifespan
 data class LifeSpanComponent(
     var remaining: Float = 2f
 ) : Component<LifeSpanComponent> {
@@ -59,7 +63,7 @@ data class LifeSpanComponent(
     companion object : ComponentType<LifeSpanComponent>()
 }
 
-// Sensor radius for finding objects in the void
+// Sensor radius
 data class SensorComponent(
     var radius: Float = 400f
 ) : Component<SensorComponent> {
@@ -67,13 +71,13 @@ data class SensorComponent(
     companion object : ComponentType<SensorComponent>()
 }
 
-// Marker for entities that are currently visible/detected
+// Visibility marker
 class VisibleComponent : Component<VisibleComponent> {
     override fun type() = VisibleComponent
     companion object : ComponentType<VisibleComponent>()
 }
 
-// Marker for enemy entities
+// Enemy marker
 data class EnemyComponent(
     var health: Float = 10f,
     val type: String = "Swarm"
@@ -91,13 +95,52 @@ data class EssenceComponent(
     companion object : ComponentType<EssenceComponent>()
 }
 
-// Tracks evolution progress for the player
+// Evolution progress
 data class EvolutionComponent(
     var currentTier: Int = 1,
-    var subTier: Int = 1, // 1=a, 2=b, 3=c, 4=d
+    var subTier: Int = 1,
     var essenceCollected: Int = 0,
-    var essenceRequired: Int = 5 // Reduced for faster testing of sub-tiers
+    var essenceRequired: Int = 5
 ) : Component<EvolutionComponent> {
     override fun type() = EvolutionComponent
     companion object : ComponentType<EvolutionComponent>()
+}
+
+// Player drones
+data class DroneComponent(
+    val owner: Entity,
+    var orbitAngle: Float = 0f,
+    var orbitRadius: Float = 50f,
+    var orbitSpeed: Float = 2f
+) : Component<DroneComponent> {
+    override fun type() = DroneComponent
+    companion object : ComponentType<DroneComponent>()
+}
+
+// Station/Docking
+data class StationComponent(
+    val name: String = "Outpost",
+    val radius: Float = 150f
+) : Component<StationComponent> {
+    override fun type() = StationComponent
+    companion object : ComponentType<StationComponent>()
+}
+
+data class DockingComponent(
+    var isDocked: Boolean = false,
+    var nearestStation: Entity? = null,
+    var proximity: Float = 0f
+) : Component<DockingComponent> {
+    override fun type() = DockingComponent
+    companion object : ComponentType<DockingComponent>()
+}
+
+// Handles the "Aperture" opening animation for UI
+data class ApertureComponent(
+    var openProgress: Float = 0f, // 0 to 1
+    var state: State = State.CLOSED
+) : Component<ApertureComponent> {
+    enum class State { CLOSED, OPENING, OPEN, CLOSING }
+    override fun type() = ApertureComponent
+    companion object : ComponentType<ApertureComponent>()
 }

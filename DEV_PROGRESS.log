@@ -1,16 +1,18 @@
 # DEVELOPMENT PROGRESS LOG
 
-## Current Milestone: Tier 1 - Pilot Foundation
+## Current Milestone: Tier 4 - The Sentinel & Station Docking
 - [x] GDX-Liftoff Setup
 - [x] Knowledge Base Created (25 files)
-- [x] Tier 1 Pilot Movement System (WASD + Joystick)
-- [x] Procedural Render System (ShapeDrawer Ship)
-- [x] Procedural Starfield System (Parallax + UV Shift)
-- [x] Tier 1 Kinetic Weaponry (Firing Logic + Lifespan)
-- [ ] Sensor Radius / Fog of War (Next)
-- [ ] Procedural Enemy Spawning (Pending)
+- [x] Tier 1 Pilot Movement System
+- [x] Procedural Starfield System
+- [x] Tier 1 Sub-Tier Weapons (1a-1d)
+- [x] Major Tier 2 Evolution (Violet Interceptor)
+- [x] Major Tier 3 Evolution (Drone Carrier + Swarm AI)
+- [x] Tier 4 Twin-Stick Transition (Independent Aiming)
+- [ ] Aperture Docking UI (In Progress)
+- [ ] Procedural Space Stations (Refinement)
 
 ## Current Global Stats
-- **Active Tier:** 1/48
+- **Active Tier:** 4/48
 - **Active Epoch:** 1/4
-- **Build Version:** 0.0.2 (Pre-Alpha)
+- **Build Version:** 0.0.4 (Pre-Alpha)
