@@ -33,13 +33,15 @@ class RenderSystem(
                 val angleRad = if (entity.has(OrientationComponent)) entity[OrientationComponent].angleRad else MathUtils.PI / 2f
                 val evo = if (entity.has(EvolutionComponent)) entity[EvolutionComponent] else null
 
-                if (evo?.currentTier == 5 && entity.has(ShieldComponent)) {
+                if (evo != null && evo.currentTier >= 5 && entity.has(ShieldComponent)) {
                     val shield = entity[ShieldComponent]
                     if (shield.active && shield.current > 0) {
-                        drawer.setColor(0f, 0.8f, 1f, 0.3f)
-                        drawer.filledCircle(pos.x, pos.y, 35f)
-                        drawer.setColor(Color.CYAN)
-                        drawer.circle(pos.x, pos.y, 35f, 2f)
+                        val shieldColor = if (evo.currentTier == 8) Color.SLATE else Color.CYAN
+                        drawer.setColor(shieldColor.r, shieldColor.g, shieldColor.b, 0.2f)
+                        val shieldSize = if (evo.currentTier == 8) 90f else 35f
+                        drawer.filledCircle(pos.x, pos.y, shieldSize)
+                        drawer.setColor(shieldColor)
+                        drawer.circle(pos.x, pos.y, shieldSize, 2f)
                     }
                 }
 
@@ -76,14 +78,12 @@ class RenderSystem(
             4 -> 30f
             5 -> 35f
             6 -> 45f
-            7 -> 30f // Wraith is sleeker
+            7 -> 30f
+            8 -> 80f // Increased size for Dreadnought
             else -> 16f
         }
         val cos = MathUtils.cos(rotation)
         val sin = MathUtils.sin(rotation)
-
-        val x1 = x + size * cos
-        val y1 = y + size * sin
 
         val color = when(tier) {
             1 -> Color.CYAN
@@ -93,29 +93,75 @@ class RenderSystem(
             5 -> Color.CHARTREUSE
             6 -> Color.SKY
             7 -> Color.PURPLE
+            8 -> Color.SLATE
             else -> Color.CYAN
         }
         drawer.setColor(color)
 
         when (tier) {
+            8 -> {
+                // Dreadnought: Stable vertex-based industrial chassis
+                val halfL = size * 0.6f
+                val halfW = size * 0.4f
+
+                // Corners in local space
+                val corners = arrayOf(
+                    Vector2(-halfL, -halfW), Vector2(halfL * 0.8f, -halfW),
+                    Vector2(halfL, -halfW * 0.5f), Vector2(halfL, halfW * 0.5f),
+                    Vector2(halfL * 0.8f, halfW), Vector2(-halfL, halfW)
+                )
+
+                // Rotate and draw perimeter
+                for (i in corners.indices) {
+                    val c1 = corners[i]
+                    val c2 = corners[(i + 1) % corners.size]
+                    val x1 = x + c1.x * cos - c1.y * sin
+                    val y1 = y + c1.x * sin + c1.y * cos
+                    val x2 = x + c2.x * cos - c2.y * sin
+                    val y2 = y + c2.x * sin + c2.y * cos
+                    drawer.line(x1, y1, x2, y2, 4f)
+                }
+
+                // Armor plates
+                drawer.setColor(Color.DARK_GRAY)
+                val plateX = x - (halfL * 0.3f) * cos
+                val plateY = y - (halfL * 0.3f) * sin
+                drawer.line(plateX - halfW * sin, plateY + halfW * cos, plateX + halfW * sin, plateY - halfW * cos, 2f)
+
+                // Triple Batteries
+                drawer.setColor(color)
+                val barrelL = 25f
+                val spacing = 20f
+                val numBarrels = when(subTier) {
+                    in 1..2 -> 1
+                    3 -> 2
+                    else -> 3
+                }
+
+                for (i in 0 until numBarrels) {
+                    val offset = (i - (numBarrels - 1) * 0.5f) * spacing
+                    val bx = x + (halfL * 0.8f) * cos - offset * sin
+                    val by = y + (halfL * 0.8f) * sin + offset * cos
+                    drawer.line(bx, by, bx + barrelL * cos, by + barrelL * sin, 8f)
+                }
+            }
             6 -> {
+                val x1 = x + size * cos
+                val y1 = y + size * sin
                 drawer.filledCircle(x, y, size * 0.4f)
                 drawer.circle(x, y, size * 0.7f, 3f)
-
                 val wingSize = size * 1.2f
                 val wingAngle = 2.1f
                 val wx1 = x + wingSize * MathUtils.cos(rotation + wingAngle)
                 val wy1 = y + wingSize * MathUtils.sin(rotation + wingAngle)
                 val wx2 = x + wingSize * MathUtils.cos(rotation - wingAngle)
                 val wy2 = y + wingSize * MathUtils.sin(rotation - wingAngle)
-
                 drawer.line(x1, y1, wx1, wy1, 4f)
                 drawer.line(x1, y1, wx2, wy2, 4f)
                 drawer.line(wx1, wy1, x - size * 0.5f * cos, y - size * 0.5f * sin, 2f)
                 drawer.line(wx2, wy2, x - size * 0.5f * cos, y - size * 0.5f * sin, 2f)
             }
             7 -> {
-                // Wraith: Sleek, needle-like
                 val tipX = x + size * 1.5f * cos
                 val tipY = y + size * 1.5f * sin
                 val wingAngle = 2.5f
@@ -123,17 +169,16 @@ class RenderSystem(
                 val wy1 = y + size * 0.8f * MathUtils.sin(rotation + wingAngle)
                 val wx2 = x + size * 0.8f * MathUtils.cos(rotation - wingAngle)
                 val wy2 = y + size * 0.8f * MathUtils.sin(rotation - wingAngle)
-
                 drawer.line(tipX, tipY, wx1, wy1, 2f)
                 drawer.line(tipX, tipY, wx2, wy2, 2f)
                 drawer.line(wx1, wy1, wx2, wy2, 1f)
-
-                // Pulsing core
                 val alpha = 0.5f + 0.5f * MathUtils.sin(Gdx.graphics.frameId.toFloat() * 0.2f)
                 drawer.setColor(color.r, color.g, color.b, alpha)
                 drawer.filledCircle(x, y, 4f)
             }
             else -> {
+                val x1 = x + size * cos
+                val y1 = y + size * sin
                 val angleOffset = if (tier >= 2) 2.2f else 2.4f
                 val x2 = x + size * MathUtils.cos(rotation + angleOffset)
                 val y2 = y + size * MathUtils.sin(rotation + angleOffset)
@@ -155,12 +200,6 @@ class RenderSystem(
             drawer.line(x3, y3, x3 - 10f * cos, y3 - 10f * sin, 3f)
         }
 
-        if (tier >= 3 && tier < 6) {
-            drawer.circle(x, y, size * 0.8f, 1.5f)
-        } else if (tier >= 2 && tier < 6) {
-            drawer.line(x, y, x - size * 0.5f * cos, y - size * 0.5f * sin, 2f)
-        }
-
         drawer.setColor(Color.WHITE)
         drawer.filledCircle(x, y, 3f)
     }
@@ -174,28 +213,21 @@ class RenderSystem(
     }
 
     private fun drawProjectile(x: Float, y: Float, rotation: Float, tier: Int) {
+        val cos = MathUtils.cos(rotation)
+        val sin = MathUtils.sin(rotation)
         when (tier) {
             1 -> {
                 drawer.setColor(Color.YELLOW)
-                val length = 8f
-                val cos = MathUtils.cos(rotation)
-                val sin = MathUtils.sin(rotation)
-                drawer.line(x, y, x + length * cos, y + length * sin, 1.5f)
+                drawer.line(x, y, x + 8f * cos, y + 8f * sin, 1.5f)
             }
             2 -> {
                 drawer.setColor(Color.VIOLET)
-                val length = 12f
-                val cos = MathUtils.cos(rotation)
-                val sin = MathUtils.sin(rotation)
-                drawer.line(x, y, x + length * cos, y + length * sin, 3f)
+                drawer.line(x, y, x + 12f * cos, y + 12f * sin, 3f)
             }
             3 -> {
                 drawer.setColor(Color.GOLD)
-                val length = 10f
-                val cos = MathUtils.cos(rotation)
-                val sin = MathUtils.sin(rotation)
                 drawer.filledCircle(x, y, 3f)
-                drawer.line(x, y, x + length * cos, y + length * sin, 2f)
+                drawer.line(x, y, x + 10f * cos, y + 10f * sin, 2f)
             }
             4 -> {
                 drawer.setColor(Color.ORANGE)
@@ -205,29 +237,37 @@ class RenderSystem(
             }
             5 -> {
                 drawer.setColor(Color.CHARTREUSE)
-                drawer.rectangle(x-4f, y-4f, 8f, 8f, 2f)
+                // Correcting rect centered draw
+                val s = 4f
+                drawer.line(x - s*cos + s*sin, y - s*sin - s*cos, x + s*cos + s*sin, y + s*sin - s*cos, 2f)
+                drawer.line(x + s*cos + s*sin, y + s*sin - s*cos, x + s*cos - s*sin, y + s*sin + s*cos, 2f)
+                drawer.line(x + s*cos - s*sin, y + s*sin + s*cos, x - s*cos - s*sin, y - s*sin + s*cos, 2f)
+                drawer.line(x - s*cos - s*sin, y - s*sin + s*cos, x - s*cos + s*sin, y - s*sin - s*cos, 2f)
             }
             6 -> {
                 drawer.setColor(Color.SKY)
-                drawer.filledRectangle(x - 4f, y - 4f, 8f, 8f, rotation * MathUtils.radDeg)
-                drawer.setColor(Color.WHITE)
-                drawer.rectangle(x - 6f, y - 6f, 12f, 12f, 1f, rotation * MathUtils.radDeg)
+                val s = 5f
+                drawer.line(x - s*cos + s*sin, y - s*sin - s*cos, x + s*cos + s*sin, y + s*sin - s*cos, 3f)
+                drawer.line(x + s*cos + s*sin, y + s*sin - s*cos, x + s*cos - s*sin, y + s*sin + s*cos, 3f)
+                drawer.line(x + s*cos - s*sin, y + s*sin + s*cos, x - s*cos - s*sin, y - s*sin + s*cos, 3f)
+                drawer.line(x - s*cos - s*sin, y - s*sin + s*cos, x - s*cos + s*sin, y - s*sin - s*cos, 3f)
             }
             7 -> {
-                // Wraith: Purple Phase-Bolt
                 drawer.setColor(Color.PURPLE)
-                val cos = MathUtils.cos(rotation)
-                val sin = MathUtils.sin(rotation)
                 drawer.line(x, y, x + 20f * cos, y + 20f * sin, 2.5f)
                 drawer.setColor(Color.WHITE)
                 drawer.filledCircle(x, y, 3f)
             }
+            8 -> {
+                // Dreadnought: Heavy Kinetic Shells - Scaling up
+                drawer.setColor(Color.LIGHT_GRAY)
+                drawer.line(x, y, x + 25f * cos, y + 25f * sin, 8f) // Massive width
+                drawer.setColor(Color.WHITE)
+                drawer.line(x + 15f * cos, y + 15f * sin, x + 25f * cos, y + 25f * sin, 4f) // Glowing tip
+            }
             else -> {
                 drawer.setColor(Color.WHITE)
-                val length = 8f
-                val cos = MathUtils.cos(rotation)
-                val sin = MathUtils.sin(rotation)
-                drawer.line(x, y, x + length * cos, y + length * sin, 1.5f)
+                drawer.line(x, y, x + 8f * cos, y + 8f * sin, 1.5f)
             }
         }
     }

@@ -137,27 +137,56 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
                         5 -> {
                             evo.currentTier = 7
                             evo.subTier = 1
-                            // Wraith: Stealth & Phasing
                             vel.acceleration += 100f
                             weapon.fireRate = 0.2f
-                            weapon.barrels = 1 // Precise heavy beam (simulated with large projectile)
+                            weapon.barrels = 1
                         }
                     }
                 }
                 7 -> {
-                    // Wraith Progression
                     when (evo.subTier) {
                         2 -> { weapon.fireRate = 0.15f }
-                        3 -> {
-                            // Unlocks Phasing (Visual effect for now)
-                            vel.acceleration += 200f
-                        }
+                        3 -> { vel.acceleration += 200f }
                         4 -> { weapon.fireRate = 0.1f }
                         5 -> {
                             evo.currentTier = 8
+                            evo.subTier = 1 // 8a: Proto
+                            weapon.barrels = 1
+                            weapon.fireRate = 0.4f // Heavy but slow
+                            vel.acceleration = 80f // Heavy chassis penalty
+                            if (entity.has(HealthComponent)) {
+                                val health = entity[HealthComponent]
+                                health.max = 1000f // Massively increased durability
+                                health.current = health.max
+                            }
+                            if (entity.has(ShieldComponent)) {
+                                val shield = entity[ShieldComponent]
+                                shield.max = 800f
+                                shield.current = shield.max
+                                shield.rechargeRate = 20f
+                            }
+                        }
+                    }
+                }
+                8 -> {
+                    when (evo.subTier) {
+                        2 -> { // 8b: Refined
+                            weapon.fireRate = 0.3f
+                            if (entity.has(ShieldComponent)) entity[ShieldComponent].max += 200f
+                        }
+                        3 -> { // 8c: Advanced
+                            weapon.barrels = 2 // Twin Heavy
+                            weapon.fireRate = 0.25f
+                        }
+                        4 -> { // 8d: Apex
+                            weapon.barrels = 3 // Triple Heavy Battery
+                            weapon.fireRate = 0.2f
+                            if (entity.has(ShieldComponent)) entity[ShieldComponent].rechargeRate += 10f
+                        }
+                        5 -> {
+                            evo.currentTier = 9
                             evo.subTier = 1
-                            weapon.barrels = 2
-                            // Next major evolution transition
+                            vel.acceleration += 20f
                         }
                     }
                 }
