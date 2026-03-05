@@ -71,12 +71,13 @@ class CameraSystem(private val camera: OrthographicCamera) : IteratingSystem(fam
         val vel = entity[VelocityComponent].v
         val evo = entity[EvolutionComponent]
 
-        // Adjusted size logic to sync with the new Dreadnought scale
         val currentSize = ProceduralShipDrawer.getShipSize(evo.currentTier, evo.subTier)
 
-        // Stabilized Camera Curve for Large Capital Ships:
-        // Divisor increased to 45f to ensure the hull takes up significant but manageable screen space.
-        val baseZoom = 1.0f + (currentSize - 8f) / 45f
+        // Heavily Dampened Camera Curve:
+        // Divisor increased to 85f to ensure the ship physically grows in screen-space as it evolves.
+        // T1a (8) -> 1.0f zoom
+        // T8a (105) -> 1.0 + (97 / 85) = ~2.14f zoom
+        val baseZoom = 1.0f + (currentSize - 8f) / 85f
 
         targetPos.set(pos.x + (vel.x * 0.5f), pos.y + (vel.y * 0.5f))
 

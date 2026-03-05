@@ -1,5 +1,6 @@
 package com.srw.seedsofsovereignty.system
 
+import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
@@ -21,6 +22,7 @@ class RadarRenderSystem(
 
     private val targetsFamily by lazy { world.family { all(PositionComponent, VisibleComponent).none(PlayerComponent, ProjectileComponent) } }
     private var timeCount = 0f
+    private val tempVec = Vector2()
 
     override fun onTick() {
         timeCount += deltaTime
@@ -35,43 +37,61 @@ class RadarRenderSystem(
         val sensor = entity[SensorComponent]
 
         val radarRadius = 120f
-        val padding = 40f
-        val centerX = uiViewport.worldWidth - radarRadius - padding
-        val centerY = uiViewport.worldHeight - radarRadius - padding
+        val centerX = uiViewport.worldWidth - radarRadius - 40f
+        val centerY = uiViewport.worldHeight - radarRadius - 40f
 
-        drawer.setColor(0f, 0.6f, 0f, 0.3f)
+        // Draw Radar Background (Tactical Green)
+        drawer.setColor(0f, 0.15f, 0f, 0.5f)
         drawer.filledCircle(centerX, centerY, radarRadius)
         drawer.setColor(Color.GREEN)
-        drawer.circle(centerX, centerY, radarRadius, 3f)
+        drawer.circle(centerX, centerY, radarRadius, 2f)
 
-        val scanAngle = (timeCount * 3f) % MathUtils.PI2
-        drawer.setColor(Color.LIME)
+        // Draw Scan Sweep
+        val scanAngle = (timeCount * 2.5f) % MathUtils.PI2
+        drawer.setColor(Color.LIME.r, Color.LIME.g, Color.LIME.b, 0.4f)
         drawer.line(centerX, centerY, centerX + MathUtils.cos(scanAngle) * radarRadius, centerY + MathUtils.sin(scanAngle) * radarRadius, 2f)
 
         targetsFamily.forEach { target ->
             val targetPos = target[PositionComponent].pos
-            val relativePos = Vector2(targetPos).sub(playerPos)
+            tempVec.set(targetPos).sub(playerPos)
 
             val scale = radarRadius / sensor.radius
-            val rx = centerX + relativePos.x * scale
-            val ry = centerY + relativePos.y * scale
+            val rx = centerX + tempVec.x * scale
+            val ry = centerY + tempVec.y * scale
 
-            if (Vector2.dst(centerX, centerY, rx, ry) <= radarRadius) {
-                if (target.has(EnemyComponent)) {
-                    drawer.setColor(Color.RED)
-                } else if (target.has(EssenceComponent)) {
-                    drawer.setColor(Color.CYAN)
-                } else if (target.has(StationComponent)) {
-                    drawer.setColor(Color.CYAN)
-                } else {
-                    drawer.setColor(Color.WHITE)
+            val distFromCenter = Vector2.dst(centerX, centerY, rx, ry)
+
+            if (distFromCenter <= radarRadius) {
+                // BLIP LOGIC
+                when {
+                    target.has(StationComponent) -> {
+                        drawer.setColor(Color.CYAN)
+                        drawer.rectangle(rx - 4f, ry - 4f, 8f, 8f, 2f)
+                    }
+                    target.has(EnemyComponent) -> {
+                        // Flickering red dot for hostiles
+                        val flicker = 0.5f + 0.5f * MathUtils.sin(timeCount * 15f)
+                        drawer.setColor(1f, 0f, 0f, flicker)
+                        drawer.filledCircle(rx, ry, 3f)
+                    }
+                    target.has(EssenceComponent) -> {
+                        drawer.setColor(Color.GOLD)
+                        drawer.filledCircle(rx, ry, 2f)
+                    }
+                    else -> {
+                        drawer.setColor(Color.WHITE)
+                        drawer.filledCircle(rx, ry, 2f)
+                    }
                 }
-                drawer.filledCircle(rx, ry, 4f)
             }
         }
 
+        // Player Indicator (White Chevron)
+        val playerAngle = entity[OrientationComponent].angleRad
         drawer.setColor(Color.WHITE)
-        drawer.filledCircle(centerX, centerY, 5f)
+        val pSize = 6f
+        drawer.line(centerX, centerY, centerX + MathUtils.cos(playerAngle) * pSize, centerY + MathUtils.sin(playerAngle) * pSize, 2f)
+        drawer.filledCircle(centerX, centerY, 3f)
     }
 }
 
@@ -81,7 +101,7 @@ class HUDSystem(
     private val uiViewport: Viewport
 ) : IteratingSystem(family { all(PlayerComponent).any(EvolutionComponent, HealthComponent, ShieldComponent) }) {
 
-    private val font = BitmapFont() // Default font for tier label
+    private val font = BitmapFont()
 
     override fun onTick() {
         batch.use(uiViewport.camera.combined) {
@@ -90,71 +110,50 @@ class HUDSystem(
     }
 
     override fun onTickEntity(entity: Entity) {
-        // 1. Essence Progress Bar (Bottom Center)
         if (entity.has(EvolutionComponent)) {
             val evo = entity[EvolutionComponent]
             val barWidth = 400f
-            val barHeight = 10f
             val x = (uiViewport.worldWidth - barWidth) / 2f
             val y = 30f
 
             drawer.setColor(Color.DARK_GRAY)
-            drawer.filledRectangle(x, y, barWidth, barHeight)
-
+            drawer.filledRectangle(x, y, barWidth, 10f)
             val progress = (evo.essenceCollected.toFloat() / evo.essenceRequired.toFloat()).coerceIn(0f, 1f)
             drawer.setColor(Color.CYAN)
-            drawer.filledRectangle(x, y, barWidth * progress, barHeight)
-
+            drawer.filledRectangle(x, y, barWidth * progress, 10f)
             drawer.setColor(Color.WHITE)
-            drawer.rectangle(x, y, barWidth, barHeight, 1f)
+            drawer.rectangle(x, y, barWidth, 10f, 1f)
 
-            // TIER LABEL DISPLAY
             val tierName = when(evo.currentTier) {
-                1 -> "PILOT"
-                2 -> "INTERCEPTOR"
-                3 -> "CARRIER"
-                4 -> "SENTINEL"
-                5 -> "BULWARK"
-                6 -> "SENTINEL+"
-                7 -> "WRAITH"
-                else -> "UNKNOWN"
+                1 -> "PILOT"; 2 -> "INTERCEPTOR"; 3 -> "CARRIER"; 4 -> "SENTINEL"
+                5 -> "BULWARK"; 6 -> "SENTINEL+"; 7 -> "WRAITH"; 8 -> "DREADNOUGHT"
+                else -> "CAPITAL"
             }
             font.color = Color.CYAN
             font.draw(batch, "TIER ${evo.currentTier}: $tierName [Sub-${evo.subTier}]", x, y + 35f)
         }
 
         val barWidth = 250f
-        val barHeight = 14f
         val startX = 30f
         var currentY = uiViewport.worldHeight - 40f
 
         if (entity.has(HealthComponent)) {
             val health = entity[HealthComponent]
-            val hProgress = (health.current / health.max).coerceIn(0f, 1f)
-            drawer.setColor(0.3f, 0f, 0f, 0.6f)
-            drawer.filledRectangle(startX, currentY, barWidth, barHeight)
-            drawer.setColor(Color.RED)
-            drawer.filledRectangle(startX, currentY, barWidth * hProgress, barHeight)
-            drawer.setColor(Color.WHITE)
-            drawer.rectangle(startX, currentY, barWidth, barHeight, 1.5f)
-            currentY -= (barHeight + 10f)
+            drawer.setColor(0.3f, 0f, 0f, 0.6f); drawer.filledRectangle(startX, currentY, barWidth, 14f)
+            drawer.setColor(Color.RED); drawer.filledRectangle(startX, currentY, barWidth * (health.current / health.max).coerceIn(0f, 1f), 14f)
+            drawer.setColor(Color.WHITE); drawer.rectangle(startX, currentY, barWidth, 14f, 1.5f)
+            currentY -= 24f
         }
 
         if (entity.has(ShieldComponent)) {
             val shield = entity[ShieldComponent]
-            val sProgress = (shield.current / shield.max).coerceIn(0f, 1f)
-            drawer.setColor(0f, 0.2f, 0.3f, 0.6f)
-            drawer.filledRectangle(startX, currentY, barWidth, barHeight)
-            drawer.setColor(Color.CYAN)
-            drawer.filledRectangle(startX, currentY, barWidth * sProgress, barHeight)
-            drawer.setColor(Color.WHITE)
-            drawer.rectangle(startX, currentY, barWidth, barHeight, 1.5f)
+            drawer.setColor(0f, 0.2f, 0.3f, 0.6f); drawer.filledRectangle(startX, currentY, barWidth, 14f)
+            drawer.setColor(Color.CYAN); drawer.filledRectangle(startX, currentY, barWidth * (shield.current / shield.max).coerceIn(0f, 1f), 14f)
+            drawer.setColor(Color.WHITE); drawer.rectangle(startX, currentY, barWidth, 14f, 1.5f)
         }
     }
 
-    override fun onDispose() {
-        font.dispose()
-    }
+    override fun onDispose() { font.dispose() }
 }
 
 class ApertureSystem(
@@ -183,23 +182,17 @@ class ApertureSystem(
         when (aperture.state) {
             ApertureComponent.State.OPENING -> {
                 aperture.openProgress += speed * deltaTime
-                if (aperture.openProgress >= 1f) {
-                    aperture.openProgress = 1f
-                    aperture.state = ApertureComponent.State.OPEN
-                }
+                if (aperture.openProgress >= 1f) { aperture.openProgress = 1f; aperture.state = ApertureComponent.State.OPEN }
             }
             ApertureComponent.State.CLOSING -> {
                 aperture.openProgress -= speed * deltaTime
-                if (aperture.openProgress <= 0f) {
-                    aperture.openProgress = 0f
-                    aperture.state = ApertureComponent.State.CLOSED
-                }
+                if (aperture.openProgress <= 0f) { aperture.openProgress = 0f; aperture.state = ApertureComponent.State.CLOSED }
             }
             else -> {}
         }
 
         if (aperture.openProgress > 0f) {
-            val barHeight = (uiViewport.worldWidth / 2f) * (1f - aperture.openProgress) // Typo fix: should be worldHeight
+            val barHeight = (uiViewport.worldHeight / 2f) * (1f - aperture.openProgress)
             drawer.setColor(0f, 0f, 0f, 0.8f)
             drawer.filledRectangle(0f, uiViewport.worldHeight - barHeight, uiViewport.worldWidth, barHeight)
             drawer.filledRectangle(0f, 0f, uiViewport.worldWidth, barHeight)

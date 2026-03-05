@@ -1,25 +1,26 @@
 # ARCHITECTURAL SYNCHRONIZATION LOG
 
 ## Current Refactoring State
-- [x] **Components Modularized:** Verified domain split (Core, Combat, Evolution, Interaction, Health).
-- [x] **Systems Modularized:** Verified domain split (Movement, Combat, Evolution, Interaction, World, Render, UI, Vitals).
+- [x] **Components Modularized:** Domain split complete (Core, Combat, Evolution, Interaction, Health, Drone).
+- [x] **Systems Modularized:** Domain split complete (Movement, Combat, Evolution, Interaction, World, Render, UI, Vitals, Drone).
 - [x] **Modular Rendering:** Extracted ship drawing to `ProceduralShipDrawer` utility.
 - [x] **Independent Aiming:** Decoupled Hull and Aim vectors.
-- [ ] **Drone Domain Consolidation (IN PROGRESS):**
-    - [ ] Create `DroneComponents.kt` with `DroneLauncherComponent` and `FleetCommandComponent`.
-    - [ ] Create `DroneSystems.kt` to centralize spawning, AI, and redistribution.
-    - [ ] Remove legacy drone logic from `AISystems.kt` and `EvolutionSystems.kt`.
+- [x] **Drone Domain Consolidation:** [SUCCESS]
+    - [x] Created `DroneComponents.kt` (Modular Launchers + Fleet Commands).
+    - [x] Created `DroneSystems.kt` (Regen + Synchronized Formation + AI Modes).
+    - [x] Legacy drone logic purged from AI/Evolution systems.
 
 ## Logic Implementation Status
 - [x] **Tier 8 Evolution:** Dreadnought (8a-8d) scale refined (105u) and speed boosted.
 - [x] **Sequential ROF:** Center-out firing order with cumulative rate-of-fire.
-- [ ] **Station System Transition (PLANNED):**
-    - [ ] Pivot to "Modular Slots".
-    - [ ] Implement "No Inventory" module replacement.
-- [ ] **Minimap/Radar (PLANNED):** Circular UI overlay.
+- [x] **Drone Spacing:** Synchronized global orbit for perfect circular distribution.
+- [x] **Drone Sponge:** Physical collision damage absorption verified.
+- [ ] **Station System Transition (NEXT):**
+    - [ ] Pivot to "Modular Slots" (Refactor Hull Component).
+    - [ ] Implement "No Inventory" module replacement logic.
+- [ ] **Minimap/Radar (NEXT):** Circular UI overlay with frustum tracking.
 
 ## Verification Protocol
-1. Update `TASK_SYNC.log` with planned steps.
-2. Execute code changes across domain files.
-3. Run `gradle core:assemble` to verify build integrity.
-4. List Disk Status in session handover.
+1. **Build Integrity:** Gradle `core:assemble` [PASSED]
+2. **Persistence:** Read-back verified for all domain files.
+3. **Mantra Check:** Files remain < 300 lines.
