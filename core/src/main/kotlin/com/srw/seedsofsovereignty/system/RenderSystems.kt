@@ -38,7 +38,8 @@ class RenderSystem(
                     if (shield.active && shield.current > 0) {
                         val shieldColor = if (evo.currentTier == 8) Color.SLATE else Color.CYAN
                         drawer.setColor(shieldColor.r, shieldColor.g, shieldColor.b, 0.2f)
-                        val shieldSize = if (evo.currentTier == 8) 90f else 35f
+                        val size = getShipSize(evo.currentTier, evo.subTier)
+                        val shieldSize = size * 1.3f
                         drawer.filledCircle(pos.x, pos.y, shieldSize)
                         drawer.setColor(shieldColor)
                         drawer.circle(pos.x, pos.y, shieldSize, 2f)
@@ -70,18 +71,14 @@ class RenderSystem(
         }
     }
 
+    private fun getShipSize(tier: Int, subTier: Int): Float {
+        // T1a = 8. Tier Growth = 7.5. Sub-tier Growth = 1.875
+        val tierBase = 8f + (tier - 1) * 7.5f
+        return tierBase + (subTier - 1) * 1.875f
+    }
+
     private fun drawPlayerShip(x: Float, y: Float, rotation: Float, tier: Int, subTier: Int) {
-        val size = when(tier) {
-            1 -> 16f
-            2 -> 20f
-            3 -> 24f
-            4 -> 30f
-            5 -> 35f
-            6 -> 45f
-            7 -> 30f
-            8 -> 80f // Increased size for Dreadnought
-            else -> 16f
-        }
+        val size = getShipSize(tier, subTier)
         val cos = MathUtils.cos(rotation)
         val sin = MathUtils.sin(rotation)
 
@@ -100,18 +97,13 @@ class RenderSystem(
 
         when (tier) {
             8 -> {
-                // Dreadnought: Stable vertex-based industrial chassis
                 val halfL = size * 0.6f
                 val halfW = size * 0.4f
-
-                // Corners in local space
                 val corners = arrayOf(
                     Vector2(-halfL, -halfW), Vector2(halfL * 0.8f, -halfW),
                     Vector2(halfL, -halfW * 0.5f), Vector2(halfL, halfW * 0.5f),
                     Vector2(halfL * 0.8f, halfW), Vector2(-halfL, halfW)
                 )
-
-                // Rotate and draw perimeter
                 for (i in corners.indices) {
                     val c1 = corners[i]
                     val c2 = corners[(i + 1) % corners.size]
@@ -119,30 +111,21 @@ class RenderSystem(
                     val y1 = y + c1.x * sin + c1.y * cos
                     val x2 = x + c2.x * cos - c2.y * sin
                     val y2 = y + c2.x * sin + c2.y * cos
-                    drawer.line(x1, y1, x2, y2, 4f)
+                    drawer.line(x1, y1, x2, y2, (size / 15f).coerceAtLeast(2f))
                 }
-
-                // Armor plates
                 drawer.setColor(Color.DARK_GRAY)
                 val plateX = x - (halfL * 0.3f) * cos
                 val plateY = y - (halfL * 0.3f) * sin
-                drawer.line(plateX - halfW * sin, plateY + halfW * cos, plateX + halfW * sin, plateY - halfW * cos, 2f)
-
-                // Triple Batteries
+                drawer.line(plateX - halfW * sin, plateY + halfW * cos, plateX + halfW * sin, plateY - halfW * cos, 1.5f)
                 drawer.setColor(color)
-                val barrelL = 25f
-                val spacing = 20f
-                val numBarrels = when(subTier) {
-                    in 1..2 -> 1
-                    3 -> 2
-                    else -> 3
-                }
-
+                val barrelL = size * 0.3f
+                val spacing = size * 0.25f
+                val numBarrels = when(subTier) { in 1..2 -> 1; 3 -> 2; else -> 3 }
                 for (i in 0 until numBarrels) {
                     val offset = (i - (numBarrels - 1) * 0.5f) * spacing
                     val bx = x + (halfL * 0.8f) * cos - offset * sin
                     val by = y + (halfL * 0.8f) * sin + offset * cos
-                    drawer.line(bx, by, bx + barrelL * cos, by + barrelL * sin, 8f)
+                    drawer.line(bx, by, bx + barrelL * cos, by + barrelL * sin, (size / 10f).coerceAtLeast(4f))
                 }
             }
             6 -> {
@@ -156,8 +139,8 @@ class RenderSystem(
                 val wy1 = y + wingSize * MathUtils.sin(rotation + wingAngle)
                 val wx2 = x + wingSize * MathUtils.cos(rotation - wingAngle)
                 val wy2 = y + wingSize * MathUtils.sin(rotation - wingAngle)
-                drawer.line(x1, y1, wx1, wy1, 4f)
-                drawer.line(x1, y1, wx2, wy2, 4f)
+                drawer.line(x1, y1, wx1, wy1, (size/10f).coerceAtLeast(2f))
+                drawer.line(x1, y1, wx2, wy2, (size/10f).coerceAtLeast(2f))
                 drawer.line(wx1, wy1, x - size * 0.5f * cos, y - size * 0.5f * sin, 2f)
                 drawer.line(wx2, wy2, x - size * 0.5f * cos, y - size * 0.5f * sin, 2f)
             }
@@ -174,7 +157,7 @@ class RenderSystem(
                 drawer.line(wx1, wy1, wx2, wy2, 1f)
                 val alpha = 0.5f + 0.5f * MathUtils.sin(Gdx.graphics.frameId.toFloat() * 0.2f)
                 drawer.setColor(color.r, color.g, color.b, alpha)
-                drawer.filledCircle(x, y, 4f)
+                drawer.filledCircle(x, y, size * 0.15f)
             }
             else -> {
                 val x1 = x + size * cos
@@ -189,19 +172,17 @@ class RenderSystem(
                 drawer.line(x3, y3, x1, y1, 2f)
             }
         }
-
         if (tier == 5) {
             val angleOffset = 2.2f
             val x2 = x + size * MathUtils.cos(rotation + angleOffset)
             val y2 = y + size * MathUtils.sin(rotation + angleOffset)
             val x3 = x + size * MathUtils.cos(rotation - angleOffset)
             val y3 = y + size * MathUtils.sin(rotation - angleOffset)
-            drawer.line(x2, y2, x2 - 10f * cos, y2 - 10f * sin, 3f)
-            drawer.line(x3, y3, x3 - 10f * cos, y3 - 10f * sin, 3f)
+            drawer.line(x2, y2, x2 - (size * 0.3f) * cos, y2 - (size * 0.3f) * sin, 3f)
+            drawer.line(x3, y3, x3 - (size * 0.3f) * cos, y3 - (size * 0.3f) * sin, 3f)
         }
-
         drawer.setColor(Color.WHITE)
-        drawer.filledCircle(x, y, 3f)
+        drawer.filledCircle(x, y, (size * 0.1f).coerceAtLeast(1.5f))
     }
 
     private fun drawDrone(x: Float, y: Float, rotation: Float) {
@@ -216,83 +197,33 @@ class RenderSystem(
         val cos = MathUtils.cos(rotation)
         val sin = MathUtils.sin(rotation)
         when (tier) {
-            1 -> {
-                drawer.setColor(Color.YELLOW)
-                drawer.line(x, y, x + 8f * cos, y + 8f * sin, 1.5f)
-            }
-            2 -> {
-                drawer.setColor(Color.VIOLET)
-                drawer.line(x, y, x + 12f * cos, y + 12f * sin, 3f)
-            }
-            3 -> {
-                drawer.setColor(Color.GOLD)
-                drawer.filledCircle(x, y, 3f)
-                drawer.line(x, y, x + 10f * cos, y + 10f * sin, 2f)
-            }
-            4 -> {
-                drawer.setColor(Color.ORANGE)
-                drawer.filledCircle(x, y, 4f)
-                drawer.setColor(Color.WHITE)
-                drawer.circle(x, y, 6f, 1f)
-            }
-            5 -> {
-                drawer.setColor(Color.CHARTREUSE)
-                // Correcting rect centered draw
-                val s = 4f
+            1 -> { drawer.setColor(Color.YELLOW); drawer.line(x, y, x + 8f * cos, y + 8f * sin, 1.5f) }
+            2 -> { drawer.setColor(Color.VIOLET); drawer.line(x, y, x + 12f * cos, y + 12f * sin, 3f) }
+            3 -> { drawer.setColor(Color.GOLD); drawer.filledCircle(x, y, 3f); drawer.line(x, y, x + 10f * cos, y + 10f * sin, 2f) }
+            4 -> { drawer.setColor(Color.ORANGE); drawer.filledCircle(x, y, 4f); drawer.setColor(Color.WHITE); drawer.circle(x, y, 6f, 1f) }
+            5 -> { drawer.setColor(Color.CHARTREUSE); val s = 4f
                 drawer.line(x - s*cos + s*sin, y - s*sin - s*cos, x + s*cos + s*sin, y + s*sin - s*cos, 2f)
                 drawer.line(x + s*cos + s*sin, y + s*sin - s*cos, x + s*cos - s*sin, y + s*sin + s*cos, 2f)
                 drawer.line(x + s*cos - s*sin, y + s*sin + s*cos, x - s*cos - s*sin, y - s*sin + s*cos, 2f)
                 drawer.line(x - s*cos - s*sin, y - s*sin + s*cos, x - s*cos + s*sin, y - s*sin - s*cos, 2f)
             }
-            6 -> {
-                drawer.setColor(Color.SKY)
-                val s = 5f
+            6 -> { drawer.setColor(Color.SKY); val s = 5f
                 drawer.line(x - s*cos + s*sin, y - s*sin - s*cos, x + s*cos + s*sin, y + s*sin - s*cos, 3f)
                 drawer.line(x + s*cos + s*sin, y + s*sin - s*cos, x + s*cos - s*sin, y + s*sin + s*cos, 3f)
                 drawer.line(x + s*cos - s*sin, y + s*sin + s*cos, x - s*cos - s*sin, y - s*sin + s*cos, 3f)
                 drawer.line(x - s*cos - s*sin, y - s*sin + s*cos, x - s*cos + s*sin, y - s*sin - s*cos, 3f)
             }
-            7 -> {
-                drawer.setColor(Color.PURPLE)
-                drawer.line(x, y, x + 20f * cos, y + 20f * sin, 2.5f)
-                drawer.setColor(Color.WHITE)
-                drawer.filledCircle(x, y, 3f)
-            }
-            8 -> {
-                // Dreadnought: Heavy Kinetic Shells - Scaling up
-                drawer.setColor(Color.LIGHT_GRAY)
-                drawer.line(x, y, x + 25f * cos, y + 25f * sin, 8f) // Massive width
-                drawer.setColor(Color.WHITE)
-                drawer.line(x + 15f * cos, y + 15f * sin, x + 25f * cos, y + 25f * sin, 4f) // Glowing tip
-            }
-            else -> {
-                drawer.setColor(Color.WHITE)
-                drawer.line(x, y, x + 8f * cos, y + 8f * sin, 1.5f)
-            }
+            7 -> { drawer.setColor(Color.PURPLE); drawer.line(x, y, x + 20f * cos, y + 20f * sin, 2.5f); drawer.setColor(Color.WHITE); drawer.filledCircle(x, y, 3f) }
+            8 -> { drawer.setColor(Color.LIGHT_GRAY); drawer.line(x, y, x + 25f * cos, y + 25f * sin, 6f); drawer.setColor(Color.WHITE); drawer.line(x + 15f * cos, y + 15f * sin, x + 25f * cos, y + 25f * sin, 3f) }
+            else -> { drawer.setColor(Color.WHITE); drawer.line(x, y, x + 8f * cos, y + 8f * sin, 1.5f) }
         }
     }
 
     private fun drawEnemy(x: Float, y: Float, type: String) {
         when (type) {
-            "Reaper" -> {
-                drawer.setColor(Color.PURPLE)
-                drawer.circle(x, y, 18f, 3f)
-                drawer.setColor(Color.RED)
-                drawer.circle(x, y, 10f, 2f)
-            }
-            "Phantom" -> {
-                drawer.setColor(Color.TEAL)
-                drawer.rectangle(x-10f, y-10f, 20f, 20f, 2f)
-                drawer.setColor(Color.RED)
-                drawer.filledCircle(x, y, 4f)
-            }
-            else -> {
-                drawer.setColor(Color.RED)
-                drawer.circle(x, y, 15f, 2f)
-                drawer.setColor(Color.ORANGE)
-                drawer.line(x - 10f, y, x + 10f, y, 1f)
-                drawer.line(x, y - 10f, x, y + 10f, 1f)
-            }
+            "Reaper" -> { drawer.setColor(Color.PURPLE); drawer.circle(x, y, 18f, 3f); drawer.setColor(Color.RED); drawer.circle(x, y, 10f, 2f) }
+            "Phantom" -> { drawer.setColor(Color.TEAL); drawer.rectangle(x-10f, y-10f, 20f, 20f, 2f); drawer.setColor(Color.RED); drawer.filledCircle(x, y, 4f) }
+            else -> { drawer.setColor(Color.RED); drawer.circle(x, y, 15f, 2f); drawer.setColor(Color.ORANGE); drawer.line(x - 10f, y, x + 10f, y, 1f); drawer.line(x, y - 10f, x, y + 10f, 1f) }
         }
     }
 
@@ -308,34 +239,17 @@ class RenderSystem(
     private fun drawParticle(x: Float, y: Float, part: ParticleComponent, life: Float) {
         val alpha = if (part.fade) life / part.maxLife else 1f
         drawer.setColor(part.color.r, part.color.g, part.color.b, part.color.a * alpha)
-
         when (part.type) {
-            ParticleComponent.Type.SHIELD_RIPPLE -> {
-                val size = part.size * (1f - life/part.maxLife)
-                drawer.circle(x, y, size, 2f)
-            }
-            ParticleComponent.Type.SPARK -> {
-                drawer.filledCircle(x, y, part.size * (life/part.maxLife))
-            }
+            ParticleComponent.Type.SHIELD_RIPPLE -> { val size = part.size * (1f - life/part.maxLife); drawer.circle(x, y, size, 2f) }
+            ParticleComponent.Type.SPARK -> { drawer.filledCircle(x, y, part.size * (life/part.maxLife)) }
         }
     }
 
     private fun drawStation(x: Float, y: Float) {
-        drawer.setColor(Color.CYAN)
-        drawer.circle(x, y, 150f, 4f)
-        drawer.setColor(Color.DARK_GRAY)
-        drawer.filledRectangle(x - 60f, y - 60f, 120f, 120f)
-        drawer.setColor(Color.WHITE)
-        drawer.rectangle(x - 60f, y - 60f, 120f, 120f, 2f)
-        drawer.setColor(Color.CYAN)
-        drawer.line(x - 60f, y, x + 60f, y, 1f)
-        drawer.line(x, y - 60f, x, y + 60f, 1f)
+        drawer.setColor(Color.CYAN); drawer.circle(x, y, 150f, 4f); drawer.setColor(Color.DARK_GRAY); drawer.filledRectangle(x - 60f, y - 60f, 120f, 120f); drawer.setColor(Color.WHITE); drawer.rectangle(x - 60f, y - 60f, 120f, 120f, 2f); drawer.setColor(Color.CYAN); drawer.line(x - 60f, y, x + 60f, y, 1f); drawer.line(x, y - 60f, x, y + 60f, 1f)
     }
 
     private fun drawDetectedObject(x: Float, y: Float) {
-        drawer.setColor(Color.GRAY)
-        drawer.rectangle(x - 8f, y - 8f, 16f, 16f, 1f)
-        drawer.setColor(Color.DARK_GRAY)
-        drawer.filledRectangle(x - 6f, y - 6f, 12f, 12f)
+        drawer.setColor(Color.GRAY); drawer.rectangle(x - 8f, y - 8f, 16f, 16f, 1f); drawer.setColor(Color.DARK_GRAY); drawer.filledRectangle(x - 6f, y - 6f, 12f, 12f)
     }
 }

@@ -63,18 +63,34 @@ class MoveSystem : IteratingSystem(family { all(PositionComponent, VelocityCompo
     }
 }
 
-class CameraSystem(private val camera: OrthographicCamera) : IteratingSystem(family { all(PlayerComponent, PositionComponent, VelocityComponent) }) {
+class CameraSystem(private val camera: OrthographicCamera) : IteratingSystem(family { all(PlayerComponent, PositionComponent, VelocityComponent, EvolutionComponent) }) {
     private val targetPos = Vector2()
     private val lerpSpeed = 2.5f
 
     override fun onTickEntity(entity: Entity) {
         val pos = entity[PositionComponent].pos
         val vel = entity[VelocityComponent].v
+        val evo = entity[EvolutionComponent]
+
+        // Tier-based size reference (Sync with RenderSystem)
+        val currentSize = 8f + (evo.currentTier - 1) * 7.5f + (evo.subTier - 1) * 1.875f
+
+        // Stabilized and further dampened Zoom Curve:
+        // T1a (Size 8) -> 1.0f zoom
+        // T8a (Size 60.5) -> 1.0 + (52.5 / 60) = ~1.87f zoom
+        val baseZoom = 1.0f + (currentSize - 8f) / 60f
+
         targetPos.set(pos.x + (vel.x * 0.5f), pos.y + (vel.y * 0.5f))
+
+        // Position Smoothing
         camera.position.x += (targetPos.x - camera.position.x) * lerpSpeed * deltaTime
         camera.position.y += (targetPos.y - camera.position.y) * lerpSpeed * deltaTime
+
+        // Zoom Smoothing (Base Zoom + Velocity Elasticity)
         val speedPercent = (vel.len() / 500f).coerceIn(0f, 1f)
-        camera.zoom += (1.0f + (speedPercent * 0.4f) - camera.zoom) * deltaTime
+        val targetZoom = baseZoom * (1.0f + (speedPercent * 0.2f))
+
+        camera.zoom += (targetZoom - camera.zoom) * deltaTime
         camera.update()
     }
 }

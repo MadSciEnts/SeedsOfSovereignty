@@ -1,9 +1,11 @@
 package com.srw.seedsofsovereignty.system
 
+import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.math.MathUtils
+import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.utils.ScreenUtils
 import com.github.quillraven.fleks.Fixed
 import com.github.quillraven.fleks.IntervalSystem
@@ -22,21 +24,36 @@ class StarfieldSystem(
     private val camera: OrthographicCamera,
     private val layers: List<Texture>
 ) : IntervalSystem() {
-    private val parallaxFactors = listOf(0.1f, 0.3f, 0.6f)
+    private val parallaxFactors = listOf(0.1f, 0.25f, 0.5f)
+    private val starCamera = Matrix4()
+    // Adjusted: 0.65f is the middle ground between "too close" (0.5) and "too wide" (0.8)
+    private val starScale = 0.65f
+    // Increased: 0.15f (15%) to make the zoom influence actually perceptible
+    private val zoomInfluence = 0.15f
 
     override fun onTick() {
         if (layers.isEmpty()) return
 
-        batch.use(camera.combined) { b ->
+        val w = Gdx.graphics.width.toFloat()
+        val h = Gdx.graphics.height.toFloat()
+
+        // Fixed projection keeps background full-frame
+        starCamera.setToOrtho2D(0f, 0f, w, h)
+        val originalMatrix = batch.projectionMatrix.cpy()
+        batch.projectionMatrix = starCamera
+
+        batch.use { b ->
             layers.forEachIndexed { index, texture ->
                 val factor = parallaxFactors.getOrElse(index) { 0.1f }
-                val w = camera.viewportWidth * camera.zoom
-                val h = camera.viewportHeight * camera.zoom
-                val x = camera.position.x - w / 2f
-                val y = camera.position.y - h / 2f
 
-                val uWidth = w / texture.width
-                val vHeight = h / texture.height
+                // Calculate zoom influence (Relative to base zoom of 1.0)
+                val zoomFactor = 1f + (camera.zoom - 1f) * zoomInfluence
+                val effectiveScale = starScale * zoomFactor
+
+                val uWidth = (w * effectiveScale) / texture.width
+                val vHeight = (h * effectiveScale) / texture.height
+
+                // Parallax shift based on camera world position
                 val uCenter = (camera.position.x * factor) / texture.width
                 val vCenter = (camera.position.y * factor) / texture.height
 
@@ -45,9 +62,11 @@ class StarfieldSystem(
                 val u2 = uCenter + uWidth / 2f
                 val v2 = vCenter + vHeight / 2f
 
-                b.draw(texture, x, y, w, h, u, v, u2, v2)
+                b.draw(texture, 0f, 0f, w, h, u, v, u2, v2)
             }
         }
+
+        batch.projectionMatrix = originalMatrix
     }
 }
 
@@ -66,7 +85,7 @@ class EnemySpawnSystem(
 
         val enemyCount = world.family { all(EnemyComponent) }.numEntities
         if (enemyCount < 5) {
-            val spawnRadius = 600f
+            val spawnRadius = 800f * camera.zoom
             val angle = MathUtils.random(0f, MathUtils.PI2)
             val spawnX = camera.position.x + MathUtils.cos(angle) * spawnRadius
             val spawnY = camera.position.y + MathUtils.sin(angle) * spawnRadius
@@ -99,7 +118,6 @@ class EnemySpawnSystem(
                     }
                 )
 
-                // Arm ALL drones starting at T1
                 val baseFireRate = when(currentTier) {
                     1 -> 2.0f
                     2 -> 1.5f
@@ -107,7 +125,6 @@ class EnemySpawnSystem(
                 }
 
                 it += WeaponComponent(
-                    // VERIFIED FIX: Added a random jitter to initial cooldown
                     fireRate = baseFireRate,
                     cooldown = MathUtils.random(0f, baseFireRate),
                     barrels = 1
