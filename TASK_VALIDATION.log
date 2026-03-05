@@ -1,22 +1,16 @@
-# TASK VALIDATION LOG (Verified Live Files)
+# TASK VALIDATION LOG (Verified Ground Truth)
 
-## Refactoring State (Refactored Phase 1 complete)
+## Refactoring State
 - [x] Components modularized into domain files.
 - [x] Systems modularized into domain files.
-- [x] SovereigntyGame.kt updated with all registered modular systems.
-- [x] PlayScreen.kt updated with modular UI Factories and Managers.
+- [x] SovereigntyGame.kt updated as clean orchestrator.
 
-## Current Functional Status (Verified on Disk)
-- [x] Player ROF (0.5f)
-- [x] Enemy Motion (Orbiting AI)
-- [x] Enemy Firing (WeaponComponent armed)
-- [x] Station Docking (Auto-proximity)
-- [x] Undock cooldown (3s) + kick (-400u)
-- [x] HUD Vitals (Linear Top-Left)
+## Verified Baseline (Tier 1-4)
+- [x] **Enemy Accuracy:** Predictive Aiming verified. Shooter velocity inheritance removed. Aim is perfect.
+- [x] **Combat Feedback:** Contact damage is registered. Linear vitals bars update correctly.
+- [x] **Station Systems:** Docking, physical HUD buttons, and Safe Haven logic are verified active.
 
-## Next Verified Changes
-- [ ] Implement Projectile Contact Particle FX (VFX Sprint)
-- [ ] Add SPARK/RIPPLE spawning to CombatSystem
-- [ ] Verify RenderSystem draws particles
-- [ ] Verify EffectSystem cleans up particles
-- [ ] Tier 5 Bulwark physical transformation
+## Current Priorities (Visual Refinement)
+- [ ] **Fix Spark Physics:** Convert static impact "glows" into velocity-based spark bursts.
+- [ ] **Differentiate Player Damage:** Move hull sparks inside the health-damage block to distinguish from shield ripples.
+- [ ] **Verify T5 Prep:** Document Bulwark geometry specs.

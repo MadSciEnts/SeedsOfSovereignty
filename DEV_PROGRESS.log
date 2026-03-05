@@ -1,6 +1,6 @@
 # DEVELOPMENT PROGRESS LOG
 
-## Current Milestone: Tier 5 - The Bulwark
+## Current Milestone: Tier 6 - The Sentinel+ (Preparation)
 - [x] GDX-Liftoff Setup
 - [x] Knowledge Base Created (25 files)
 - [x] Tier 1 Pilot Movement System (WASD + Joystick)
@@ -9,13 +9,16 @@
 - [x] Major Tier 2 Evolution (Violet Interceptor)
 - [x] Major Tier 3 Evolution (Drone Carrier + Autonomous AI)
 - [x] Tier 4 Twin-Stick Transition (Strafing + Auto-Fire)
-- [x] Enemy AI Overhaul (Orbiting + Staggered Projectiles)
 - [x] Station Docking & Aperture HUD (Functional Buttons)
 - [x] Full Architectural Modularization (Domain-driven Files)
-- [ ] Tier 5 Evolution (Shielded Bulwark) (In Progress)
-- [ ] Contact Damage VFX (Planned: Shields/Impact Particles)
+- [x] Improved Enemy Accuracy (Predictive Aiming verified)
+- [x] Enemy Impact VFX (White Spark Bursts verified)
+- [x] Player Damage Distinction (Shield vs. Hull VFX verified)
+- [x] Tier 5 Evolution (Shielded Bulwark) (Complete)
+- [x] Contact Damage VFX (Enhanced Particle Pools) (Integrated)
+- [ ] Tier 6 Evolution (Heavy Cruiser / Sentinel+) (Next)
 
 ## Current Global Stats
-- **Active Tier:** 4/48
+- **Active Tier:** 5/48
 - **Active Epoch:** 1/4
-- **Build Version:** 0.0.6 (Pre-Alpha)
+- **Build Version:** 0.0.7 (Pre-Alpha)

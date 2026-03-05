@@ -84,7 +84,7 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
                         evo.currentTier = 4
                         evo.subTier = 1
                         weapon.fireRate = 0.1f
-                        weapon.barrels = 1 // Heavy turret mode
+                        weapon.barrels = 1
                     }
                 }
                 4 -> {
@@ -98,13 +98,33 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
                             weapon.fireRate = 0.15f
                             weapon.barrels = 2
                             vel.acceleration += 50f
-                            // Bulwark gets improved shields
                             if (entity.has(ShieldComponent)) {
                                 val shield = entity[ShieldComponent]
                                 shield.max = 200f
                                 shield.current = shield.max
                                 shield.rechargeRate = 15f
                             }
+                        }
+                    }
+                }
+                5 -> {
+                    // Bulwark progression: Focus on Shield capacity and fire rate
+                    when (evo.subTier) {
+                        2 -> {
+                            if (entity.has(ShieldComponent)) entity[ShieldComponent].max += 50f
+                        }
+                        3 -> {
+                            weapon.fireRate = 0.12f
+                            weapon.barrels = 3
+                        }
+                        4 -> {
+                            if (entity.has(ShieldComponent)) entity[ShieldComponent].rechargeRate += 5f
+                        }
+                        5 -> {
+                            // Prepare for Tier 6 (Assumed Heavy Cruiser/Sentinel+)
+                            evo.currentTier = 6
+                            evo.subTier = 1
+                            weapon.barrels = 4
                         }
                     }
                 }

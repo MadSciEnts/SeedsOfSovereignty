@@ -6,6 +6,7 @@ import com.github.quillraven.fleks.Entity
 import com.github.quillraven.fleks.IteratingSystem
 import com.github.quillraven.fleks.World.Companion.family
 import com.srw.seedsofsovereignty.component.*
+import kotlin.math.sqrt
 
 class WeaponSystem : IteratingSystem(family { all(WeaponComponent, PositionComponent, VelocityComponent, OrientationComponent) }) {
     override fun onTickEntity(entity: Entity) {
@@ -40,7 +41,7 @@ class WeaponSystem : IteratingSystem(family { all(WeaponComponent, PositionCompo
                     }
                     e += VelocityComponent().apply {
                         val bulletSpeed = if (isEnemy) 600f else 1000f
-                        this.v.set(bulletSpeed, 0f).setAngleRad(angleRad).add(vel)
+                        this.v.set(bulletSpeed, 0f).setAngleRad(angleRad)
                     }
                     e += ProjectileComponent(
                         tier = tier,
@@ -67,16 +68,12 @@ class CombatSystem : IteratingSystem(family { all(ProjectileComponent, PositionC
         val projComp = entity[ProjectileComponent]
 
         if (!projComp.ownerIsEnemy) {
-            // Player Projectile hitting Enemy
             enemyFamily.forEach { enemy ->
                 val enemyPos = enemy[PositionComponent].pos
                 if (projPos.dst2(enemyPos) < 1600f) {
                     val enemyComp = enemy[EnemyComponent]
                     enemyComp.health -= projComp.damage
-
-                    // Spawn Spark VFX on hit
-                    spawnSparks(projPos.x, projPos.y, com.badlogic.gdx.graphics.Color.YELLOW)
-
+                    spawnSparkBurst(projPos.x, projPos.y, com.badlogic.gdx.graphics.Color.WHITE, 8f)
                     world -= entity
 
                     if (enemyComp.health <= 0f) {
@@ -93,7 +90,6 @@ class CombatSystem : IteratingSystem(family { all(ProjectileComponent, PositionC
                 }
             }
         } else {
-            // Enemy Projectile hitting Player
             playerFamily.firstOrNull()?.let { player ->
                 val playerPos = player[PositionComponent].pos
                 if (projPos.dst2(playerPos) < 900f) {
@@ -104,30 +100,30 @@ class CombatSystem : IteratingSystem(family { all(ProjectileComponent, PositionC
         }
     }
 
-    private fun spawnSparks(x: Float, y: Float, color: com.badlogic.gdx.graphics.Color) {
-        world.entity {
-            it += PositionComponent().apply { pos.set(x, y) }
-            it += ParticleComponent(type = ParticleComponent.Type.SPARK, color = color, size = 5f)
-            it += LifeSpanComponent(remaining = 0.3f)
+    private fun spawnSparkBurst(x: Float, y: Float, color: com.badlogic.gdx.graphics.Color, baseSize: Float) {
+        for (i in 0 until 5) {
+            world.entity {
+                it += PositionComponent().apply { pos.set(x, y) }
+                it += VelocityComponent().apply {
+                    v.set(MathUtils.random(-200f, 200f), MathUtils.random(-200f, 200f))
+                    friction = 2f
+                }
+                it += ParticleComponent(type = ParticleComponent.Type.SPARK, color = color, size = baseSize * MathUtils.random(0.5f, 1.5f))
+                it += LifeSpanComponent(remaining = MathUtils.random(0.2f, 0.4f))
+            }
         }
     }
 
     private fun applyDamageToPlayer(player: Entity, damage: Float, x: Float, y: Float) {
         var remainingDamage = damage
-
-        // Spawn Spark VFX
-        spawnSparks(x, y, com.badlogic.gdx.graphics.Color.ORANGE)
-
         if (player.has(ShieldComponent)) {
             val shield = player[ShieldComponent]
             if (shield.active && shield.current > 0) {
-                // Spawn Shield Ripple VFX
                 world.entity {
                     it += PositionComponent().apply { pos.set(x, y) }
                     it += ParticleComponent(type = ParticleComponent.Type.SHIELD_RIPPLE, color = com.badlogic.gdx.graphics.Color.CYAN, size = 40f)
                     it += LifeSpanComponent(remaining = 0.4f)
                 }
-
                 val shieldDamage = remainingDamage.coerceAtMost(shield.current)
                 shield.current -= shieldDamage
                 remainingDamage -= shieldDamage
@@ -135,51 +131,7 @@ class CombatSystem : IteratingSystem(family { all(ProjectileComponent, PositionC
         }
         if (remainingDamage > 0) {
             player[HealthComponent].current -= remainingDamage
-        }
-    }
-}
-
-class DroneSystem : IteratingSystem(family { all(DroneComponent, PositionComponent, OrientationComponent) }) {
-    private val enemyFamily by lazy { world.family { all(EnemyComponent, PositionComponent) } }
-
-    override fun onTickEntity(entity: Entity) {
-        val drone = entity[DroneComponent]
-        val pos = entity[PositionComponent].pos
-        val orientation = entity[OrientationComponent]
-
-        drone.orbitAngle += drone.orbitSpeed * deltaTime
-        val ownerPos = drone.owner[PositionComponent].pos
-        pos.set(
-            ownerPos.x + MathUtils.cos(drone.orbitAngle) * drone.orbitRadius,
-            ownerPos.y + MathUtils.sin(drone.orbitAngle) * drone.orbitRadius
-        )
-
-        var nearestEnemy: Entity? = null
-        var minDistSq = Float.MAX_VALUE
-
-        enemyFamily.forEach { enemy ->
-            val enemyComp = enemy[EnemyComponent]
-            if (enemyComp.state == EnemyComponent.State.RETREATING) return@forEach
-
-            val ePos = enemy[PositionComponent].pos
-            val d2 = pos.dst2(ePos)
-            if (d2 < minDistSq) {
-                minDistSq = d2
-                nearestEnemy = enemy
-            }
-        }
-
-        nearestEnemy?.let { enemy ->
-            val ePos = enemy[PositionComponent].pos
-            orientation.angleRad = Vector2(ePos).sub(pos).angleRad()
-
-            if (entity.has(WeaponComponent)) {
-                entity[WeaponComponent].isFiring = true
-            }
-        } ?: run {
-            if (entity.has(WeaponComponent)) {
-                entity[WeaponComponent].isFiring = false
-            }
+            spawnSparkBurst(x, y, com.badlogic.gdx.graphics.Color.ORANGE, 10f)
         }
     }
 }
@@ -190,56 +142,6 @@ class LifeSpanSystem : IteratingSystem(family { all(LifeSpanComponent) }) {
         life.remaining -= deltaTime
         if (life.remaining <= 0f) {
             world -= entity
-        }
-    }
-}
-
-class EnemyAISystem : IteratingSystem(family { all(EnemyComponent, PositionComponent, VelocityComponent, OrientationComponent) }) {
-    private val playerFamily by lazy { world.family { all(PlayerComponent, PositionComponent) } }
-    private val stationFamily by lazy { world.family { all(StationComponent, PositionComponent) } }
-    private val steerForce = Vector2()
-
-    override fun onTickEntity(entity: Entity) {
-        val pos = entity[PositionComponent].pos
-        val vel = entity[VelocityComponent]
-        val enemy = entity[EnemyComponent]
-        val orientation = entity[OrientationComponent]
-
-        val player = playerFamily.firstOrNull() ?: return
-        val playerPos = player[PositionComponent].pos
-        val docking = if (player.has(DockingComponent)) player[DockingComponent] else null
-
-        var nearStation = docking?.isDocked == true
-        if (!nearStation) {
-            stationFamily.forEach { station ->
-                if (pos.dst2(station[PositionComponent].pos) < 250000f) nearStation = true
-            }
-        }
-
-        if (nearStation) {
-            enemy.state = EnemyComponent.State.RETREATING
-            steerForce.set(pos).sub(playerPos).nor().scl(vel.acceleration * 2f * deltaTime)
-            vel.v.add(steerForce)
-            vel.v.scl(0.95f)
-            if (pos.dst2(playerPos) > 2250000f) world -= entity
-        } else {
-            enemy.state = EnemyComponent.State.HUNTING
-            val distSq = pos.dst2(playerPos)
-
-            orientation.angleRad = Vector2(playerPos).sub(pos).angleRad()
-
-            if (entity.has(WeaponComponent)) {
-                entity[WeaponComponent].isFiring = distSq < 400000f
-            }
-
-            if (distSq < 90000f) {
-                val toPlayer = Vector2(playerPos).sub(pos).nor()
-                val tangent = Vector2(-toPlayer.y, toPlayer.x).scl(vel.acceleration * deltaTime)
-                vel.v.add(tangent)
-            } else {
-                steerForce.set(playerPos).sub(pos).nor().scl(vel.acceleration * deltaTime)
-                vel.v.add(steerForce)
-            }
         }
     }
 }

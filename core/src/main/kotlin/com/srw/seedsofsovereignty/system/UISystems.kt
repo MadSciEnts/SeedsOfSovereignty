@@ -1,6 +1,7 @@
 package com.srw.seedsofsovereignty.system
 
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Vector2
@@ -80,6 +81,8 @@ class HUDSystem(
     private val uiViewport: Viewport
 ) : IteratingSystem(family { all(PlayerComponent).any(EvolutionComponent, HealthComponent, ShieldComponent) }) {
 
+    private val font = BitmapFont() // Default font for tier label
+
     override fun onTick() {
         batch.use(uiViewport.camera.combined) {
             super.onTick()
@@ -104,51 +107,51 @@ class HUDSystem(
 
             drawer.setColor(Color.WHITE)
             drawer.rectangle(x, y, barWidth, barHeight, 1f)
+
+            // TIER LABEL DISPLAY
+            val tierName = when(evo.currentTier) {
+                1 -> "PILOT"
+                2 -> "INTERCEPTOR"
+                3 -> "CARRIER"
+                4 -> "SENTINEL"
+                5 -> "BULWARK"
+                else -> "UNKNOWN"
+            }
+            font.color = Color.CYAN
+            font.draw(batch, "TIER ${evo.currentTier}: $tierName [Sub-${evo.subTier}]", x, y + 35f)
         }
 
-        // Linear Vitals Bar Config (Top Left)
         val barWidth = 250f
         val barHeight = 14f
         val startX = 30f
         var currentY = uiViewport.worldHeight - 40f
 
-        // 2. Linear Health Bar
         if (entity.has(HealthComponent)) {
             val health = entity[HealthComponent]
             val hProgress = (health.current / health.max).coerceIn(0f, 1f)
-
-            // Background
             drawer.setColor(0.3f, 0f, 0f, 0.6f)
             drawer.filledRectangle(startX, currentY, barWidth, barHeight)
-
-            // Fill
             drawer.setColor(Color.RED)
             drawer.filledRectangle(startX, currentY, barWidth * hProgress, barHeight)
-
-            // Border
             drawer.setColor(Color.WHITE)
             drawer.rectangle(startX, currentY, barWidth, barHeight, 1.5f)
-
             currentY -= (barHeight + 10f)
         }
 
-        // 3. Linear Shield Bar
         if (entity.has(ShieldComponent)) {
             val shield = entity[ShieldComponent]
             val sProgress = (shield.current / shield.max).coerceIn(0f, 1f)
-
-            // Background
             drawer.setColor(0f, 0.2f, 0.3f, 0.6f)
             drawer.filledRectangle(startX, currentY, barWidth, barHeight)
-
-            // Fill
             drawer.setColor(Color.CYAN)
             drawer.filledRectangle(startX, currentY, barWidth * sProgress, barHeight)
-
-            // Border
             drawer.setColor(Color.WHITE)
             drawer.rectangle(startX, currentY, barWidth, barHeight, 1.5f)
         }
+    }
+
+    override fun onDispose() {
+        font.dispose()
     }
 }
 
