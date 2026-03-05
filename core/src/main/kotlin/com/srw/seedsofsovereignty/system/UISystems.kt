@@ -78,7 +78,7 @@ class HUDSystem(
     private val batch: SpriteBatch,
     private val drawer: ShapeDrawer,
     private val uiViewport: Viewport
-) : IteratingSystem(family { all(PlayerComponent, EvolutionComponent) }) {
+) : IteratingSystem(family { all(PlayerComponent).any(EvolutionComponent, HealthComponent, ShieldComponent) }) {
 
     override fun onTick() {
         batch.use(uiViewport.camera.combined) {
@@ -87,22 +87,68 @@ class HUDSystem(
     }
 
     override fun onTickEntity(entity: Entity) {
-        val evo = entity[EvolutionComponent]
+        // 1. Essence Progress Bar (Bottom Center)
+        if (entity.has(EvolutionComponent)) {
+            val evo = entity[EvolutionComponent]
+            val barWidth = 400f
+            val barHeight = 10f
+            val x = (uiViewport.worldWidth - barWidth) / 2f
+            val y = 30f
 
-        val barWidth = 400f
-        val barHeight = 10f
-        val x = (uiViewport.worldWidth - barWidth) / 2f
-        val y = 30f
+            drawer.setColor(Color.DARK_GRAY)
+            drawer.filledRectangle(x, y, barWidth, barHeight)
 
-        drawer.setColor(Color.DARK_GRAY)
-        drawer.filledRectangle(x, y, barWidth, barHeight)
+            val progress = (evo.essenceCollected.toFloat() / evo.essenceRequired.toFloat()).coerceIn(0f, 1f)
+            drawer.setColor(Color.CYAN)
+            drawer.filledRectangle(x, y, barWidth * progress, barHeight)
 
-        val progress = (evo.essenceCollected.toFloat() / evo.essenceRequired.toFloat()).coerceIn(0f, 1f)
-        drawer.setColor(Color.CYAN)
-        drawer.filledRectangle(x, y, barWidth * progress, barHeight)
+            drawer.setColor(Color.WHITE)
+            drawer.rectangle(x, y, barWidth, barHeight, 1f)
+        }
 
-        drawer.setColor(Color.WHITE)
-        drawer.rectangle(x, y, barWidth, barHeight, 1f)
+        // Linear Vitals Bar Config (Top Left)
+        val barWidth = 250f
+        val barHeight = 14f
+        val startX = 30f
+        var currentY = uiViewport.worldHeight - 40f
+
+        // 2. Linear Health Bar
+        if (entity.has(HealthComponent)) {
+            val health = entity[HealthComponent]
+            val hProgress = (health.current / health.max).coerceIn(0f, 1f)
+
+            // Background
+            drawer.setColor(0.3f, 0f, 0f, 0.6f)
+            drawer.filledRectangle(startX, currentY, barWidth, barHeight)
+
+            // Fill
+            drawer.setColor(Color.RED)
+            drawer.filledRectangle(startX, currentY, barWidth * hProgress, barHeight)
+
+            // Border
+            drawer.setColor(Color.WHITE)
+            drawer.rectangle(startX, currentY, barWidth, barHeight, 1.5f)
+
+            currentY -= (barHeight + 10f)
+        }
+
+        // 3. Linear Shield Bar
+        if (entity.has(ShieldComponent)) {
+            val shield = entity[ShieldComponent]
+            val sProgress = (shield.current / shield.max).coerceIn(0f, 1f)
+
+            // Background
+            drawer.setColor(0f, 0.2f, 0.3f, 0.6f)
+            drawer.filledRectangle(startX, currentY, barWidth, barHeight)
+
+            // Fill
+            drawer.setColor(Color.CYAN)
+            drawer.filledRectangle(startX, currentY, barWidth * sProgress, barHeight)
+
+            // Border
+            drawer.setColor(Color.WHITE)
+            drawer.rectangle(startX, currentY, barWidth, barHeight, 1.5f)
+        }
     }
 }
 

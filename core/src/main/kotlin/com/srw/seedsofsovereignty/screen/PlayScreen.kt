@@ -48,12 +48,26 @@ class PlayScreen(
             it += EvolutionComponent(currentTier = 1, subTier = 1, essenceCollected = 0, essenceRequired = 5)
             it += DockingComponent()
             it += ApertureComponent()
+            it += HealthComponent(current = 100f, max = 100f) // ADDED
+            it += ShieldComponent(current = 50f, max = 50f) // ADDED
         }
 
         // Setup Event Listeners
         undockButton.addListener(object : ChangeListener() {
             override fun changed(event: ChangeEvent?, actor: Actor?) {
                 dockingManager.undock()
+            }
+        })
+
+        repairButton.addListener(object : ChangeListener() {
+            override fun changed(event: ChangeEvent?, actor: Actor?) {
+                val player = world.family { all(PlayerComponent, HealthComponent, ShieldComponent) }.firstOrNull()
+                player?.let { p ->
+                    with(world) {
+                        p[HealthComponent].current = p[HealthComponent].max
+                        p[ShieldComponent].current = p[ShieldComponent].max
+                    }
+                }
             }
         })
 
@@ -89,8 +103,14 @@ class PlayScreen(
 
                 // UI Visibility Logic
                 moveJoystick.isVisible = !isFullyDocked
-                aimJoystick.isVisible = !isFullyDocked && isTwinStickTier
-                fireButton.isVisible = !isFullyDocked && !isTwinStickTier
+                aimJoystick.isVisible = !isTwinStickTier // HIDDEN initially as per user request for < T4
+                if (isTwinStickTier) {
+                    aimJoystick.isVisible = !isFullyDocked
+                    fireButton.isVisible = false
+                } else {
+                    fireButton.isVisible = !isFullyDocked
+                }
+
                 repairButton.isVisible = isFullyDocked
                 undockButton.isVisible = isFullyDocked
 
