@@ -1,0 +1,23 @@
+# REFACTORING PROGRESS LOG
+
+## Components Phase
+- [x] CoreComponents.kt: Position, Orientation, Velocity, LifeSpan, Player
+- [x] CombatComponents.kt: Weapon, Projectile, Enemy
+- [x] EvolutionComponents.kt: Evolution, Essence, Drone
+- [x] InteractionComponents.kt: Sensor, Visible, Station, Docking, Aperture
+- [x] HealthComponents.kt: Health, Shield
+- [x] Components.kt: Cleaned (Deprecated)
+
+## Systems Phase
+- [ ] MovementSystems.kt: PlayerInput, Move, Camera, Origin
+- [ ] CombatSystems.kt: Weapon, Combat, Drone, LifeSpan, EnemyAI
+- [ ] EvolutionSystems.kt: Collection, Evolution
+- [ ] InteractionSystems.kt: Sensor, Station
+- [ ] UISystems.kt: Aperture, RadarRender, HUD
+- [ ] WorldSystems.kt: ClearScreen, Starfield, EnemySpawn, StationSpawn
+- [ ] RenderSystems.kt: Render
+- [ ] Systems.kt: Cleaned (Deprecated)
+
+## Verification
+- [ ] Successful core:assemble build.
+- [ ] Live logic check (Movement, Firing, Evolution, Docking).

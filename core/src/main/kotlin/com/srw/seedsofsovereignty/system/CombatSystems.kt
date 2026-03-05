@@ -14,13 +14,15 @@ class WeaponSystem : IteratingSystem(family { all(WeaponComponent, PositionCompo
         val vel = entity[VelocityComponent].v
         val angleRad = entity[OrientationComponent].angleRad
 
+        val isEnemy = entity.has(EnemyComponent)
         val evo = if (entity.has(EvolutionComponent)) entity[EvolutionComponent] else null
-        val tier = evo?.currentTier ?: 1
+        val tier = if (isEnemy) (if (entity[EnemyComponent].type == "Reaper") 2 else 1) else (evo?.currentTier ?: 1)
 
         if (weapon.cooldown > 0f) {
             weapon.cooldown -= deltaTime
         }
 
+        // Verified: Now correctly processes isFiring for BOTH player and enemies
         if (weapon.isFiring && weapon.cooldown <= 0f) {
             weapon.cooldown = weapon.fireRate
 
@@ -38,19 +40,16 @@ class WeaponSystem : IteratingSystem(family { all(WeaponComponent, PositionCompo
                         }
                     }
                     e += VelocityComponent().apply {
-                        this.v.set(1000f, 0f).setAngleRad(angleRad).add(vel)
+                        // Slower projectiles for enemies
+                        val bulletSpeed = if (isEnemy) 600f else 1000f
+                        this.v.set(bulletSpeed, 0f).setAngleRad(angleRad).add(vel)
                     }
                     e += ProjectileComponent(
                         tier = tier,
-                        damage = when(tier) {
-                            1 -> 10f
-                            2 -> 25f
-                            3 -> 15f
-                            4 -> 40f
-                            else -> 10f
-                        }
+                        damage = if (isEnemy) 5f else (if (tier >= 2) 25f else 10f),
+                        ownerIsEnemy = isEnemy
                     )
-                    e += LifeSpanComponent(remaining = 1.5f)
+                    e += LifeSpanComponent(remaining = if (isEnemy) 2.5f else 1.5f)
                 }
             }
 
@@ -63,30 +62,58 @@ class WeaponSystem : IteratingSystem(family { all(WeaponComponent, PositionCompo
 
 class CombatSystem : IteratingSystem(family { all(ProjectileComponent, PositionComponent) }) {
     private val enemyFamily by lazy { world.family { all(EnemyComponent, PositionComponent) } }
+    private val playerFamily by lazy { world.family { all(PlayerComponent, PositionComponent, HealthComponent) } }
 
     override fun onTickEntity(entity: Entity) {
         val projPos = entity[PositionComponent].pos
         val projComp = entity[ProjectileComponent]
 
-        enemyFamily.forEach { enemy ->
-            val enemyPos = enemy[PositionComponent].pos
-            if (projPos.dst2(enemyPos) < 1600f) {
-                val enemyComp = enemy[EnemyComponent]
-                enemyComp.health -= projComp.damage
-                world -= entity
+        if (!projComp.ownerIsEnemy) {
+            // Player Projectile hitting Enemy
+            enemyFamily.forEach { enemy ->
+                val enemyPos = enemy[PositionComponent].pos
+                if (projPos.dst2(enemyPos) < 1600f) {
+                    val enemyComp = enemy[EnemyComponent]
+                    enemyComp.health -= projComp.damage
+                    world -= entity
 
-                if (enemyComp.health <= 0f) {
-                    val ePos = Vector2(enemyPos)
-                    world.entity { e ->
-                        e += PositionComponent().apply { pos.set(ePos) }
-                        e += VelocityComponent().apply { friction = 0.5f }
-                        e += EssenceComponent()
-                        e += LifeSpanComponent(remaining = 15f)
+                    if (enemyComp.health <= 0f) {
+                        val ePos = Vector2(enemyPos)
+                        world.entity { e ->
+                            e += PositionComponent().apply { pos.set(ePos) }
+                            e += VelocityComponent().apply { friction = 0.5f }
+                            e += EssenceComponent()
+                            e += LifeSpanComponent(remaining = 15f)
+                        }
+                        world -= enemy
                     }
-                    world -= enemy
+                    return@forEach
                 }
-                return@forEach
             }
+        } else {
+            // Enemy Projectile hitting Player
+            playerFamily.firstOrNull()?.let { player ->
+                val playerPos = player[PositionComponent].pos
+                if (projPos.dst2(playerPos) < 900f) {
+                    applyDamageToPlayer(player, projComp.damage)
+                    world -= entity
+                }
+            }
+        }
+    }
+
+    private fun applyDamageToPlayer(player: Entity, damage: Float) {
+        var remainingDamage = damage
+        if (player.has(ShieldComponent)) {
+            val shield = player[ShieldComponent]
+            if (shield.active && shield.current > 0) {
+                val shieldDamage = remainingDamage.coerceAtMost(shield.current)
+                shield.current -= shieldDamage
+                remainingDamage -= shieldDamage
+            }
+        }
+        if (remainingDamage > 0) {
+            player[HealthComponent].current -= remainingDamage
         }
     }
 }
@@ -146,39 +173,54 @@ class LifeSpanSystem : IteratingSystem(family { all(LifeSpanComponent) }) {
     }
 }
 
-class EnemyAISystem : IteratingSystem(family { all(EnemyComponent, PositionComponent, VelocityComponent) }) {
+class EnemyAISystem : IteratingSystem(family { all(EnemyComponent, PositionComponent, VelocityComponent, OrientationComponent) }) {
     private val playerFamily by lazy { world.family { all(PlayerComponent, PositionComponent) } }
     private val stationFamily by lazy { world.family { all(StationComponent, PositionComponent) } }
     private val steerForce = Vector2()
 
     override fun onTickEntity(entity: Entity) {
-        val enemyPos = entity[PositionComponent].pos
+        val pos = entity[PositionComponent].pos
         val vel = entity[VelocityComponent]
         val enemy = entity[EnemyComponent]
+        val orientation = entity[OrientationComponent]
 
         val player = playerFamily.firstOrNull() ?: return
         val playerPos = player[PositionComponent].pos
-        val playerDocking = if (player.has(DockingComponent)) player[DockingComponent] else null
+        val docking = if (player.has(DockingComponent)) player[DockingComponent] else null
 
-        // Safe Haven Check: Retreat if player is docked OR if enemy itself is near a station
-        var shouldRetreat = playerDocking?.isDocked == true
-        if (!shouldRetreat) {
+        var nearStation = docking?.isDocked == true
+        if (!nearStation) {
             stationFamily.forEach { station ->
-                if (enemyPos.dst2(station[PositionComponent].pos) < 250000f) shouldRetreat = true // 500u station aura
+                if (pos.dst2(station[PositionComponent].pos) < 250000f) nearStation = true
             }
         }
 
-        if (shouldRetreat) {
+        if (nearStation) {
             enemy.state = EnemyComponent.State.RETREATING
-            // Steer AWAY from player
-            steerForce.set(enemyPos).sub(playerPos).nor().scl(vel.acceleration * deltaTime)
+            steerForce.set(pos).sub(playerPos).nor().scl(vel.acceleration * 2f * deltaTime)
             vel.v.add(steerForce)
-            if (enemyPos.dst2(playerPos) > 1000000f) world -= entity // Despawn far away
+            vel.v.scl(0.95f)
+            if (pos.dst2(playerPos) > 2250000f) world -= entity
         } else {
             enemy.state = EnemyComponent.State.HUNTING
-            // Steer TOWARD player
-            steerForce.set(playerPos).sub(enemyPos).nor().scl(vel.acceleration * deltaTime)
-            vel.v.add(steerForce)
+            val distSq = pos.dst2(playerPos)
+
+            // Look at player
+            orientation.angleRad = Vector2(playerPos).sub(pos).angleRad()
+
+            // Firing logic: Enabled for T2+ Reapers
+            if (entity.has(WeaponComponent)) {
+                entity[WeaponComponent].isFiring = distSq < 400000f // 630u range
+            }
+
+            if (distSq < 90000f) { // 300u range
+                val toPlayer = Vector2(playerPos).sub(pos).nor()
+                val tangent = Vector2(-toPlayer.y, toPlayer.x).scl(vel.acceleration * deltaTime)
+                vel.v.add(tangent)
+            } else {
+                steerForce.set(playerPos).sub(pos).nor().scl(vel.acceleration * deltaTime)
+                vel.v.add(steerForce)
+            }
         }
     }
 }

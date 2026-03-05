@@ -33,31 +33,26 @@ class SovereigntyGame : KtxGame<KtxScreen>() {
                 add(drawer)
             }
             systems {
-                // CORE & WORLD
                 add(ClearScreenSystem())
                 add(StationSpawnSystem())
                 add(EnemySpawnSystem(camera))
                 add(StarfieldSystem(batch, camera, starTextures))
 
-                // INPUT & AI LOGIC
                 add(PlayerInputSystem())
                 add(EnemyAISystem())
                 add(DroneSystem())
-
-                // PHYSICS
                 add(MoveSystem())
                 add(CameraSystem(camera))
 
-                // COMBAT & CLEANUP
                 add(WeaponSystem())
                 add(CombatSystem())
+                add(CollisionDamageSystem()) // REGISTERED
+                add(VitalsSystem()) // REGISTERED
                 add(LifeSpanSystem())
 
-                // EVOLUTION & COLLECTION
                 add(CollectionSystem())
                 add(EvolutionSystem())
 
-                // INTERACTION & HUD
                 add(SensorSystem())
                 add(StationSystem())
                 add(ApertureSystem(batch, drawer, uiViewport))

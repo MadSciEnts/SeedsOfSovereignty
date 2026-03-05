@@ -16,7 +16,8 @@ data class WeaponComponent(
 
 data class ProjectileComponent(
     var tier: Int = 1,
-    var damage: Float = 10f
+    var damage: Float = 10f,
+    var ownerIsEnemy: Boolean = false
 ) : Component<ProjectileComponent> {
     override fun type() = ProjectileComponent
     companion object : ComponentType<ProjectileComponent>()

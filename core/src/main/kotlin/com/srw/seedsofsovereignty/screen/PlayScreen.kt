@@ -43,13 +43,13 @@ class PlayScreen(
             it += PositionComponent()
             it += OrientationComponent()
             it += VelocityComponent()
-            it += WeaponComponent(fireRate = 1.0f)
+            it += WeaponComponent(fireRate = 0.5f) // Increased baseline ROF (2 per second)
             it += SensorComponent(radius = 1000f)
             it += EvolutionComponent(currentTier = 1, subTier = 1, essenceCollected = 0, essenceRequired = 5)
             it += DockingComponent()
             it += ApertureComponent()
-            it += HealthComponent(current = 100f, max = 100f) // ADDED
-            it += ShieldComponent(current = 50f, max = 50f) // ADDED
+            it += HealthComponent(current = 100f, max = 100f)
+            it += ShieldComponent(current = 50f, max = 50f)
         }
 
         // Setup Event Listeners
@@ -103,14 +103,8 @@ class PlayScreen(
 
                 // UI Visibility Logic
                 moveJoystick.isVisible = !isFullyDocked
-                aimJoystick.isVisible = !isTwinStickTier // HIDDEN initially as per user request for < T4
-                if (isTwinStickTier) {
-                    aimJoystick.isVisible = !isFullyDocked
-                    fireButton.isVisible = false
-                } else {
-                    fireButton.isVisible = !isFullyDocked
-                }
-
+                aimJoystick.isVisible = !isFullyDocked && isTwinStickTier
+                fireButton.isVisible = !isFullyDocked && !isTwinStickTier
                 repairButton.isVisible = isFullyDocked
                 undockButton.isVisible = isFullyDocked
 

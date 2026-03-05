@@ -82,6 +82,7 @@ class EnemySpawnSystem(
                     }
                     friction = 1.0f
                 }
+                it += OrientationComponent()
                 it += EnemyComponent(
                     health = when(currentTier) {
                         1 -> 20f
@@ -96,6 +97,20 @@ class EnemySpawnSystem(
                         3 -> "Phantom"
                         else -> "Apex"
                     }
+                )
+
+                // Arm ALL drones starting at T1
+                val baseFireRate = when(currentTier) {
+                    1 -> 2.0f
+                    2 -> 1.5f
+                    else -> 1.0f
+                }
+
+                it += WeaponComponent(
+                    // VERIFIED FIX: Added a random jitter to initial cooldown
+                    fireRate = baseFireRate,
+                    cooldown = MathUtils.random(0f, baseFireRate),
+                    barrels = 1
                 )
             }
         }
