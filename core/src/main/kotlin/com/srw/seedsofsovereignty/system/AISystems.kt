@@ -1,6 +1,5 @@
 package com.srw.seedsofsovereignty.system
 
-import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Vector2
@@ -67,72 +66,6 @@ class EnemyAISystem(
                 steerForce.set(playerPos).sub(pos).nor().scl(vel.acceleration * deltaTime)
                 vel.v.add(steerForce)
             }
-        }
-    }
-}
-
-class DroneSystem(
-    private val camera: OrthographicCamera
-) : IteratingSystem(family { all(DroneComponent, PositionComponent, OrientationComponent) }) {
-    private val enemyFamily by lazy { world.family { all(EnemyComponent, PositionComponent) } }
-    private val droneFamily by lazy { world.family { all(DroneComponent) } }
-    private val droneListBuffer = mutableListOf<Entity>()
-    private var globalOrbitBase = 0f
-
-    override fun onTick() {
-        // Increment a SINGLE shared orbit timer per frame
-        globalOrbitBase += 2f * deltaTime // 2.0f is the default orbitSpeed
-        super.onTick()
-    }
-
-    override fun onTickEntity(entity: Entity) {
-        val drone = entity[DroneComponent]
-        val pos = entity[PositionComponent].pos
-        val orientation = entity[OrientationComponent]
-        val weapon = if (entity.has(WeaponComponent)) entity[WeaponComponent] else null
-
-        val owner = drone.owner
-        if (!world.contains(owner)) {
-            world -= entity
-            return
-        }
-
-        // SYNCHRONIZED CIRCULAR REDISTRIBUTION
-        droneListBuffer.clear()
-        droneFamily.forEach { if (it[DroneComponent].owner == owner) droneListBuffer.add(it) }
-
-        val total = droneListBuffer.size
-        val index = droneListBuffer.indexOf(entity)
-
-        // All drones use the SAME globalOrbitBase, offset only by their rank in the group
-        val finalAngle = globalOrbitBase + (index * MathUtils.PI2 / total)
-
-        val ownerPos = owner[PositionComponent].pos
-        pos.set(
-            ownerPos.x + MathUtils.cos(finalAngle) * drone.orbitRadius,
-            ownerPos.y + MathUtils.sin(finalAngle) * drone.orbitRadius
-        )
-
-        var nearestEnemy: Entity? = null
-        var minDistSq = Float.MAX_VALUE
-
-        enemyFamily.forEach { enemy ->
-            if (enemy[EnemyComponent].state == EnemyComponent.State.RETREATING) return@forEach
-            val ePos = enemy[PositionComponent].pos
-            val d2 = pos.dst2(ePos)
-            if (d2 < minDistSq && camera.frustum.pointInFrustum(ePos.x, ePos.y, 0f)) {
-                minDistSq = d2
-                nearestEnemy = enemy
-            }
-        }
-
-        nearestEnemy?.let { enemy ->
-            val aimAngle = Vector2(enemy[PositionComponent].pos).sub(pos).angleRad()
-            orientation.angleRad = aimAngle
-            weapon?.aimAngleRad = aimAngle
-            weapon?.isFiring = true
-        } ?: run {
-            weapon?.isFiring = false
         }
     }
 }

@@ -3,21 +3,23 @@
 ## Current Refactoring State
 - [x] **Components Modularized:** Verified domain split (Core, Combat, Evolution, Interaction, Health).
 - [x] **Systems Modularized:** Verified domain split (Movement, Combat, Evolution, Interaction, World, Render, UI, Vitals).
-- [x] **God Scripts Cleared:** Verified `Systems.kt` and `Components.kt` are empty/deprecated.
-- [x] **Modular Rendering:** Extracted ship drawing to ProceduralShipDrawer utility.
+- [x] **Modular Rendering:** Extracted ship drawing to `ProceduralShipDrawer` utility.
+- [x] **Independent Aiming:** Decoupled Hull and Aim vectors.
+- [ ] **Drone Domain Consolidation (IN PROGRESS):**
+    - [ ] Create `DroneComponents.kt` with `DroneLauncherComponent` and `FleetCommandComponent`.
+    - [ ] Create `DroneSystems.kt` to centralize spawning, AI, and redistribution.
+    - [ ] Remove legacy drone logic from `AISystems.kt` and `EvolutionSystems.kt`.
 
 ## Logic Implementation Status
-- [x] **Tier 8 Evolution:** Dreadnought (8a-8d) implemented with heavy industrial DNA.
-- [x] **Independent Aiming:** Decoupled Hull and Aim vectors for all entities.
-- [x] **Distributed Mounts:** T8 Dreadnought fires from 4 discrete weapon rings.
-- [x] **Sequential ROF:** Weapon sub-tiers fire sequentially with cumulative rate-of-fire.
-- [x] **Drone Spacing Fix:** Synchronized global orbit for perfect circular distribution.
-- [ ] **Tier 8 Scale Refinement (IN PROGRESS):**
-    - [ ] **Physical Size:** Increase Dreadnought size by another 15%.
-    - [ ] **Camera Zoom:** Adjust FOV curve to make T8 appear 10% larger in the frame.
-- [ ] **Minimap Implementation:** Circular radar with POI markers.
+- [x] **Tier 8 Evolution:** Dreadnought (8a-8d) scale refined (105u) and speed boosted.
+- [x] **Sequential ROF:** Center-out firing order with cumulative rate-of-fire.
+- [ ] **Station System Transition (PLANNED):**
+    - [ ] Pivot to "Modular Slots".
+    - [ ] Implement "No Inventory" module replacement.
+- [ ] **Minimap/Radar (PLANNED):** Circular UI overlay.
 
 ## Verification Protocol
-1. Write domain file.
-2. Immediately read back to verify disk persistence.
-3. Execute Gradle build check.
+1. Update `TASK_SYNC.log` with planned steps.
+2. Execute code changes across domain files.
+3. Run `gradle core:assemble` to verify build integrity.
+4. List Disk Status in session handover.

@@ -39,8 +39,12 @@ class SovereigntyGame : KtxGame<KtxScreen>() {
                 add(StarfieldSystem(batch, camera, starTextures))
 
                 add(PlayerInputSystem())
-                add(EnemyAISystem(camera)) // Updated with Camera injection
-                add(DroneSystem(camera))    // Updated with Camera injection
+                add(EnemyAISystem(camera))
+
+                // NEW CONSOLIDATED DRONE DOMAIN
+                add(DroneRegenSystem())
+                add(DroneFormationSystem(camera))
+
                 add(MoveSystem())
                 add(CameraSystem(camera))
 

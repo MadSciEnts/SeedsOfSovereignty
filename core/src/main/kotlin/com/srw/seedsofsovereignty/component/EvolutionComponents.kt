@@ -21,13 +21,3 @@ data class EssenceComponent(
     override fun type() = EssenceComponent
     companion object : ComponentType<EssenceComponent>()
 }
-
-data class DroneComponent(
-    val owner: Entity,
-    var orbitAngle: Float = 0f,
-    var orbitRadius: Float = 50f,
-    var orbitSpeed: Float = 2f
-) : Component<DroneComponent> {
-    override fun type() = DroneComponent
-    companion object : ComponentType<DroneComponent>()
-}
