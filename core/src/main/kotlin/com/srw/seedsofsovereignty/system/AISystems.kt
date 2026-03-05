@@ -22,7 +22,7 @@ class EnemyAISystem(
         val vel = entity[VelocityComponent]
         val enemy = entity[EnemyComponent]
         val orientation = entity[OrientationComponent]
-        val weapon = if (entity.has(WeaponComponent)) entity[WeaponComponent] else return // Enemies must have weapons
+        val weapon = if (entity.has(WeaponComponent)) entity[WeaponComponent] else return
 
         val player = playerFamily.firstOrNull() ?: return
         val playerPos = player[PositionComponent].pos
@@ -39,35 +39,30 @@ class EnemyAISystem(
         if (isSafeHavenActive) {
             enemy.state = EnemyComponent.State.RETREATING
             weapon.isFiring = false
-
             steerForce.set(pos).sub(playerPos).nor().scl(vel.acceleration * 2f * deltaTime)
             vel.v.add(steerForce)
             vel.v.scl(0.95f)
-
             if (pos.dst2(playerPos) > 2250000f) world -= entity
         } else {
             enemy.state = EnemyComponent.State.HUNTING
             val distSq = pos.dst2(playerPos)
             val isVisibleToPlayer = camera.frustum.pointInFrustum(pos.x, pos.y, 0f)
 
-            // Predictive Aiming Logic
             val bulletSpeed = 600f
             val timeToReach = sqrt(distSq) / bulletSpeed
             predictedPlayerPos.set(playerPos).add(playerVel.x * timeToReach, playerVel.y * timeToReach)
 
-            // SET BOTH HULL AND AIM ANGLE
             val aimAngle = Vector2(predictedPlayerPos).sub(pos).angleRad()
             orientation.angleRad = aimAngle
             weapon.aimAngleRad = aimAngle
-
             weapon.isFiring = distSq < 400000f && isVisibleToPlayer
 
-            if (distSq < 90000f) { // Orbiting
+            if (distSq < 90000f) {
                 val toPlayer = Vector2(playerPos).sub(pos).nor()
                 val tangent = Vector2(-toPlayer.y, toPlayer.x).scl(vel.acceleration * deltaTime)
                 vel.v.add(tangent)
                 vel.v.add(toPlayer.scl(vel.acceleration * 0.2f * deltaTime))
-            } else { // Hunting
+            } else {
                 steerForce.set(playerPos).sub(pos).nor().scl(vel.acceleration * deltaTime)
                 vel.v.add(steerForce)
             }
@@ -80,27 +75,38 @@ class DroneSystem(
 ) : IteratingSystem(family { all(DroneComponent, PositionComponent, OrientationComponent) }) {
     private val enemyFamily by lazy { world.family { all(EnemyComponent, PositionComponent) } }
     private val droneFamily by lazy { world.family { all(DroneComponent) } }
+    private val droneListBuffer = mutableListOf<Entity>()
 
     override fun onTickEntity(entity: Entity) {
         val drone = entity[DroneComponent]
         val pos = entity[PositionComponent].pos
         val orientation = entity[OrientationComponent]
-        val weapon = if(entity.has(WeaponComponent)) entity[WeaponComponent] else null
+        val weapon = if (entity.has(WeaponComponent)) entity[WeaponComponent] else null
 
         val owner = drone.owner
-        if (owner !in world) {
+        if (!world.contains(owner)) {
             world -= entity
             return
         }
 
-        // Dynamic Spacing Logic
-        var total = 0; var myIndex = -1
-        droneFamily.forEach { if (it[DroneComponent].owner == owner) { if (it == entity) myIndex = total; total++ } }
+        // PERFECT CIRCULAR REDISTRIBUTION
+        droneListBuffer.clear()
+        droneFamily.forEach { if (it[DroneComponent].owner == owner) droneListBuffer.add(it) }
 
-        val targetOrbitAngle = drone.orbitAngle + (myIndex * MathUtils.PI2 / total)
-        val ownerPos = owner[PositionComponent].pos
-        pos.set(ownerPos.x + MathUtils.cos(targetOrbitAngle) * drone.orbitRadius, ownerPos.y + MathUtils.sin(targetOrbitAngle) * drone.orbitRadius)
+        val total = droneListBuffer.size
+        val index = droneListBuffer.indexOf(entity)
+
+        // Base orbit angle advances over time
         drone.orbitAngle += drone.orbitSpeed * deltaTime
+
+        // Each drone is offset by a fraction of PI2 based on its index in the group
+        val finalAngle = drone.orbitAngle + (index * MathUtils.PI2 / total)
+
+        val ownerPos = owner[PositionComponent].pos
+        pos.set(
+            ownerPos.x + MathUtils.cos(finalAngle) * drone.orbitRadius,
+            ownerPos.y + MathUtils.sin(finalAngle) * drone.orbitRadius
+        )
 
         var nearestEnemy: Entity? = null
         var minDistSq = Float.MAX_VALUE
@@ -116,10 +122,9 @@ class DroneSystem(
         }
 
         nearestEnemy?.let { enemy ->
-            val ePos = enemy[PositionComponent].pos
-            val aimAngle = Vector2(ePos).sub(pos).angleRad()
+            val aimAngle = Vector2(enemy[PositionComponent].pos).sub(pos).angleRad()
             orientation.angleRad = aimAngle
-            weapon?.aimAngleRad = aimAngle // SET AIM ANGLE
+            weapon?.aimAngleRad = aimAngle
             weapon?.isFiring = true
         } ?: run {
             weapon?.isFiring = false

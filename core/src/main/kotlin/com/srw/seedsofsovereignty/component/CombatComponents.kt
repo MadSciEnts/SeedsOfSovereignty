@@ -10,7 +10,8 @@ data class WeaponComponent(
     var isFiring: Boolean = false,
     var barrels: Int = 1,
     var currentBarrel: Int = 0,
-    var aimAngleRad: Float = MathUtils.PI / 2f
+    var aimAngleRad: Float = MathUtils.PI / 2f,
+    val barrelSequence: MutableList<Int> = mutableListOf(0) // Order of firing
 ) : Component<WeaponComponent> {
     override fun type() = WeaponComponent
     companion object : ComponentType<WeaponComponent>()

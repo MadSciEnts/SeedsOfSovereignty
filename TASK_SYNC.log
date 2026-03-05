@@ -4,15 +4,17 @@
 - [x] **Components Modularized:** Verified domain split (Core, Combat, Evolution, Interaction, Health).
 - [x] **Systems Modularized:** Verified domain split (Movement, Combat, Evolution, Interaction, World, Render, UI, Vitals).
 - [x] **God Scripts Cleared:** Verified `Systems.kt` and `Components.kt` are empty/deprecated.
+- [x] **Modular Rendering:** Extracted ship drawing to ProceduralShipDrawer utility.
 
 ## Logic Implementation Status
 - [x] **Tier 8 Evolution:** Dreadnought (8a-8d) implemented with heavy industrial DNA.
-- [ ] **Global Scale Adjustment (IN PROGRESS):**
-    - [ ] **Objective:** Ship size grows dynamically from T1 (50% current) to T8 (150% current).
-    - [ ] **Camera:** Field of view (zoom) scales in sync with ship growth.
-    - [ ] **Sub-Tier Progression:** Incremental scaling within 1a-8d.
-- [ ] **Enemy AI Overhaul:** Implement Orbiting pattern and return fire (T2+).
-- [ ] **Station Fixes:** Verified Undock Push (-400u), 3s Cooldown, and Enemy Retreat (Safe Haven).
+- [x] **Independent Aiming:** Decoupled Hull and Aim vectors for all entities.
+- [x] **Distributed Mounts:** T8 Dreadnought fires from 4 discrete weapon rings.
+- [x] **Sequential ROF:** Weapon sub-tiers fire sequentially with cumulative rate-of-fire.
+- [ ] **Drone Spacing Fix (IN PROGRESS):**
+    - [ ] **Objective:** Perfect geometric circular distribution around player.
+    - [ ] **Sponge Mechanic:** Absorbing projectiles via collision detection.
+- [ ] **Minimap Implementation:** Circular radar with POI markers.
 
 ## Verification Protocol
 1. Write domain file.

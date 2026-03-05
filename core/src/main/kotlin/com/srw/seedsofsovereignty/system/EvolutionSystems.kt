@@ -49,22 +49,23 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
             evo.essenceCollected = 0
             evo.essenceRequired = (evo.essenceRequired * 1.5f).toInt()
 
-            // GLOBAL RULE: Barrels = SubTier (1-4)
-            // Sequential firing will naturally increase ROF.
             weapon.barrels = evo.subTier.coerceIn(1, 4)
+            generateCenterOutSequence(weapon)
 
             when (evo.currentTier) {
                 1 -> {
                     if (evo.subTier == 5) {
                         evo.currentTier = 2; evo.subTier = 1; weapon.barrels = 1
+                        generateCenterOutSequence(weapon)
                         weapon.fireRate = 0.4f; vel.acceleration += 150f
                     } else {
-                        weapon.fireRate = 0.5f // Baseline sequential rate
+                        weapon.fireRate = 0.5f
                     }
                 }
                 2 -> {
                     if (evo.subTier == 5) {
                         evo.currentTier = 3; evo.subTier = 1; weapon.barrels = 1
+                        generateCenterOutSequence(weapon)
                         vel.acceleration += 100f
                     } else {
                         weapon.fireRate = 0.35f
@@ -74,23 +75,22 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
                     val myDrones = droneFamily.filter { it[DroneComponent].owner == entity }
                     if (myDrones.size < evo.subTier) {
                         world.entity { d ->
-                            d += PositionComponent()
-                            d += OrientationComponent()
+                            d += PositionComponent(); d += OrientationComponent()
                             d += DroneComponent(owner = entity, orbitRadius = 60f + myDrones.size * 10f)
-                            d += WeaponComponent(fireRate = 0.5f)
-                            d += VelocityComponent()
-                            d += HealthComponent(max = 50f, current = 50f)
-                            d += VisibleComponent()
+                            d += WeaponComponent(fireRate = 0.5f); d += VelocityComponent()
+                            d += HealthComponent(max = 50f, current = 50f); d += VisibleComponent()
                         }
                     }
                     if (evo.subTier >= 5) {
                         evo.currentTier = 4; evo.subTier = 1; weapon.barrels = 1
+                        generateCenterOutSequence(weapon)
                         weapon.fireRate = 0.3f
                     }
                 }
                 4 -> {
                     if (evo.subTier == 5) {
                         evo.currentTier = 5; evo.subTier = 1; weapon.barrels = 1
+                        generateCenterOutSequence(weapon)
                         weapon.fireRate = 0.4f; vel.acceleration += 50f
                         if (entity.has(ShieldComponent)) {
                             val shield = entity[ShieldComponent]
@@ -103,6 +103,7 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
                     if (evo.subTier == 4 && entity.has(ShieldComponent)) entity[ShieldComponent].rechargeRate += 5f
                     if (evo.subTier == 5) {
                         evo.currentTier = 6; evo.subTier = 1; weapon.barrels = 1
+                        generateCenterOutSequence(weapon)
                         weapon.fireRate = 0.3f; vel.acceleration += 25f
                     }
                 }
@@ -119,6 +120,7 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
                     }
                     if (evo.subTier == 5) {
                         evo.currentTier = 7; evo.subTier = 1; weapon.barrels = 1
+                        generateCenterOutSequence(weapon)
                         vel.acceleration += 100f; weapon.fireRate = 0.4f
                     }
                 }
@@ -126,6 +128,7 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
                     if (evo.subTier == 3) vel.acceleration += 200f
                     if (evo.subTier == 5) {
                         evo.currentTier = 8; evo.subTier = 1; weapon.barrels = 1
+                        generateCenterOutSequence(weapon)
                         weapon.fireRate = 0.6f; vel.acceleration = 80f
                         if (entity.has(HealthComponent)) entity[HealthComponent].apply { max = 1000f; current = 1000f }
                         if (entity.has(ShieldComponent)) entity[ShieldComponent].apply { max = 800f; current = 800f; rechargeRate = 20f }
@@ -136,10 +139,25 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
                     if (evo.subTier == 4 && entity.has(ShieldComponent)) entity[ShieldComponent].rechargeRate += 10f
                     if (evo.subTier == 5) {
                         evo.currentTier = 9; evo.subTier = 1; weapon.barrels = 1
+                        generateCenterOutSequence(weapon)
                         vel.acceleration += 20f
                     }
                 }
             }
         }
+    }
+
+    private fun generateCenterOutSequence(weapon: WeaponComponent) {
+        weapon.barrelSequence.clear()
+        when (weapon.barrels) {
+            1 -> weapon.barrelSequence.add(0)
+            2 -> weapon.barrelSequence.addAll(listOf(0, 1))
+            3 -> weapon.barrelSequence.addAll(listOf(1, 0, 2)) // Center, then Left, then Right
+            4 -> weapon.barrelSequence.addAll(listOf(1, 2, 0, 3)) // Inner pair, then Outer pair
+            else -> {
+                for (i in 0 until weapon.barrels) weapon.barrelSequence.add(i)
+            }
+        }
+        weapon.currentBarrel = 0
     }
 }
