@@ -27,17 +27,25 @@ class WeaponSystem : IteratingSystem(family { all(WeaponComponent, PositionCompo
             weapon.cooldown = weapon.fireRate
 
             for (i in 0 until weapon.barrels) {
+                // Fix: Properly handle barrel firing for higher tiers
                 if (weapon.barrels == 2 && i != weapon.currentBarrel) continue
 
                 world.entity { e ->
                     e += PositionComponent().apply {
                         this.pos.set(pos)
-                        if (weapon.barrels >= 2) {
-                            val offset = if (i == 0) -10f else if (i == 1) 10f else 0f
-                            val ox = MathUtils.cos(angleRad + MathUtils.PI/2f) * offset
-                            val oy = MathUtils.sin(angleRad + MathUtils.PI/2f) * offset
-                            this.pos.add(ox, oy)
+
+                        // Spread logic based on barrel count and tier
+                        val spreadWidth = if (tier >= 6) 40f else 20f
+                        val offset = when (weapon.barrels) {
+                            2 -> if (i == 0) -10f else 10f
+                            3 -> (i - 1) * (spreadWidth / 2f)
+                            4 -> (i - 1.5f) * (spreadWidth / 3f)
+                            else -> 0f
                         }
+
+                        val ox = MathUtils.cos(angleRad + MathUtils.PI/2f) * offset
+                        val oy = MathUtils.sin(angleRad + MathUtils.PI/2f) * offset
+                        this.pos.add(ox, oy)
                     }
                     e += VelocityComponent().apply {
                         val bulletSpeed = if (isEnemy) 600f else 1000f
@@ -45,14 +53,14 @@ class WeaponSystem : IteratingSystem(family { all(WeaponComponent, PositionCompo
                     }
                     e += ProjectileComponent(
                         tier = tier,
-                        damage = if (isEnemy) 5f else (if (tier >= 2) 25f else 10f),
+                        damage = if (isEnemy) 5f else (if (tier >= 6) 40f else if (tier >= 2) 25f else 10f),
                         ownerIsEnemy = isEnemy
                     )
                     e += LifeSpanComponent(remaining = if (isEnemy) 2.5f else 1.5f)
                 }
             }
 
-            if (weapon.barrels > 1) {
+            if (weapon.barrels > 1 && weapon.barrels == 2) {
                 weapon.currentBarrel = (weapon.currentBarrel + 1) % weapon.barrels
             }
         }

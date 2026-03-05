@@ -115,6 +115,7 @@ class HUDSystem(
                 3 -> "CARRIER"
                 4 -> "SENTINEL"
                 5 -> "BULWARK"
+                6 -> "SENTINEL+"
                 else -> "UNKNOWN"
             }
             font.color = Color.CYAN

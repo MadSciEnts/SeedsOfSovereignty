@@ -33,7 +33,6 @@ class RenderSystem(
                 val angleRad = if (entity.has(OrientationComponent)) entity[OrientationComponent].angleRad else MathUtils.PI / 2f
                 val evo = if (entity.has(EvolutionComponent)) entity[EvolutionComponent] else null
 
-                // Tier 5 Shield Bubble Effect
                 if (evo?.currentTier == 5 && entity.has(ShieldComponent)) {
                     val shield = entity[ShieldComponent]
                     if (shield.active && shield.current > 0) {
@@ -76,6 +75,7 @@ class RenderSystem(
             3 -> 24f
             4 -> 30f
             5 -> 35f
+            6 -> 45f
             else -> 16f
         }
         val cos = MathUtils.cos(rotation)
@@ -95,40 +95,45 @@ class RenderSystem(
             3 -> Color.GOLD
             4 -> Color.ORANGE
             5 -> Color.CHARTREUSE
+            6 -> Color.SKY
             else -> Color.CYAN
         }
         drawer.setColor(color)
-        drawer.line(x1, y1, x2, y2, 2f)
-        drawer.line(x2, y2, x3, y3, 2f)
-        drawer.line(x3, y3, x1, y1, 2f)
+
+        if (tier == 6) {
+            drawer.filledCircle(x, y, size * 0.4f)
+            drawer.circle(x, y, size * 0.7f, 3f)
+
+            val wingSize = size * 1.2f
+            val wingAngle = 2.1f
+            val wx1 = x + wingSize * MathUtils.cos(rotation + wingAngle)
+            val wy1 = y + wingSize * MathUtils.sin(rotation + wingAngle)
+            val wx2 = x + wingSize * MathUtils.cos(rotation - wingAngle)
+            val wy2 = y + wingSize * MathUtils.sin(rotation - wingAngle)
+
+            drawer.line(x1, y1, wx1, wy1, 4f)
+            drawer.line(x1, y1, wx2, wy2, 4f)
+            drawer.line(wx1, wy1, x - size * 0.5f * cos, y - size * 0.5f * sin, 2f)
+            drawer.line(wx2, wy2, x - size * 0.5f * cos, y - size * 0.5f * sin, 2f)
+        } else {
+            drawer.line(x1, y1, x2, y2, 2f)
+            drawer.line(x2, y2, x3, y3, 2f)
+            drawer.line(x3, y3, x1, y1, 2f)
+        }
 
         if (tier == 5) {
             drawer.line(x2, y2, x2 - 10f * cos, y2 - 10f * sin, 3f)
             drawer.line(x3, y3, x3 - 10f * cos, y3 - 10f * sin, 3f)
         }
 
-        if (tier >= 3) {
+        if (tier >= 3 && tier != 6) {
             drawer.circle(x, y, size * 0.8f, 1.5f)
-        } else if (tier >= 2) {
+        } else if (tier >= 2 && tier != 6) {
             drawer.line(x, y, x - size * 0.5f * cos, y - size * 0.5f * sin, 2f)
         }
 
         drawer.setColor(Color.WHITE)
         drawer.filledCircle(x, y, 3f)
-    }
-
-    private fun drawWeaponPoint(x: Float, y: Float, rotation: Float, size: Float) {
-        val cos = MathUtils.cos(rotation)
-        val sin = MathUtils.sin(rotation)
-        val x1 = x + size * cos
-        val y1 = y + size * sin
-        val x2 = x + size * MathUtils.cos(rotation + 2.4f)
-        val y2 = y + size * MathUtils.sin(rotation + 2.4f)
-        val x3 = x + size * MathUtils.cos(rotation - 2.4f)
-        val y3 = y + size * MathUtils.sin(rotation - 2.4f)
-        drawer.line(x1, y1, x2, y2, 1f)
-        drawer.line(x2, y2, x3, y3, 1f)
-        drawer.line(x3, y3, x1, y1, 1f)
     }
 
     private fun drawDrone(x: Float, y: Float, rotation: Float) {
@@ -172,6 +177,14 @@ class RenderSystem(
             5 -> {
                 drawer.setColor(Color.CHARTREUSE)
                 drawer.rectangle(x-4f, y-4f, 8f, 8f, 2f)
+            }
+            6 -> {
+                drawer.setColor(Color.SKY)
+                val cos = MathUtils.cos(rotation)
+                val sin = MathUtils.sin(rotation)
+                drawer.filledRectangle(x - 4f, y - 4f, 8f, 8f, rotation * MathUtils.radDeg)
+                drawer.setColor(Color.WHITE)
+                drawer.rectangle(x - 6f, y - 6f, 12f, 12f, 1f, rotation * MathUtils.radDeg)
             }
             else -> {
                 drawer.setColor(Color.WHITE)

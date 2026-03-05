@@ -108,23 +108,38 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
                     }
                 }
                 5 -> {
-                    // Bulwark progression: Focus on Shield capacity and fire rate
                     when (evo.subTier) {
-                        2 -> {
-                            if (entity.has(ShieldComponent)) entity[ShieldComponent].max += 50f
-                        }
-                        3 -> {
-                            weapon.fireRate = 0.12f
-                            weapon.barrels = 3
-                        }
-                        4 -> {
-                            if (entity.has(ShieldComponent)) entity[ShieldComponent].rechargeRate += 5f
-                        }
+                        2 -> { if (entity.has(ShieldComponent)) entity[ShieldComponent].max += 50f }
+                        3 -> { weapon.fireRate = 0.12f; weapon.barrels = 3 }
+                        4 -> { if (entity.has(ShieldComponent)) entity[ShieldComponent].rechargeRate += 5f }
                         5 -> {
-                            // Prepare for Tier 6 (Assumed Heavy Cruiser/Sentinel+)
                             evo.currentTier = 6
                             evo.subTier = 1
+                            weapon.fireRate = 0.1f
                             weapon.barrels = 4
+                            vel.acceleration += 25f
+                        }
+                    }
+                }
+                6 -> {
+                    // Sentinel+ Progression
+                    when (evo.subTier) {
+                        2 -> { weapon.fireRate = 0.08f }
+                        3 -> {
+                            // Add a support drone even at this tier
+                            world.entity { d ->
+                                d += PositionComponent()
+                                d += OrientationComponent()
+                                d += DroneComponent(owner = entity, orbitAngle = MathUtils.PI, orbitRadius = 80f)
+                                d += WeaponComponent(fireRate = 0.4f)
+                                d += VelocityComponent()
+                            }
+                        }
+                        4 -> { weapon.fireRate = 0.06f }
+                        5 -> {
+                            evo.currentTier = 7
+                            evo.subTier = 1
+                            // Next major evolution transition
                         }
                     }
                 }
