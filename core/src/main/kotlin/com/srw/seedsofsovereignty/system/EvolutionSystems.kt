@@ -122,11 +122,9 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
                     }
                 }
                 6 -> {
-                    // Sentinel+ Progression
                     when (evo.subTier) {
                         2 -> { weapon.fireRate = 0.08f }
                         3 -> {
-                            // Add a support drone even at this tier
                             world.entity { d ->
                                 d += PositionComponent()
                                 d += OrientationComponent()
@@ -139,6 +137,26 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
                         5 -> {
                             evo.currentTier = 7
                             evo.subTier = 1
+                            // Wraith: Stealth & Phasing
+                            vel.acceleration += 100f
+                            weapon.fireRate = 0.2f
+                            weapon.barrels = 1 // Precise heavy beam (simulated with large projectile)
+                        }
+                    }
+                }
+                7 -> {
+                    // Wraith Progression
+                    when (evo.subTier) {
+                        2 -> { weapon.fireRate = 0.15f }
+                        3 -> {
+                            // Unlocks Phasing (Visual effect for now)
+                            vel.acceleration += 200f
+                        }
+                        4 -> { weapon.fireRate = 0.1f }
+                        5 -> {
+                            evo.currentTier = 8
+                            evo.subTier = 1
+                            weapon.barrels = 2
                             // Next major evolution transition
                         }
                     }

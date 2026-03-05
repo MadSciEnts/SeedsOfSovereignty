@@ -1,6 +1,6 @@
 # DEVELOPMENT PROGRESS LOG
 
-## Current Milestone: Tier 6 - The Sentinel+ (Preparation)
+## Current Milestone: Tier 8 - The Dreadnought (Preparation)
 - [x] GDX-Liftoff Setup
 - [x] Knowledge Base Created (25 files)
 - [x] Tier 1 Pilot Movement System (WASD + Joystick)
@@ -16,9 +16,11 @@
 - [x] Player Damage Distinction (Shield vs. Hull VFX verified)
 - [x] Tier 5 Evolution (Shielded Bulwark) (Complete)
 - [x] Contact Damage VFX (Enhanced Particle Pools) (Integrated)
-- [ ] Tier 6 Evolution (Heavy Cruiser / Sentinel+) (Next)
+- [x] Tier 6 Evolution (Sentinel+) (Complete & Labeled)
+- [x] Tier 7 Evolution (Wraith) (Complete & Labeled)
+- [ ] Tier 8 Evolution (Dreadnought) (Next)
 
 ## Current Global Stats
-- **Active Tier:** 5/48
+- **Active Tier:** 7/48
 - **Active Epoch:** 1/4
-- **Build Version:** 0.0.7 (Pre-Alpha)
+- **Build Version:** 0.0.9 (Pre-Alpha)

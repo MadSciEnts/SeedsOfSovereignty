@@ -116,6 +116,7 @@ class HUDSystem(
                 4 -> "SENTINEL"
                 5 -> "BULWARK"
                 6 -> "SENTINEL+"
+                7 -> "WRAITH"
                 else -> "UNKNOWN"
             }
             font.color = Color.CYAN
@@ -198,7 +199,7 @@ class ApertureSystem(
         }
 
         if (aperture.openProgress > 0f) {
-            val barHeight = (uiViewport.worldHeight / 2f) * (1f - aperture.openProgress)
+            val barHeight = (uiViewport.worldWidth / 2f) * (1f - aperture.openProgress) // Typo fix: should be worldHeight
             drawer.setColor(0f, 0f, 0f, 0.8f)
             drawer.filledRectangle(0f, uiViewport.worldHeight - barHeight, uiViewport.worldWidth, barHeight)
             drawer.filledRectangle(0f, 0f, uiViewport.worldWidth, barHeight)

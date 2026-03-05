@@ -76,6 +76,7 @@ class RenderSystem(
             4 -> 30f
             5 -> 35f
             6 -> 45f
+            7 -> 30f // Wraith is sleeker
             else -> 16f
         }
         val cos = MathUtils.cos(rotation)
@@ -83,11 +84,6 @@ class RenderSystem(
 
         val x1 = x + size * cos
         val y1 = y + size * sin
-        val angleOffset = if (tier >= 2) 2.2f else 2.4f
-        val x2 = x + size * MathUtils.cos(rotation + angleOffset)
-        val y2 = y + size * MathUtils.sin(rotation + angleOffset)
-        val x3 = x + size * MathUtils.cos(rotation - angleOffset)
-        val y3 = y + size * MathUtils.sin(rotation - angleOffset)
 
         val color = when(tier) {
             1 -> Color.CYAN
@@ -96,39 +92,72 @@ class RenderSystem(
             4 -> Color.ORANGE
             5 -> Color.CHARTREUSE
             6 -> Color.SKY
+            7 -> Color.PURPLE
             else -> Color.CYAN
         }
         drawer.setColor(color)
 
-        if (tier == 6) {
-            drawer.filledCircle(x, y, size * 0.4f)
-            drawer.circle(x, y, size * 0.7f, 3f)
+        when (tier) {
+            6 -> {
+                drawer.filledCircle(x, y, size * 0.4f)
+                drawer.circle(x, y, size * 0.7f, 3f)
 
-            val wingSize = size * 1.2f
-            val wingAngle = 2.1f
-            val wx1 = x + wingSize * MathUtils.cos(rotation + wingAngle)
-            val wy1 = y + wingSize * MathUtils.sin(rotation + wingAngle)
-            val wx2 = x + wingSize * MathUtils.cos(rotation - wingAngle)
-            val wy2 = y + wingSize * MathUtils.sin(rotation - wingAngle)
+                val wingSize = size * 1.2f
+                val wingAngle = 2.1f
+                val wx1 = x + wingSize * MathUtils.cos(rotation + wingAngle)
+                val wy1 = y + wingSize * MathUtils.sin(rotation + wingAngle)
+                val wx2 = x + wingSize * MathUtils.cos(rotation - wingAngle)
+                val wy2 = y + wingSize * MathUtils.sin(rotation - wingAngle)
 
-            drawer.line(x1, y1, wx1, wy1, 4f)
-            drawer.line(x1, y1, wx2, wy2, 4f)
-            drawer.line(wx1, wy1, x - size * 0.5f * cos, y - size * 0.5f * sin, 2f)
-            drawer.line(wx2, wy2, x - size * 0.5f * cos, y - size * 0.5f * sin, 2f)
-        } else {
-            drawer.line(x1, y1, x2, y2, 2f)
-            drawer.line(x2, y2, x3, y3, 2f)
-            drawer.line(x3, y3, x1, y1, 2f)
+                drawer.line(x1, y1, wx1, wy1, 4f)
+                drawer.line(x1, y1, wx2, wy2, 4f)
+                drawer.line(wx1, wy1, x - size * 0.5f * cos, y - size * 0.5f * sin, 2f)
+                drawer.line(wx2, wy2, x - size * 0.5f * cos, y - size * 0.5f * sin, 2f)
+            }
+            7 -> {
+                // Wraith: Sleek, needle-like
+                val tipX = x + size * 1.5f * cos
+                val tipY = y + size * 1.5f * sin
+                val wingAngle = 2.5f
+                val wx1 = x + size * 0.8f * MathUtils.cos(rotation + wingAngle)
+                val wy1 = y + size * 0.8f * MathUtils.sin(rotation + wingAngle)
+                val wx2 = x + size * 0.8f * MathUtils.cos(rotation - wingAngle)
+                val wy2 = y + size * 0.8f * MathUtils.sin(rotation - wingAngle)
+
+                drawer.line(tipX, tipY, wx1, wy1, 2f)
+                drawer.line(tipX, tipY, wx2, wy2, 2f)
+                drawer.line(wx1, wy1, wx2, wy2, 1f)
+
+                // Pulsing core
+                val alpha = 0.5f + 0.5f * MathUtils.sin(Gdx.graphics.frameId.toFloat() * 0.2f)
+                drawer.setColor(color.r, color.g, color.b, alpha)
+                drawer.filledCircle(x, y, 4f)
+            }
+            else -> {
+                val angleOffset = if (tier >= 2) 2.2f else 2.4f
+                val x2 = x + size * MathUtils.cos(rotation + angleOffset)
+                val y2 = y + size * MathUtils.sin(rotation + angleOffset)
+                val x3 = x + size * MathUtils.cos(rotation - angleOffset)
+                val y3 = y + size * MathUtils.sin(rotation - angleOffset)
+                drawer.line(x1, y1, x2, y2, 2f)
+                drawer.line(x2, y2, x3, y3, 2f)
+                drawer.line(x3, y3, x1, y1, 2f)
+            }
         }
 
         if (tier == 5) {
+            val angleOffset = 2.2f
+            val x2 = x + size * MathUtils.cos(rotation + angleOffset)
+            val y2 = y + size * MathUtils.sin(rotation + angleOffset)
+            val x3 = x + size * MathUtils.cos(rotation - angleOffset)
+            val y3 = y + size * MathUtils.sin(rotation - angleOffset)
             drawer.line(x2, y2, x2 - 10f * cos, y2 - 10f * sin, 3f)
             drawer.line(x3, y3, x3 - 10f * cos, y3 - 10f * sin, 3f)
         }
 
-        if (tier >= 3 && tier != 6) {
+        if (tier >= 3 && tier < 6) {
             drawer.circle(x, y, size * 0.8f, 1.5f)
-        } else if (tier >= 2 && tier != 6) {
+        } else if (tier >= 2 && tier < 6) {
             drawer.line(x, y, x - size * 0.5f * cos, y - size * 0.5f * sin, 2f)
         }
 
@@ -180,11 +209,18 @@ class RenderSystem(
             }
             6 -> {
                 drawer.setColor(Color.SKY)
-                val cos = MathUtils.cos(rotation)
-                val sin = MathUtils.sin(rotation)
                 drawer.filledRectangle(x - 4f, y - 4f, 8f, 8f, rotation * MathUtils.radDeg)
                 drawer.setColor(Color.WHITE)
                 drawer.rectangle(x - 6f, y - 6f, 12f, 12f, 1f, rotation * MathUtils.radDeg)
+            }
+            7 -> {
+                // Wraith: Purple Phase-Bolt
+                drawer.setColor(Color.PURPLE)
+                val cos = MathUtils.cos(rotation)
+                val sin = MathUtils.sin(rotation)
+                drawer.line(x, y, x + 20f * cos, y + 20f * sin, 2.5f)
+                drawer.setColor(Color.WHITE)
+                drawer.filledCircle(x, y, 3f)
             }
             else -> {
                 drawer.setColor(Color.WHITE)
