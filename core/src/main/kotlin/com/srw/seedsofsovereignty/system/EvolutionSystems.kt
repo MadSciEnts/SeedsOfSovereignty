@@ -49,151 +49,94 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
             evo.essenceCollected = 0
             evo.essenceRequired = (evo.essenceRequired * 1.5f).toInt()
 
+            // GLOBAL RULE: Barrels = SubTier (1-4)
+            // Sequential firing will naturally increase ROF.
+            weapon.barrels = evo.subTier.coerceIn(1, 4)
+
             when (evo.currentTier) {
                 1 -> {
-                    when (evo.subTier) {
-                        2 -> weapon.fireRate = 0.5f
-                        3 -> { weapon.fireRate = 0.33f; weapon.barrels = 2 }
-                        4 -> { weapon.fireRate = 0.25f; weapon.barrels = 3 }
-                        5 -> { evo.currentTier = 2; evo.subTier = 1; weapon.fireRate = 0.2f; weapon.barrels = 1; vel.acceleration += 150f }
+                    if (evo.subTier == 5) {
+                        evo.currentTier = 2; evo.subTier = 1; weapon.barrels = 1
+                        weapon.fireRate = 0.4f; vel.acceleration += 150f
+                    } else {
+                        weapon.fireRate = 0.5f // Baseline sequential rate
                     }
                 }
                 2 -> {
-                    when (evo.subTier) {
-                        2 -> weapon.fireRate = 0.15f
-                        3 -> { weapon.fireRate = 0.12f; weapon.barrels = 2 }
-                        4 -> { weapon.fireRate = 0.1f; weapon.barrels = 4 }
-                        5 -> { evo.currentTier = 3; evo.subTier = 1; weapon.barrels = 1; vel.acceleration += 100f }
+                    if (evo.subTier == 5) {
+                        evo.currentTier = 3; evo.subTier = 1; weapon.barrels = 1
+                        vel.acceleration += 100f
+                    } else {
+                        weapon.fireRate = 0.35f
                     }
                 }
                 3 -> {
                     val myDrones = droneFamily.filter { it[DroneComponent].owner == entity }
-                    val droneCount = myDrones.size
-                    if (droneCount < evo.subTier) {
-                        for (i in 0 until (evo.subTier - droneCount)) {
-                            world.entity { d ->
-                                d += PositionComponent()
-                                d += OrientationComponent()
-                                d += DroneComponent(owner = entity, orbitRadius = 60f + i * 10f)
-                                d += WeaponComponent(fireRate = 0.5f)
-                                d += VelocityComponent()
-                                d += HealthComponent(max = 50f, current = 50f)
-                                d += VisibleComponent()
-                            }
+                    if (myDrones.size < evo.subTier) {
+                        world.entity { d ->
+                            d += PositionComponent()
+                            d += OrientationComponent()
+                            d += DroneComponent(owner = entity, orbitRadius = 60f + myDrones.size * 10f)
+                            d += WeaponComponent(fireRate = 0.5f)
+                            d += VelocityComponent()
+                            d += HealthComponent(max = 50f, current = 50f)
+                            d += VisibleComponent()
                         }
                     }
-
                     if (evo.subTier >= 5) {
-                        evo.currentTier = 4
-                        evo.subTier = 1
-                        weapon.fireRate = 0.1f
-                        weapon.barrels = 1
+                        evo.currentTier = 4; evo.subTier = 1; weapon.barrels = 1
+                        weapon.fireRate = 0.3f
                     }
                 }
                 4 -> {
-                    when (evo.subTier) {
-                        2 -> weapon.fireRate = 0.08f
-                        3 -> { weapon.fireRate = 0.06f; weapon.barrels = 2 }
-                        4 -> { weapon.fireRate = 0.05f; weapon.barrels = 3 }
-                        5 -> {
-                            evo.currentTier = 5
-                            evo.subTier = 1
-                            weapon.fireRate = 0.15f
-                            weapon.barrels = 2
-                            vel.acceleration += 50f
-                            if (entity.has(ShieldComponent)) {
-                                val shield = entity[ShieldComponent]
-                                shield.max = 200f
-                                shield.current = shield.max
-                                shield.rechargeRate = 15f
-                            }
+                    if (evo.subTier == 5) {
+                        evo.currentTier = 5; evo.subTier = 1; weapon.barrels = 1
+                        weapon.fireRate = 0.4f; vel.acceleration += 50f
+                        if (entity.has(ShieldComponent)) {
+                            val shield = entity[ShieldComponent]
+                            shield.max = 200f; shield.current = shield.max; shield.rechargeRate = 15f
                         }
                     }
                 }
                 5 -> {
-                    when (evo.subTier) {
-                        2 -> { if (entity.has(ShieldComponent)) entity[ShieldComponent].max += 50f }
-                        3 -> { weapon.fireRate = 0.12f; weapon.barrels = 3 }
-                        4 -> { if (entity.has(ShieldComponent)) entity[ShieldComponent].rechargeRate += 5f }
-                        5 -> {
-                            evo.currentTier = 6
-                            evo.subTier = 1
-                            weapon.fireRate = 0.1f
-                            weapon.barrels = 4
-                            vel.acceleration += 25f
-                        }
+                    if (evo.subTier == 2 && entity.has(ShieldComponent)) entity[ShieldComponent].max += 50f
+                    if (evo.subTier == 4 && entity.has(ShieldComponent)) entity[ShieldComponent].rechargeRate += 5f
+                    if (evo.subTier == 5) {
+                        evo.currentTier = 6; evo.subTier = 1; weapon.barrels = 1
+                        weapon.fireRate = 0.3f; vel.acceleration += 25f
                     }
                 }
                 6 -> {
-                    when (evo.subTier) {
-                        2 -> { weapon.fireRate = 0.08f }
-                        3 -> {
-                            world.entity { d ->
-                                d += PositionComponent()
-                                d += OrientationComponent()
-                                d += DroneComponent(owner = entity, orbitRadius = 80f)
-                                d += WeaponComponent(fireRate = 0.4f)
-                                d += VelocityComponent()
-                                d += HealthComponent(max = 100f, current = 100f)
-                                d += ShieldComponent(max = 50f, current = 50f, rechargeRate = 5f)
-                                d += VisibleComponent()
-                            }
+                    if (evo.subTier == 3) {
+                        world.entity { d ->
+                            d += PositionComponent(); d += OrientationComponent()
+                            d += DroneComponent(owner = entity, orbitRadius = 80f)
+                            d += WeaponComponent(fireRate = 0.4f); d += VelocityComponent()
+                            d += HealthComponent(max = 100f, current = 100f)
+                            d += ShieldComponent(max = 50f, current = 50f, rechargeRate = 5f)
+                            d += VisibleComponent()
                         }
-                        4 -> { weapon.fireRate = 0.06f }
-                        5 -> {
-                            evo.currentTier = 7
-                            evo.subTier = 1
-                            vel.acceleration += 100f
-                            weapon.fireRate = 0.2f
-                            weapon.barrels = 1
-                        }
+                    }
+                    if (evo.subTier == 5) {
+                        evo.currentTier = 7; evo.subTier = 1; weapon.barrels = 1
+                        vel.acceleration += 100f; weapon.fireRate = 0.4f
                     }
                 }
                 7 -> {
-                    when (evo.subTier) {
-                        2 -> { weapon.fireRate = 0.15f }
-                        3 -> { vel.acceleration += 200f }
-                        4 -> { weapon.fireRate = 0.1f }
-                        5 -> {
-                            evo.currentTier = 8
-                            evo.subTier = 1
-                            weapon.barrels = 1
-                            weapon.fireRate = 0.4f
-                            vel.acceleration = 80f
-                            if (entity.has(HealthComponent)) {
-                                val health = entity[HealthComponent]
-                                health.max = 1000f
-                                health.current = health.max
-                            }
-                            if (entity.has(ShieldComponent)) {
-                                val shield = entity[ShieldComponent]
-                                shield.max = 800f
-                                shield.current = shield.max
-                                shield.rechargeRate = 20f
-                            }
-                        }
+                    if (evo.subTier == 3) vel.acceleration += 200f
+                    if (evo.subTier == 5) {
+                        evo.currentTier = 8; evo.subTier = 1; weapon.barrels = 1
+                        weapon.fireRate = 0.6f; vel.acceleration = 80f
+                        if (entity.has(HealthComponent)) entity[HealthComponent].apply { max = 1000f; current = 1000f }
+                        if (entity.has(ShieldComponent)) entity[ShieldComponent].apply { max = 800f; current = 800f; rechargeRate = 20f }
                     }
                 }
                 8 -> {
-                    when (evo.subTier) {
-                        2 -> {
-                            weapon.fireRate = 0.3f
-                            if (entity.has(ShieldComponent)) entity[ShieldComponent].max += 200f
-                        }
-                        3 -> {
-                            weapon.barrels = 2
-                            weapon.fireRate = 0.25f
-                        }
-                        4 -> {
-                            weapon.barrels = 3
-                            weapon.fireRate = 0.2f
-                            if (entity.has(ShieldComponent)) entity[ShieldComponent].rechargeRate += 10f
-                        }
-                        5 -> {
-                            evo.currentTier = 9
-                            evo.subTier = 1
-                            vel.acceleration += 20f
-                        }
+                    if (evo.subTier == 2 && entity.has(ShieldComponent)) entity[ShieldComponent].max += 200f
+                    if (evo.subTier == 4 && entity.has(ShieldComponent)) entity[ShieldComponent].rechargeRate += 10f
+                    if (evo.subTier == 5) {
+                        evo.currentTier = 9; evo.subTier = 1; weapon.barrels = 1
+                        vel.acceleration += 20f
                     }
                 }
             }

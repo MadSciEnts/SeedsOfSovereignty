@@ -20,6 +20,11 @@
 - **Refactoring Sprints:** Every 4 Tiers (once per major evolution), we perform a "Refactoring Sprint" to evaluate file size and reorganize logic.
 - **Feature-First Structure:** Organize files by their game function rather than just their technical type.
 
-## 5. Design Ethics
+## 5. Log-Based Verification & Synchronization
+- **Verification Protocol:** Before claiming a task is complete, execute a `gradle core:assemble` check to ensure the project compiles.
+- **Status Sync:** In every multi-file update, explicitly list the "Disk Status" to confirm which files were successfully written.
+- **Log-First Workflow:** Update `TASK_SYNC.log` *before* modifying logic files to maintain a clear "source of truth" for complex refactors.
+
+## 6. Design Ethics
 - **The "No-Inventory" Rule:** All weapon/ship changes are immediate "Swap or Scrap."
 - **Visual Response:** Every UI tap must trigger a visual tween (Glitch, Flare, or Aperture shift).
