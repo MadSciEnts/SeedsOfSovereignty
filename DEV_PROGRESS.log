@@ -1,6 +1,6 @@
 # DEVELOPMENT PROGRESS LOG
 
-## Current Milestone: Tier 5 - The Bulwark (Planned)
+## Current Milestone: Tier 5 - The Bulwark
 - [x] GDX-Liftoff Setup
 - [x] Knowledge Base Created (25 files)
 - [x] Tier 1 Pilot Movement System (WASD + Joystick)
@@ -12,8 +12,10 @@
 - [x] Enemy AI Overhaul (Orbiting + Staggered Projectiles)
 - [x] Station Docking & Aperture HUD (Functional Buttons)
 - [x] Full Architectural Modularization (Domain-driven Files)
+- [ ] Tier 5 Evolution (Shielded Bulwark) (In Progress)
+- [ ] Contact Damage VFX (Planned: Shields/Impact Particles)
 
 ## Current Global Stats
 - **Active Tier:** 4/48
 - **Active Epoch:** 1/4
-- **Build Version:** 0.0.5 (Pre-Alpha)
+- **Build Version:** 0.0.6 (Pre-Alpha)

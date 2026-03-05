@@ -22,7 +22,6 @@ class WeaponSystem : IteratingSystem(family { all(WeaponComponent, PositionCompo
             weapon.cooldown -= deltaTime
         }
 
-        // Verified: Now correctly processes isFiring for BOTH player and enemies
         if (weapon.isFiring && weapon.cooldown <= 0f) {
             weapon.cooldown = weapon.fireRate
 
@@ -40,7 +39,6 @@ class WeaponSystem : IteratingSystem(family { all(WeaponComponent, PositionCompo
                         }
                     }
                     e += VelocityComponent().apply {
-                        // Slower projectiles for enemies
                         val bulletSpeed = if (isEnemy) 600f else 1000f
                         this.v.set(bulletSpeed, 0f).setAngleRad(angleRad).add(vel)
                     }
@@ -75,6 +73,10 @@ class CombatSystem : IteratingSystem(family { all(ProjectileComponent, PositionC
                 if (projPos.dst2(enemyPos) < 1600f) {
                     val enemyComp = enemy[EnemyComponent]
                     enemyComp.health -= projComp.damage
+
+                    // Spawn Spark VFX on hit
+                    spawnSparks(projPos.x, projPos.y, com.badlogic.gdx.graphics.Color.YELLOW)
+
                     world -= entity
 
                     if (enemyComp.health <= 0f) {
@@ -95,18 +97,37 @@ class CombatSystem : IteratingSystem(family { all(ProjectileComponent, PositionC
             playerFamily.firstOrNull()?.let { player ->
                 val playerPos = player[PositionComponent].pos
                 if (projPos.dst2(playerPos) < 900f) {
-                    applyDamageToPlayer(player, projComp.damage)
+                    applyDamageToPlayer(player, projComp.damage, projPos.x, projPos.y)
                     world -= entity
                 }
             }
         }
     }
 
-    private fun applyDamageToPlayer(player: Entity, damage: Float) {
+    private fun spawnSparks(x: Float, y: Float, color: com.badlogic.gdx.graphics.Color) {
+        world.entity {
+            it += PositionComponent().apply { pos.set(x, y) }
+            it += ParticleComponent(type = ParticleComponent.Type.SPARK, color = color, size = 5f)
+            it += LifeSpanComponent(remaining = 0.3f)
+        }
+    }
+
+    private fun applyDamageToPlayer(player: Entity, damage: Float, x: Float, y: Float) {
         var remainingDamage = damage
+
+        // Spawn Spark VFX
+        spawnSparks(x, y, com.badlogic.gdx.graphics.Color.ORANGE)
+
         if (player.has(ShieldComponent)) {
             val shield = player[ShieldComponent]
             if (shield.active && shield.current > 0) {
+                // Spawn Shield Ripple VFX
+                world.entity {
+                    it += PositionComponent().apply { pos.set(x, y) }
+                    it += ParticleComponent(type = ParticleComponent.Type.SHIELD_RIPPLE, color = com.badlogic.gdx.graphics.Color.CYAN, size = 40f)
+                    it += LifeSpanComponent(remaining = 0.4f)
+                }
+
                 val shieldDamage = remainingDamage.coerceAtMost(shield.current)
                 shield.current -= shieldDamage
                 remainingDamage -= shieldDamage
@@ -205,15 +226,13 @@ class EnemyAISystem : IteratingSystem(family { all(EnemyComponent, PositionCompo
             enemy.state = EnemyComponent.State.HUNTING
             val distSq = pos.dst2(playerPos)
 
-            // Look at player
             orientation.angleRad = Vector2(playerPos).sub(pos).angleRad()
 
-            // Firing logic: Enabled for T2+ Reapers
             if (entity.has(WeaponComponent)) {
-                entity[WeaponComponent].isFiring = distSq < 400000f // 630u range
+                entity[WeaponComponent].isFiring = distSq < 400000f
             }
 
-            if (distSq < 90000f) { // 300u range
+            if (distSq < 90000f) {
                 val toPlayer = Vector2(playerPos).sub(pos).nor()
                 val tangent = Vector2(-toPlayer.y, toPlayer.x).scl(vel.acceleration * deltaTime)
                 vel.v.add(tangent)

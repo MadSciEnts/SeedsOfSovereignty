@@ -79,11 +79,33 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
                             }
                         }
                     }
+
                     if (evo.subTier >= 5) {
                         evo.currentTier = 4
                         evo.subTier = 1
                         weapon.fireRate = 0.1f
-                        weapon.barrels = 1
+                        weapon.barrels = 1 // Heavy turret mode
+                    }
+                }
+                4 -> {
+                    when (evo.subTier) {
+                        2 -> weapon.fireRate = 0.08f
+                        3 -> { weapon.fireRate = 0.06f; weapon.barrels = 2 }
+                        4 -> { weapon.fireRate = 0.05f; weapon.barrels = 3 }
+                        5 -> {
+                            evo.currentTier = 5
+                            evo.subTier = 1
+                            weapon.fireRate = 0.15f
+                            weapon.barrels = 2
+                            vel.acceleration += 50f
+                            // Bulwark gets improved shields
+                            if (entity.has(ShieldComponent)) {
+                                val shield = entity[ShieldComponent]
+                                shield.max = 200f
+                                shield.current = shield.max
+                                shield.rechargeRate = 15f
+                            }
+                        }
                     }
                 }
             }

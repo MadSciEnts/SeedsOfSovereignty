@@ -46,8 +46,9 @@ class SovereigntyGame : KtxGame<KtxScreen>() {
 
                 add(WeaponSystem())
                 add(CombatSystem())
-                add(CollisionDamageSystem()) // REGISTERED
-                add(VitalsSystem()) // REGISTERED
+                add(CollisionDamageSystem())
+                add(VitalsSystem())
+                add(EffectSystem()) // REGISTERED: Missing system added
                 add(LifeSpanSystem())
 
                 add(CollectionSystem())

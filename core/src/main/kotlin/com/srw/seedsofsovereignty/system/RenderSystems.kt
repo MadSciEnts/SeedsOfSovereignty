@@ -28,10 +28,22 @@ class RenderSystem(
     override fun onTickEntity(entity: Entity) {
         val pos = entity[PositionComponent].pos
 
-        if (entity.has(VisibleComponent) || entity.has(PlayerComponent) || entity.has(ProjectileComponent) || entity.has(EssenceComponent)) {
+        if (entity.has(VisibleComponent) || entity.has(PlayerComponent) || entity.has(ProjectileComponent) || entity.has(EssenceComponent) || entity.has(ParticleComponent)) {
             if (entity.has(PlayerComponent)) {
                 val angleRad = if (entity.has(OrientationComponent)) entity[OrientationComponent].angleRad else MathUtils.PI / 2f
                 val evo = if (entity.has(EvolutionComponent)) entity[EvolutionComponent] else null
+
+                // Tier 5 Shield Bubble Effect
+                if (evo?.currentTier == 5 && entity.has(ShieldComponent)) {
+                    val shield = entity[ShieldComponent]
+                    if (shield.active && shield.current > 0) {
+                        drawer.setColor(0f, 0.8f, 1f, 0.3f)
+                        drawer.filledCircle(pos.x, pos.y, 35f)
+                        drawer.setColor(Color.CYAN)
+                        drawer.circle(pos.x, pos.y, 35f, 2f)
+                    }
+                }
+
                 drawPlayerShip(pos.x, pos.y, angleRad, evo?.currentTier ?: 1, evo?.subTier ?: 1)
             } else if (entity.has(ProjectileComponent)) {
                 val proj = entity[ProjectileComponent]
@@ -47,6 +59,10 @@ class RenderSystem(
                 drawDrone(pos.x, pos.y, angleRad)
             } else if (entity.has(StationComponent)) {
                 drawStation(pos.x, pos.y)
+            } else if (entity.has(ParticleComponent)) {
+                val part = entity[ParticleComponent]
+                val life = entity[LifeSpanComponent].remaining
+                drawParticle(pos.x, pos.y, part, life)
             } else {
                 drawDetectedObject(pos.x, pos.y)
             }
@@ -59,6 +75,7 @@ class RenderSystem(
             2 -> 20f
             3 -> 24f
             4 -> 30f
+            5 -> 35f
             else -> 16f
         }
         val cos = MathUtils.cos(rotation)
@@ -77,6 +94,7 @@ class RenderSystem(
             2 -> Color.VIOLET
             3 -> Color.GOLD
             4 -> Color.ORANGE
+            5 -> Color.CHARTREUSE
             else -> Color.CYAN
         }
         drawer.setColor(color)
@@ -84,33 +102,12 @@ class RenderSystem(
         drawer.line(x2, y2, x3, y3, 2f)
         drawer.line(x3, y3, x1, y1, 2f)
 
-        drawer.setColor(Color.WHITE)
-        if (tier == 1) {
-            when (subTier) {
-                2 -> drawWeaponPoint(x + 10f * cos, y + 10f * sin, rotation, 4f)
-                3 -> {
-                    val s1 = rotation + MathUtils.PI / 2f
-                    val s2 = rotation - MathUtils.PI / 2f
-                    drawWeaponPoint(x + 8f * MathUtils.cos(s1), y + 8f * MathUtils.sin(s1), rotation, 4f)
-                    drawWeaponPoint(x + 8f * MathUtils.cos(s2), y + 8f * MathUtils.sin(s2), rotation, 4f)
-                }
-                4 -> {
-                    val s1 = rotation + MathUtils.PI / 2f
-                    val s2 = rotation - MathUtils.PI / 2f
-                    drawWeaponPoint(x + 10f * cos, y + 10f * sin, rotation, 4f)
-                    drawWeaponPoint(x + 8f * MathUtils.cos(s1), y + 8f * MathUtils.sin(s1), rotation, 4f)
-                    drawWeaponPoint(x + 8f * MathUtils.cos(s2), y + 8f * MathUtils.sin(s2), rotation, 4f)
-                }
-            }
-        } else if (tier == 4) {
-            drawer.setColor(Color.GOLD)
-            drawer.filledCircle(x, y, 6f)
-            drawer.setColor(Color.WHITE)
-            drawer.line(x, y, x + 12f * cos, y + 12f * sin, 3f)
+        if (tier == 5) {
+            drawer.line(x2, y2, x2 - 10f * cos, y2 - 10f * sin, 3f)
+            drawer.line(x3, y3, x3 - 10f * cos, y3 - 10f * sin, 3f)
         }
 
         if (tier >= 3) {
-            drawer.setColor(color)
             drawer.circle(x, y, size * 0.8f, 1.5f)
         } else if (tier >= 2) {
             drawer.line(x, y, x - size * 0.5f * cos, y - size * 0.5f * sin, 2f)
@@ -172,6 +169,10 @@ class RenderSystem(
                 drawer.setColor(Color.WHITE)
                 drawer.circle(x, y, 6f, 1f)
             }
+            5 -> {
+                drawer.setColor(Color.CHARTREUSE)
+                drawer.rectangle(x-4f, y-4f, 8f, 8f, 2f)
+            }
             else -> {
                 drawer.setColor(Color.WHITE)
                 val length = 8f
@@ -213,6 +214,21 @@ class RenderSystem(
         drawer.filledCircle(x, y, pulse)
         drawer.setColor(Color.WHITE)
         drawer.circle(x, y, pulse, 1f)
+    }
+
+    private fun drawParticle(x: Float, y: Float, part: ParticleComponent, life: Float) {
+        val alpha = if (part.fade) life / part.maxLife else 1f
+        drawer.setColor(part.color.r, part.color.g, part.color.b, part.color.a * alpha)
+
+        when (part.type) {
+            ParticleComponent.Type.SHIELD_RIPPLE -> {
+                val size = part.size * (1f - life/part.maxLife)
+                drawer.circle(x, y, size, 2f)
+            }
+            ParticleComponent.Type.SPARK -> {
+                drawer.filledCircle(x, y, part.size * (life/part.maxLife))
+            }
+        }
     }
 
     private fun drawStation(x: Float, y: Float) {

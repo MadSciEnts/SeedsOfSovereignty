@@ -1,18 +1,22 @@
 # TASK VALIDATION LOG (Verified Live Files)
 
-## Verified Modularization (End of Tier 4)
+## Refactoring State (Refactored Phase 1 complete)
 - [x] Components modularized into domain files.
 - [x] Systems modularized into domain files.
 - [x] SovereigntyGame.kt updated with all registered modular systems.
 - [x] PlayScreen.kt updated with modular UI Factories and Managers.
 
-## Verified Implementation
-- [x] **Player ROF:** Starting 1a ROF verified at 2 proj/sec (fireRate=0.5f).
-- [x] **Enemy Motion:** verified AI steering + MoveSystem application.
-- [x] **Enemy Firing:** verified T1 drones spawn with WeaponComponent and staggered cooldowns.
-- [x] **Station Docking:** verified physical button actors and undock push/cooldown logic.
-- [x] **Safe Haven:** verified enemy retreat behavior near stations.
-- [x] **Floating Origin:** verified 10,000 unit snap logic.
+## Current Functional Status (Verified on Disk)
+- [x] Player ROF (0.5f)
+- [x] Enemy Motion (Orbiting AI)
+- [x] Enemy Firing (WeaponComponent armed)
+- [x] Station Docking (Auto-proximity)
+- [x] Undock cooldown (3s) + kick (-400u)
+- [x] HUD Vitals (Linear Top-Left)
 
-## Build Status
-- [x] core:assemble verified success.
+## Next Verified Changes
+- [ ] Implement Projectile Contact Particle FX (VFX Sprint)
+- [ ] Add SPARK/RIPPLE spawning to CombatSystem
+- [ ] Verify RenderSystem draws particles
+- [ ] Verify EffectSystem cleans up particles
+- [ ] Tier 5 Bulwark physical transformation

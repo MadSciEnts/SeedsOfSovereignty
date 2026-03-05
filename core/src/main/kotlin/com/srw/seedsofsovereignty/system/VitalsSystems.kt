@@ -1,5 +1,6 @@
 package com.srw.seedsofsovereignty.system
 
+import com.badlogic.gdx.graphics.Color
 import com.github.quillraven.fleks.Entity
 import com.github.quillraven.fleks.IteratingSystem
 import com.github.quillraven.fleks.World.Companion.family
@@ -19,7 +20,6 @@ class VitalsSystem : IteratingSystem(family { all(HealthComponent).any(ShieldCom
         val health = entity[HealthComponent]
         if (health.current <= 0f) {
             if (entity.has(PlayerComponent)) {
-                // Handle Player Death (Reset health for now to keep game running)
                 health.current = health.max
             } else {
                 world -= entity
@@ -33,33 +33,42 @@ class CollisionDamageSystem : IteratingSystem(family { all(PlayerComponent, Posi
 
     override fun onTickEntity(entity: Entity) {
         val playerPos = entity[PositionComponent].pos
-        val playerHealth = entity[HealthComponent]
-        val playerShield = if (entity.has(ShieldComponent)) entity[ShieldComponent] else null
 
         enemies.forEach { enemy ->
             val enemyPos = enemy[PositionComponent].pos
-            // Simple circular collision check (30u radius)
             if (playerPos.dst2(enemyPos) < 900f) {
-                applyDamage(entity, 10f) // 10 damage on collision
-                world -= enemy // Enemy destroyed on impact
+                applyDamage(entity, 10f, playerPos.x, playerPos.y)
+                world -= enemy
             }
         }
     }
 
-    private fun applyDamage(target: Entity, damage: Float) {
+    private fun applyDamage(target: Entity, damage: Float, x: Float, y: Float) {
         var remainingDamage = damage
 
-        // Apply to shield first
+        // Spawn Spark Particles
+        world.entity {
+            it += PositionComponent().apply { pos.set(x, y) }
+            it += ParticleComponent(type = ParticleComponent.Type.SPARK, color = Color.ORANGE, size = 5f)
+            it += LifeSpanComponent(remaining = 0.3f)
+        }
+
         if (target.has(ShieldComponent)) {
             val shield = target[ShieldComponent]
             if (shield.active && shield.current > 0) {
+                // Spawn Shield Ripple
+                world.entity {
+                    it += PositionComponent().apply { pos.set(x, y) }
+                    it += ParticleComponent(type = ParticleComponent.Type.SHIELD_RIPPLE, color = Color.CYAN, size = 40f)
+                    it += LifeSpanComponent(remaining = 0.4f)
+                }
+
                 val shieldDamage = remainingDamage.coerceAtMost(shield.current)
                 shield.current -= shieldDamage
                 remainingDamage -= shieldDamage
             }
         }
 
-        // Apply remaining to health
         if (remainingDamage > 0) {
             val health = target[HealthComponent]
             health.current -= remainingDamage
