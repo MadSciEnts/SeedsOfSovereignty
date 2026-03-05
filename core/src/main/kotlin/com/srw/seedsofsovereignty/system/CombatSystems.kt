@@ -6,18 +6,22 @@ import com.github.quillraven.fleks.Entity
 import com.github.quillraven.fleks.IteratingSystem
 import com.github.quillraven.fleks.World.Companion.family
 import com.srw.seedsofsovereignty.component.*
+import com.srw.seedsofsovereignty.util.ProceduralShipDrawer
 import kotlin.math.sqrt
 
 class WeaponSystem : IteratingSystem(family { all(WeaponComponent, PositionComponent, VelocityComponent, OrientationComponent) }) {
+    private val mountOffsetsBuffer = mutableListOf<Vector2>()
+
     override fun onTickEntity(entity: Entity) {
         val weapon = entity[WeaponComponent]
         val pos = entity[PositionComponent].pos
-        val vel = entity[VelocityComponent].v
-        val angleRad = entity[OrientationComponent].angleRad
+        val hullAngle = entity[OrientationComponent].angleRad
+        val aimAngle = weapon.aimAngleRad // USE INDEPENDENT AIM
 
         val isEnemy = entity.has(EnemyComponent)
         val evo = if (entity.has(EvolutionComponent)) entity[EvolutionComponent] else null
         val tier = if (isEnemy) (if (entity[EnemyComponent].type == "Reaper") 2 else 1) else (evo?.currentTier ?: 1)
+        val subTier = evo?.subTier ?: 1
 
         if (weapon.cooldown > 0f) {
             weapon.cooldown -= deltaTime
@@ -26,37 +30,46 @@ class WeaponSystem : IteratingSystem(family { all(WeaponComponent, PositionCompo
         if (weapon.isFiring && weapon.cooldown <= 0f) {
             weapon.cooldown = weapon.fireRate
 
-            for (i in 0 until weapon.barrels) {
-                // Fix: Properly handle barrel firing for higher tiers
-                if (weapon.barrels == 2 && i != weapon.currentBarrel) continue
+            // Get Mount Positions based on Hull DNA
+            val shipSize = ProceduralShipDrawer.getShipSize(tier, subTier)
+            ProceduralShipDrawer.getMountOffsets(tier, subTier, shipSize, hullAngle, mountOffsetsBuffer)
 
-                world.entity { e ->
-                    e += PositionComponent().apply {
-                        this.pos.set(pos)
+            mountOffsetsBuffer.forEach { mountOffset ->
+                val firePosX = pos.x + mountOffset.x
+                val firePosY = pos.y + mountOffset.y
 
-                        // Spread logic based on barrel count and tier
-                        val spreadWidth = if (tier >= 6) 40f else 20f
-                        val offset = when (weapon.barrels) {
-                            2 -> if (i == 0) -10f else 10f
-                            3 -> (i - 1) * (spreadWidth / 2f)
-                            4 -> (i - 1.5f) * (spreadWidth / 3f)
-                            else -> 0f
+                for (i in 0 until weapon.barrels) {
+                    // Staggered fire for twin barrels
+                    if (weapon.barrels == 2 && i != weapon.currentBarrel) continue
+
+                    world.entity { e ->
+                        e += PositionComponent().apply {
+                            this.pos.set(firePosX, firePosY)
+
+                            // Spread logic relative to AIM direction
+                            val spreadWidth = if (tier >= 8) 30f else if (tier >= 6) 40f else 20f
+                            val lateralOffset = when (weapon.barrels) {
+                                2 -> if (i == 0) -10f else 10f
+                                3 -> (i - 1) * (spreadWidth / 2f)
+                                4 -> (i - 1.5f) * (spreadWidth / 3f)
+                                else -> 0f
+                            }
+
+                            val ox = MathUtils.cos(aimAngle + MathUtils.PI/2f) * lateralOffset
+                            val oy = MathUtils.sin(aimAngle + MathUtils.PI/2f) * lateralOffset
+                            this.pos.add(ox, oy)
                         }
-
-                        val ox = MathUtils.cos(angleRad + MathUtils.PI/2f) * offset
-                        val oy = MathUtils.sin(angleRad + MathUtils.PI/2f) * offset
-                        this.pos.add(ox, oy)
+                        e += VelocityComponent().apply {
+                            val bulletSpeed = if (isEnemy) 600f else 1000f
+                            this.v.set(bulletSpeed, 0f).setAngleRad(aimAngle) // PROJECTILE FOLLOWS AIM
+                        }
+                        e += ProjectileComponent(
+                            tier = tier,
+                            damage = if (isEnemy) 5f else (if (tier >= 6) 40f else if (tier >= 2) 25f else 10f),
+                            ownerIsEnemy = isEnemy
+                        )
+                        e += LifeSpanComponent(remaining = if (isEnemy) 2.5f else 1.5f)
                     }
-                    e += VelocityComponent().apply {
-                        val bulletSpeed = if (isEnemy) 600f else 1000f
-                        this.v.set(bulletSpeed, 0f).setAngleRad(angleRad)
-                    }
-                    e += ProjectileComponent(
-                        tier = tier,
-                        damage = if (isEnemy) 5f else (if (tier >= 6) 40f else if (tier >= 2) 25f else 10f),
-                        ownerIsEnemy = isEnemy
-                    )
-                    e += LifeSpanComponent(remaining = if (isEnemy) 2.5f else 1.5f)
                 }
             }
 
@@ -70,6 +83,7 @@ class WeaponSystem : IteratingSystem(family { all(WeaponComponent, PositionCompo
 class CombatSystem : IteratingSystem(family { all(ProjectileComponent, PositionComponent) }) {
     private val enemyFamily by lazy { world.family { all(EnemyComponent, PositionComponent) } }
     private val playerFamily by lazy { world.family { all(PlayerComponent, PositionComponent, HealthComponent) } }
+    private val droneFamily by lazy { world.family { all(DroneComponent, PositionComponent, HealthComponent) } }
 
     override fun onTickEntity(entity: Entity) {
         val projPos = entity[PositionComponent].pos
@@ -98,10 +112,19 @@ class CombatSystem : IteratingSystem(family { all(ProjectileComponent, PositionC
                 }
             }
         } else {
+            droneFamily.forEach { drone ->
+                val dronePos = drone[PositionComponent].pos
+                if (projPos.dst2(dronePos) < 600f) {
+                    applyDamage(drone, projComp.damage, projPos.x, projPos.y)
+                    world -= entity
+                    return@forEach
+                }
+            }
+
             playerFamily.firstOrNull()?.let { player ->
                 val playerPos = player[PositionComponent].pos
                 if (projPos.dst2(playerPos) < 900f) {
-                    applyDamageToPlayer(player, projComp.damage, projPos.x, projPos.y)
+                    applyDamage(player, projComp.damage, projPos.x, projPos.y)
                     world -= entity
                 }
             }
@@ -122,10 +145,10 @@ class CombatSystem : IteratingSystem(family { all(ProjectileComponent, PositionC
         }
     }
 
-    private fun applyDamageToPlayer(player: Entity, damage: Float, x: Float, y: Float) {
+    private fun applyDamage(target: Entity, damage: Float, x: Float, y: Float) {
         var remainingDamage = damage
-        if (player.has(ShieldComponent)) {
-            val shield = player[ShieldComponent]
+        if (target.has(ShieldComponent)) {
+            val shield = target[ShieldComponent]
             if (shield.active && shield.current > 0) {
                 world.entity {
                     it += PositionComponent().apply { pos.set(x, y) }
@@ -137,9 +160,9 @@ class CombatSystem : IteratingSystem(family { all(ProjectileComponent, PositionC
                 remainingDamage -= shieldDamage
             }
         }
-        if (remainingDamage > 0) {
-            player[HealthComponent].current -= remainingDamage
-            spawnSparkBurst(x, y, com.badlogic.gdx.graphics.Color.ORANGE, 10f)
+        if (remainingDamage > 0 && target.has(HealthComponent)) {
+            target[HealthComponent].current -= remainingDamage
+            spawnSparkBurst(x, y, if (target.has(PlayerComponent)) com.badlogic.gdx.graphics.Color.ORANGE else com.badlogic.gdx.graphics.Color.GOLD, 10f)
         }
     }
 }

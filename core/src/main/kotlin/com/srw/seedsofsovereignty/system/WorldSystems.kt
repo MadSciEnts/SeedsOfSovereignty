@@ -6,6 +6,7 @@ import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Matrix4
+import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.utils.ScreenUtils
 import com.github.quillraven.fleks.Fixed
 import com.github.quillraven.fleks.IntervalSystem
@@ -24,12 +25,10 @@ class StarfieldSystem(
     private val camera: OrthographicCamera,
     private val layers: List<Texture>
 ) : IntervalSystem() {
-    private val parallaxFactors = listOf(0.1f, 0.25f, 0.5f)
+    private val parallaxFactors = listOf(0.05f, 0.12f, 0.25f)
     private val starCamera = Matrix4()
-    // Adjusted: 0.65f is the middle ground between "too close" (0.5) and "too wide" (0.8)
-    private val starScale = 0.65f
-    // Increased: 0.15f (15%) to make the zoom influence actually perceptible
-    private val zoomInfluence = 0.15f
+    private val starScale = 0.45f
+    private val zoomInfluence = 0.1f
 
     override fun onTick() {
         if (layers.isEmpty()) return
@@ -37,7 +36,6 @@ class StarfieldSystem(
         val w = Gdx.graphics.width.toFloat()
         val h = Gdx.graphics.height.toFloat()
 
-        // Fixed projection keeps background full-frame
         starCamera.setToOrtho2D(0f, 0f, w, h)
         val originalMatrix = batch.projectionMatrix.cpy()
         batch.projectionMatrix = starCamera
@@ -46,14 +44,12 @@ class StarfieldSystem(
             layers.forEachIndexed { index, texture ->
                 val factor = parallaxFactors.getOrElse(index) { 0.1f }
 
-                // Calculate zoom influence (Relative to base zoom of 1.0)
                 val zoomFactor = 1f + (camera.zoom - 1f) * zoomInfluence
                 val effectiveScale = starScale * zoomFactor
 
                 val uWidth = (w * effectiveScale) / texture.width
                 val vHeight = (h * effectiveScale) / texture.height
 
-                // Parallax shift based on camera world position
                 val uCenter = (camera.position.x * factor) / texture.width
                 val vCenter = (camera.position.y * factor) / texture.height
 
@@ -136,11 +132,22 @@ class EnemySpawnSystem(
 
 class StationSpawnSystem : IntervalSystem(interval = Fixed(10f)) {
     override fun onTick() {
+        val playerFamily = world.family { all(PlayerComponent, PositionComponent, SensorComponent) }
+        val player = playerFamily.firstOrNull() ?: return
+        val playerPos = player[PositionComponent].pos
+        val sensorRadius = player[SensorComponent].radius
+
         if (world.family { all(StationComponent) }.numEntities == 0) {
+            // Spawn station at the edge of sensor range (1.2x radius to ensure it's hidden)
+            val spawnDist = sensorRadius * 1.2f
+            val angle = MathUtils.random(0f, MathUtils.PI2)
+            val spawnX = playerPos.x + MathUtils.cos(angle) * spawnDist
+            val spawnY = playerPos.y + MathUtils.sin(angle) * spawnDist
+
             world.entity {
-                it += PositionComponent().apply { pos.set(1000f, 1000f) }
+                it += PositionComponent().apply { pos.set(spawnX, spawnY) }
                 it += StationComponent(name = "Nexus Prime", radius = 200f)
-                it += VisibleComponent()
+                // VisibleComponent is NOT added here; SensorSystem will add it when in range
             }
         }
     }

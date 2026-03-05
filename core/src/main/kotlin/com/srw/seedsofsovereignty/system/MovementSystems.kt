@@ -17,6 +17,7 @@ class PlayerInputSystem : IteratingSystem(family { all(PlayerComponent, Velocity
     override fun onTickEntity(entity: Entity) {
         val vel = entity[VelocityComponent]
         val orientation = entity[OrientationComponent]
+        val weapon = if (entity.has(WeaponComponent)) entity[WeaponComponent] else null
         val evo = if (entity.has(EvolutionComponent)) entity[EvolutionComponent] else null
         val docking = if (entity.has(DockingComponent)) entity[DockingComponent] else null
 
@@ -29,19 +30,21 @@ class PlayerInputSystem : IteratingSystem(family { all(PlayerComponent, Velocity
         if (Gdx.input.isKeyPressed(Keys.A) || Gdx.input.isKeyPressed(Keys.LEFT)) moveForce.x -= 1f
         if (Gdx.input.isKeyPressed(Keys.D) || Gdx.input.isKeyPressed(Keys.RIGHT)) moveForce.x += 1f
 
+        // HULL ROTATION: Always follows velocity vector (leans into turns)
         if (!moveForce.isZero) {
             moveForce.nor().scl(vel.acceleration * deltaTime)
             vel.v.add(moveForce)
-            if ((evo?.currentTier ?: 1) < 4) orientation.angleRad = moveForce.angleRad()
+            orientation.angleRad = vel.v.angleRad()
         }
 
-        if ((evo?.currentTier ?: 1) >= 4) {
-            if (!aimVector.isZero) orientation.angleRad = aimVector.angleRad()
-            else if (!moveForce.isZero) orientation.angleRad = moveForce.angleRad()
-        }
-
-        if (entity.has(WeaponComponent)) {
-            entity[WeaponComponent].isFiring = isFiringRequested || Gdx.input.isKeyPressed(Keys.SPACE)
+        // WEAPON AIM ROTATION: Follows aim stick, or velocity if no aim input
+        if (weapon != null) {
+            if (!aimVector.isZero) {
+                weapon.aimAngleRad = aimVector.angleRad()
+            } else if (!vel.v.isZero(0.1f)) {
+                weapon.aimAngleRad = vel.v.angleRad()
+            }
+            weapon.isFiring = isFiringRequested || Gdx.input.isKeyPressed(Keys.SPACE)
         }
     }
 }
@@ -51,11 +54,9 @@ class MoveSystem : IteratingSystem(family { all(PositionComponent, VelocityCompo
         val pos = entity[PositionComponent]
         val vel = entity[VelocityComponent]
 
-        // Apply velocity to position
         pos.pos.x += vel.v.x * deltaTime
         pos.pos.y += vel.v.y * deltaTime
 
-        // Damping/Friction logic
         val frictionFactor = if (entity.has(EssenceComponent)) 0.5f else vel.friction
         if (!entity.has(ProjectileComponent)) {
             vel.v.scl(1f - (frictionFactor * deltaTime))
@@ -72,21 +73,14 @@ class CameraSystem(private val camera: OrthographicCamera) : IteratingSystem(fam
         val vel = entity[VelocityComponent].v
         val evo = entity[EvolutionComponent]
 
-        // Tier-based size reference (Sync with RenderSystem)
         val currentSize = 8f + (evo.currentTier - 1) * 7.5f + (evo.subTier - 1) * 1.875f
-
-        // Stabilized and further dampened Zoom Curve:
-        // T1a (Size 8) -> 1.0f zoom
-        // T8a (Size 60.5) -> 1.0 + (52.5 / 60) = ~1.87f zoom
         val baseZoom = 1.0f + (currentSize - 8f) / 60f
 
         targetPos.set(pos.x + (vel.x * 0.5f), pos.y + (vel.y * 0.5f))
 
-        // Position Smoothing
         camera.position.x += (targetPos.x - camera.position.x) * lerpSpeed * deltaTime
         camera.position.y += (targetPos.y - camera.position.y) * lerpSpeed * deltaTime
 
-        // Zoom Smoothing (Base Zoom + Velocity Elasticity)
         val speedPercent = (vel.len() / 500f).coerceIn(0f, 1f)
         val targetZoom = baseZoom * (1.0f + (speedPercent * 0.2f))
 

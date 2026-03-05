@@ -67,15 +67,18 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
                     }
                 }
                 3 -> {
-                    val droneCount = droneFamily.numEntities
+                    val myDrones = droneFamily.filter { it[DroneComponent].owner == entity }
+                    val droneCount = myDrones.size
                     if (droneCount < evo.subTier) {
                         for (i in 0 until (evo.subTier - droneCount)) {
                             world.entity { d ->
                                 d += PositionComponent()
                                 d += OrientationComponent()
-                                d += DroneComponent(owner = entity, orbitAngle = i * MathUtils.PI2 / 4f, orbitRadius = 60f + i * 10f)
+                                d += DroneComponent(owner = entity, orbitRadius = 60f + i * 10f)
                                 d += WeaponComponent(fireRate = 0.5f)
                                 d += VelocityComponent()
+                                d += HealthComponent(max = 50f, current = 50f)
+                                d += VisibleComponent()
                             }
                         }
                     }
@@ -128,9 +131,12 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
                             world.entity { d ->
                                 d += PositionComponent()
                                 d += OrientationComponent()
-                                d += DroneComponent(owner = entity, orbitAngle = MathUtils.PI, orbitRadius = 80f)
+                                d += DroneComponent(owner = entity, orbitRadius = 80f)
                                 d += WeaponComponent(fireRate = 0.4f)
                                 d += VelocityComponent()
+                                d += HealthComponent(max = 100f, current = 100f)
+                                d += ShieldComponent(max = 50f, current = 50f, rechargeRate = 5f)
+                                d += VisibleComponent()
                             }
                         }
                         4 -> { weapon.fireRate = 0.06f }
@@ -150,13 +156,13 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
                         4 -> { weapon.fireRate = 0.1f }
                         5 -> {
                             evo.currentTier = 8
-                            evo.subTier = 1 // 8a: Proto
+                            evo.subTier = 1
                             weapon.barrels = 1
-                            weapon.fireRate = 0.4f // Heavy but slow
-                            vel.acceleration = 80f // Heavy chassis penalty
+                            weapon.fireRate = 0.4f
+                            vel.acceleration = 80f
                             if (entity.has(HealthComponent)) {
                                 val health = entity[HealthComponent]
-                                health.max = 1000f // Massively increased durability
+                                health.max = 1000f
                                 health.current = health.max
                             }
                             if (entity.has(ShieldComponent)) {
@@ -170,16 +176,16 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
                 }
                 8 -> {
                     when (evo.subTier) {
-                        2 -> { // 8b: Refined
+                        2 -> {
                             weapon.fireRate = 0.3f
                             if (entity.has(ShieldComponent)) entity[ShieldComponent].max += 200f
                         }
-                        3 -> { // 8c: Advanced
-                            weapon.barrels = 2 // Twin Heavy
+                        3 -> {
+                            weapon.barrels = 2
                             weapon.fireRate = 0.25f
                         }
-                        4 -> { // 8d: Apex
-                            weapon.barrels = 3 // Triple Heavy Battery
+                        4 -> {
+                            weapon.barrels = 3
                             weapon.fireRate = 0.2f
                             if (entity.has(ShieldComponent)) entity[ShieldComponent].rechargeRate += 10f
                         }

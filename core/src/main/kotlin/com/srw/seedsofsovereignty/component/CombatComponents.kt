@@ -2,13 +2,15 @@ package com.srw.seedsofsovereignty.component
 
 import com.github.quillraven.fleks.Component
 import com.github.quillraven.fleks.ComponentType
+import com.badlogic.gdx.math.MathUtils
 
 data class WeaponComponent(
     var fireRate: Float = 1.0f,
     var cooldown: Float = 0f,
     var isFiring: Boolean = false,
     var barrels: Int = 1,
-    var currentBarrel: Int = 0
+    var currentBarrel: Int = 0,
+    var aimAngleRad: Float = MathUtils.PI / 2f
 ) : Component<WeaponComponent> {
     override fun type() = WeaponComponent
     companion object : ComponentType<WeaponComponent>()

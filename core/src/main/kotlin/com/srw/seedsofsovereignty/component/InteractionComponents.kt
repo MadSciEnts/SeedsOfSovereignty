@@ -5,7 +5,7 @@ import com.github.quillraven.fleks.ComponentType
 import com.github.quillraven.fleks.Entity
 
 data class SensorComponent(
-    var radius: Float = 400f
+    var radius: Float = 1000f // Matches SYSTEM_MINIMAP_SENSORS.md spec
 ) : Component<SensorComponent> {
     override fun type() = SensorComponent
     companion object : ComponentType<SensorComponent>()

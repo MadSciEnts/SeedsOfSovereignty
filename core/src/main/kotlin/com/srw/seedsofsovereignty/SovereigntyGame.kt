@@ -39,8 +39,8 @@ class SovereigntyGame : KtxGame<KtxScreen>() {
                 add(StarfieldSystem(batch, camera, starTextures))
 
                 add(PlayerInputSystem())
-                add(EnemyAISystem())
-                add(DroneSystem())
+                add(EnemyAISystem(camera)) // Updated with Camera injection
+                add(DroneSystem(camera))    // Updated with Camera injection
                 add(MoveSystem())
                 add(CameraSystem(camera))
 
@@ -48,7 +48,7 @@ class SovereigntyGame : KtxGame<KtxScreen>() {
                 add(CombatSystem())
                 add(CollisionDamageSystem())
                 add(VitalsSystem())
-                add(EffectSystem()) // REGISTERED: Missing system added
+                add(EffectSystem())
                 add(LifeSpanSystem())
 
                 add(CollectionSystem())
