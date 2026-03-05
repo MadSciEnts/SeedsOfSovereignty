@@ -11,9 +11,10 @@
 - [x] **Independent Aiming:** Decoupled Hull and Aim vectors for all entities.
 - [x] **Distributed Mounts:** T8 Dreadnought fires from 4 discrete weapon rings.
 - [x] **Sequential ROF:** Weapon sub-tiers fire sequentially with cumulative rate-of-fire.
-- [ ] **Drone Spacing Fix (IN PROGRESS):**
-    - [ ] **Objective:** Perfect geometric circular distribution around player.
-    - [ ] **Sponge Mechanic:** Absorbing projectiles via collision detection.
+- [x] **Drone Spacing Fix:** Synchronized global orbit for perfect circular distribution.
+- [ ] **Tier 8 Scale Refinement (IN PROGRESS):**
+    - [ ] **Physical Size:** Increase Dreadnought size by another 15%.
+    - [ ] **Camera Zoom:** Adjust FOV curve to make T8 appear 10% larger in the frame.
 - [ ] **Minimap Implementation:** Circular radar with POI markers.
 
 ## Verification Protocol

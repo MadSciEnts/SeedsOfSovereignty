@@ -9,8 +9,11 @@ import space.earlygrey.shapedrawer.ShapeDrawer
 object ProceduralShipDrawer {
 
     fun getShipSize(tier: Int, subTier: Int): Float {
+        // Linear growth for T1-T7, T8 jumps to "Heavy Capital" scale
         val tierBase = 8f + (tier - 1) * 7.5f
-        return tierBase + (subTier - 1) * 1.875f
+        // T8a is now 105 units (previously 90)
+        val finalSize = if (tier >= 8) tierBase + 45f else tierBase
+        return finalSize + (subTier - 1) * 2.5f
     }
 
     fun getMountOffsets(tier: Int, subTier: Int, size: Float, hullRotation: Float, out: MutableList<Vector2>) {
@@ -20,8 +23,8 @@ object ProceduralShipDrawer {
         if (tier < 8) {
             out.add(Vector2(0f, 0f))
         } else {
-            // Distributed Mounts for Dreadnought
-            val spread = size * 0.45f
+            // Distributed Mounts for Dreadnought (Square spread scaled to hull)
+            val spread = size * 0.42f
             val count = subTier.coerceIn(1, 4)
             val locals = arrayOf(Vector2(spread, spread), Vector2(spread, -spread), Vector2(-spread, -spread), Vector2(-spread, spread))
             for (i in 0 until count) {
@@ -48,7 +51,7 @@ object ProceduralShipDrawer {
 
         if (tier == 5) drawBulwarkAttachments(drawer, x, y, hullRotation, size)
 
-        val mountSize = if (tier >= 8) 12f else size * 0.6f
+        val mountSize = if (tier >= 8) 18f else size * 0.6f
         val offsets = mutableListOf<Vector2>()
         getMountOffsets(tier, subTier, size, hullRotation, offsets)
         offsets.forEach { drawWeaponMount(drawer, x + it.x, y + it.y, aimRotation, mountSize, color, subTier) }
@@ -61,7 +64,6 @@ object ProceduralShipDrawer {
         drawer.setColor(color)
         val cos = MathUtils.cos(rotation); val sin = MathUtils.sin(rotation)
 
-        // FIXED: Barrels = SubTier (1, 2, 3, or 4)
         val numBarrels = subTier.coerceIn(1, 4)
         val barrelL = size * 1.5f
         val barrelW = (size * 0.4f).coerceAtLeast(2f)
@@ -79,11 +81,11 @@ object ProceduralShipDrawer {
         val corners = arrayOf(Vector2(-halfL, -halfW), Vector2(halfL * 0.8f, -halfW), Vector2(halfL, -halfW * 0.5f), Vector2(halfL, halfW * 0.5f), Vector2(halfL * 0.8f, halfW), Vector2(-halfL, halfW))
         for (i in corners.indices) {
             val c1 = corners[i]; val c2 = corners[(i + 1) % corners.size]
-            drawer.line(x + c1.x * cos - c1.y * sin, y + c1.x * sin + c1.y * cos, x + c2.x * cos - c2.y * sin, y + c2.x * sin + c2.y * cos, (size / 15f).coerceAtLeast(2f))
+            drawer.line(x + c1.x * cos - c1.y * sin, y + c1.x * sin + c1.y * cos, x + c2.x * cos - c2.y * sin, y + c2.x * sin + c2.y * cos, (size / 25f).coerceAtLeast(3f))
         }
         drawer.setColor(Color.DARK_GRAY)
         val plateX = x - (halfL * 0.3f) * cos; val plateY = y - (halfL * 0.3f) * sin
-        drawer.line(plateX - halfW * sin, plateY + halfW * cos, plateX + halfW * sin, plateY - halfW * cos, 1.5f)
+        drawer.line(plateX - halfW * sin, plateY + halfW * cos, plateX + halfW * sin, plateY - halfW * cos, 2.5f)
     }
 
     private fun drawSentinelPlusHull(drawer: ShapeDrawer, x: Float, y: Float, rotation: Float, size: Float) {

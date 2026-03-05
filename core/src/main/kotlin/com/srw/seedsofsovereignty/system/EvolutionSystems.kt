@@ -129,18 +129,19 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
                     if (evo.subTier == 5) {
                         evo.currentTier = 8; evo.subTier = 1; weapon.barrels = 1
                         generateCenterOutSequence(weapon)
-                        weapon.fireRate = 0.6f; vel.acceleration = 80f
+                        weapon.fireRate = 0.6f
+                        vel.acceleration = 250f // MASSIVE SPEED UP
                         if (entity.has(HealthComponent)) entity[HealthComponent].apply { max = 1000f; current = 1000f }
-                        if (entity.has(ShieldComponent)) entity[ShieldComponent].apply { max = 800f; current = 800f; rechargeRate = 20f }
+                        if (entity.has(ShieldComponent)) entity[ShieldComponent].apply { max = 1000f; current = 1000f; rechargeRate = 30f }
                     }
                 }
                 8 -> {
-                    if (evo.subTier == 2 && entity.has(ShieldComponent)) entity[ShieldComponent].max += 200f
-                    if (evo.subTier == 4 && entity.has(ShieldComponent)) entity[ShieldComponent].rechargeRate += 10f
+                    if (evo.subTier == 2 && entity.has(ShieldComponent)) entity[ShieldComponent].max += 500f
+                    if (evo.subTier == 4 && entity.has(ShieldComponent)) entity[ShieldComponent].rechargeRate += 20f
                     if (evo.subTier == 5) {
                         evo.currentTier = 9; evo.subTier = 1; weapon.barrels = 1
                         generateCenterOutSequence(weapon)
-                        vel.acceleration += 20f
+                        vel.acceleration += 50f
                     }
                 }
             }
@@ -152,11 +153,9 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
         when (weapon.barrels) {
             1 -> weapon.barrelSequence.add(0)
             2 -> weapon.barrelSequence.addAll(listOf(0, 1))
-            3 -> weapon.barrelSequence.addAll(listOf(1, 0, 2)) // Center, then Left, then Right
-            4 -> weapon.barrelSequence.addAll(listOf(1, 2, 0, 3)) // Inner pair, then Outer pair
-            else -> {
-                for (i in 0 until weapon.barrels) weapon.barrelSequence.add(i)
-            }
+            3 -> weapon.barrelSequence.addAll(listOf(1, 0, 2))
+            4 -> weapon.barrelSequence.addAll(listOf(1, 2, 0, 3))
+            else -> { for (i in 0 until weapon.barrels) weapon.barrelSequence.add(i) }
         }
         weapon.currentBarrel = 0
     }

@@ -1,5 +1,6 @@
 package com.srw.seedsofsovereignty.system
 
+import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Vector2
@@ -76,6 +77,13 @@ class DroneSystem(
     private val enemyFamily by lazy { world.family { all(EnemyComponent, PositionComponent) } }
     private val droneFamily by lazy { world.family { all(DroneComponent) } }
     private val droneListBuffer = mutableListOf<Entity>()
+    private var globalOrbitBase = 0f
+
+    override fun onTick() {
+        // Increment a SINGLE shared orbit timer per frame
+        globalOrbitBase += 2f * deltaTime // 2.0f is the default orbitSpeed
+        super.onTick()
+    }
 
     override fun onTickEntity(entity: Entity) {
         val drone = entity[DroneComponent]
@@ -89,18 +97,15 @@ class DroneSystem(
             return
         }
 
-        // PERFECT CIRCULAR REDISTRIBUTION
+        // SYNCHRONIZED CIRCULAR REDISTRIBUTION
         droneListBuffer.clear()
         droneFamily.forEach { if (it[DroneComponent].owner == owner) droneListBuffer.add(it) }
 
         val total = droneListBuffer.size
         val index = droneListBuffer.indexOf(entity)
 
-        // Base orbit angle advances over time
-        drone.orbitAngle += drone.orbitSpeed * deltaTime
-
-        // Each drone is offset by a fraction of PI2 based on its index in the group
-        val finalAngle = drone.orbitAngle + (index * MathUtils.PI2 / total)
+        // All drones use the SAME globalOrbitBase, offset only by their rank in the group
+        val finalAngle = globalOrbitBase + (index * MathUtils.PI2 / total)
 
         val ownerPos = owner[PositionComponent].pos
         pos.set(

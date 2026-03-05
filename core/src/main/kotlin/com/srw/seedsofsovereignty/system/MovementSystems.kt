@@ -7,6 +7,7 @@ import com.badlogic.gdx.math.Vector2
 import com.github.quillraven.fleks.*
 import com.github.quillraven.fleks.World.Companion.family
 import com.srw.seedsofsovereignty.component.*
+import com.srw.seedsofsovereignty.util.ProceduralShipDrawer
 
 class PlayerInputSystem : IteratingSystem(family { all(PlayerComponent, VelocityComponent) }) {
     private val moveForce = Vector2()
@@ -18,7 +19,6 @@ class PlayerInputSystem : IteratingSystem(family { all(PlayerComponent, Velocity
         val vel = entity[VelocityComponent]
         val orientation = entity[OrientationComponent]
         val weapon = if (entity.has(WeaponComponent)) entity[WeaponComponent] else null
-        val evo = if (entity.has(EvolutionComponent)) entity[EvolutionComponent] else null
         val docking = if (entity.has(DockingComponent)) entity[DockingComponent] else null
 
         if (docking?.isDocked == true) return
@@ -30,14 +30,12 @@ class PlayerInputSystem : IteratingSystem(family { all(PlayerComponent, Velocity
         if (Gdx.input.isKeyPressed(Keys.A) || Gdx.input.isKeyPressed(Keys.LEFT)) moveForce.x -= 1f
         if (Gdx.input.isKeyPressed(Keys.D) || Gdx.input.isKeyPressed(Keys.RIGHT)) moveForce.x += 1f
 
-        // HULL ROTATION: Always follows velocity vector (leans into turns)
         if (!moveForce.isZero) {
             moveForce.nor().scl(vel.acceleration * deltaTime)
             vel.v.add(moveForce)
             orientation.angleRad = vel.v.angleRad()
         }
 
-        // WEAPON AIM ROTATION: Follows aim stick, or velocity if no aim input
         if (weapon != null) {
             if (!aimVector.isZero) {
                 weapon.aimAngleRad = aimVector.angleRad()
@@ -73,8 +71,12 @@ class CameraSystem(private val camera: OrthographicCamera) : IteratingSystem(fam
         val vel = entity[VelocityComponent].v
         val evo = entity[EvolutionComponent]
 
-        val currentSize = 8f + (evo.currentTier - 1) * 7.5f + (evo.subTier - 1) * 1.875f
-        val baseZoom = 1.0f + (currentSize - 8f) / 60f
+        // Adjusted size logic to sync with the new Dreadnought scale
+        val currentSize = ProceduralShipDrawer.getShipSize(evo.currentTier, evo.subTier)
+
+        // Stabilized Camera Curve for Large Capital Ships:
+        // Divisor increased to 45f to ensure the hull takes up significant but manageable screen space.
+        val baseZoom = 1.0f + (currentSize - 8f) / 45f
 
         targetPos.set(pos.x + (vel.x * 0.5f), pos.y + (vel.y * 0.5f))
 
