@@ -6,7 +6,6 @@ import com.badlogic.gdx.math.Rectangle
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.ui.*
-import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener
 import com.github.quillraven.fleks.World
 import com.srw.seedsofsovereignty.component.*
 import com.srw.seedsofsovereignty.manager.MarketManager
@@ -42,23 +41,17 @@ class MarketTable(
         centerColumn.add(Label("STATION DATA LINK", skin)).padBottom(5f).row()
         centerColumn.add(catalogScrollPane).width(450f).height(350f).row()
 
-        val swapBtn = TextButton("CONFIRM SWAP", skin, "market-swap")
-        swapBtn.addListener(object : ChangeListener() {
-            override fun changed(event: ChangeEvent?, actor: Actor?) {
-                val player = world.family { all(PlayerComponent, DockingComponent) }.first()
-                val station = with(world) { player[DockingComponent].nearestStation!! }
-                marketManager.swapModule(player, station, selectedModuleIndex)
-                refreshCatalog()
-            }
-        })
+        val swapBtn = UIButtonFactory.createButton(skin, "CONFIRM SWAP", UIButtonFactory.ButtonType.MARKET) {
+            val player = world.family { all(PlayerComponent, DockingComponent) }.first()
+            val station = with(world) { player[DockingComponent].nearestStation!! }
+            marketManager.swapModule(player, station, selectedModuleIndex)
+            refreshCatalog()
+        }
         centerColumn.add(swapBtn).size(450f, 90f).padTop(20f).row()
 
-        val exitBtn = TextButton("EXIT CATEGORY", skin, "scifi")
-        exitBtn.addListener(object : ChangeListener() {
-            override fun changed(event: ChangeEvent?, actor: Actor?) {
-                onExit()
-            }
-        })
+        val exitBtn = UIButtonFactory.createButton(skin, "EXIT CATEGORY", UIButtonFactory.ButtonType.GENERIC) {
+            onExit()
+        }
         centerColumn.add(exitBtn).size(450f, 70f).padTop(10f)
 
         add(equippedDetails).uniform().expand().fill().pad(10f)
@@ -75,25 +68,15 @@ class MarketTable(
         val market = with(world) { if (station.has(MarketComponent)) station[MarketComponent] else null } ?: return
 
         market.weaponOffers.forEachIndexed { index, offer ->
-            val style = if (index == selectedModuleIndex) "scifi-selected" else "scifi"
-
-            // Using a standard Button to allow custom layout with icon and text
-            val offerBtn = Button(skin, style)
-
+            val type = if (index == selectedModuleIndex) UIButtonFactory.ButtonType.SELECTED else UIButtonFactory.ButtonType.MODULE
             val icon = ProjectileIcon(drawer, offer.projectileTier, 1.5f)
-            offerBtn.add(icon).size(40f).padLeft(15f).padRight(15f)
 
-            val label = Label("${offer.name} [T${offer.projectileTier}]", skin)
-            offerBtn.add(label).expandX().left()
+            val offerBtn = UIButtonFactory.createButton(skin, "${offer.name} [T${offer.projectileTier}]", type, icon) {
+                selectedModuleIndex = index
+                refreshCatalog()
+            }
 
             if (index == selectedModuleIndex) selectedOfferButton = offerBtn
-
-            offerBtn.addListener(object : ChangeListener() {
-                override fun changed(event: ChangeEvent?, actor: Actor?) {
-                    selectedModuleIndex = index
-                    refreshCatalog()
-                }
-            })
             catalogScrollTable.add(offerBtn).size(420f, 75f).padBottom(8f).row()
         }
         updateSymmetry()

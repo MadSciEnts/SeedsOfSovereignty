@@ -45,34 +45,25 @@ class StationHangarUI(
     private fun setupWelcome() {
         welcomeTable.clear()
         val buttonTable = Table(skin)
-        val repairBtn = TextButton("REPAIR HULL", skin, "scifi")
-        val marketBtn = TextButton("STATION MARKET", skin, "scifi")
-        val undockBtn = TextButton("UNDOCK", skin, "scifi")
 
-        repairBtn.addListener(object : ChangeListener() {
-            override fun changed(event: ChangeEvent?, actor: Actor?) {
-                world.family { all(PlayerComponent, HealthComponent, ShieldComponent) }.firstOrNull()?.let { p ->
-                    with(world) {
-                        p[HealthComponent].current = p[HealthComponent].max
-                        p[ShieldComponent].current = p[ShieldComponent].max
-                    }
-                    updateStatsLabels()
+        val repairBtn = UIButtonFactory.createButton(skin, "REPAIR HULL", UIButtonFactory.ButtonType.GENERIC) {
+            world.family { all(PlayerComponent, HealthComponent, ShieldComponent) }.firstOrNull()?.let { p ->
+                with(world) {
+                    p[HealthComponent].current = p[HealthComponent].max
+                    p[ShieldComponent].current = p[ShieldComponent].max
                 }
+                updateStatsLabels()
             }
-        })
+        }
 
-        marketBtn.addListener(object : ChangeListener() {
-            override fun changed(event: ChangeEvent?, actor: Actor?) {
-                currentState = State.CATEGORIES
-                refreshState()
-            }
-        })
+        val marketBtn = UIButtonFactory.createButton(skin, "STATION MARKET", UIButtonFactory.ButtonType.GENERIC) {
+            currentState = State.CATEGORIES
+            refreshState()
+        }
 
-        undockBtn.addListener(object : ChangeListener() {
-            override fun changed(event: ChangeEvent?, actor: Actor?) {
-                dockingManager.undock()
-            }
-        })
+        val undockBtn = UIButtonFactory.createButton(skin, "UNDOCK", UIButtonFactory.ButtonType.GENERIC) {
+            dockingManager.undock()
+        }
 
         buttonTable.add(repairBtn).size(350f, 80f).pad(10f).row()
         buttonTable.add(marketBtn).size(350f, 80f).pad(10f).row()
@@ -98,22 +89,16 @@ class StationHangarUI(
 
     private fun setupCategories() {
         categoriesTable.clear()
-        val weaponsBtn = TextButton("WEAPONRY SUBSYSTEMS", skin, "scifi")
-        val backBtn = TextButton("BACK TO COMMAND", skin, "scifi")
 
-        weaponsBtn.addListener(object : ChangeListener() {
-            override fun changed(event: ChangeEvent?, actor: Actor?) {
-                currentState = State.WEAPON_MARKET
-                refreshState()
-            }
-        })
+        val weaponsBtn = UIButtonFactory.createButton(skin, "WEAPONRY SUBSYSTEMS", UIButtonFactory.ButtonType.GENERIC) {
+            currentState = State.WEAPON_MARKET
+            refreshState()
+        }
 
-        backBtn.addListener(object : ChangeListener() {
-            override fun changed(event: ChangeEvent?, actor: Actor?) {
-                currentState = State.WELCOME
-                refreshState()
-            }
-        })
+        val backBtn = UIButtonFactory.createButton(skin, "BACK TO COMMAND", UIButtonFactory.ButtonType.GENERIC) {
+            currentState = State.WELCOME
+            refreshState()
+        }
 
         categoriesTable.add(Label("SELECT MODULE CATEGORY", skin)).padBottom(30f).row()
         categoriesTable.add(weaponsBtn).size(500f, 90f).pad(15f).row()
