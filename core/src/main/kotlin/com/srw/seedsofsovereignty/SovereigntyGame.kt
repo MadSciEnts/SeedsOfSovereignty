@@ -41,7 +41,6 @@ class SovereigntyGame : KtxGame<KtxScreen>() {
                 add(PlayerInputSystem())
                 add(EnemyAISystem(camera))
 
-                // NEW CONSOLIDATED DRONE DOMAIN
                 add(DroneRegenSystem())
                 add(DroneFormationSystem(camera))
 
@@ -72,7 +71,7 @@ class SovereigntyGame : KtxGame<KtxScreen>() {
 
     override fun create() {
         KtxAsync.initiate()
-        addScreen(PlayScreen(world, viewport, uiViewport))
+        addScreen(PlayScreen(world, batch, viewport, uiViewport, drawer))
         setScreen<PlayScreen>()
     }
 

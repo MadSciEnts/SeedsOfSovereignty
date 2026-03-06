@@ -2,6 +2,7 @@ package com.srw.seedsofsovereignty.screen
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.ui.Label
@@ -17,15 +18,19 @@ import com.srw.seedsofsovereignty.manager.EvolutionManager
 import com.srw.seedsofsovereignty.manager.MarketManager
 import com.srw.seedsofsovereignty.system.PlayerInputSystem
 import com.srw.seedsofsovereignty.ui.HUDFactory
+import com.srw.seedsofsovereignty.ui.WeaponComparisonWidget
 import ktx.app.KtxScreen
+import space.earlygrey.shapedrawer.ShapeDrawer
 
 class PlayScreen(
     private val world: World,
+    private val batch: SpriteBatch,
     private val viewport: Viewport,
-    private val uiViewport: Viewport
+    private val uiViewport: Viewport,
+    private val drawer: ShapeDrawer
 ) : KtxScreen {
 
-    private val uiStage = Stage(uiViewport)
+    private val uiStage = Stage(uiViewport, batch)
     private val skin: Skin = HUDFactory.createSkin()
 
     private val moveJoystick: Touchpad = HUDFactory.createMoveJoystick(skin)
@@ -36,7 +41,7 @@ class PlayScreen(
     private val undockButton: TextButton = HUDFactory.createStationButton("UNDOCK", skin)
     private val swapButton: TextButton = HUDFactory.createMarketButton("SWAP MODULE", "market-swap", skin)
     private val scrapButton: TextButton = HUDFactory.createMarketButton("SCRAP MODULE", "market-scrap", skin)
-    private val compareLabel: Label = HUDFactory.createLabel("", skin)
+    private val marketWidget = WeaponComparisonWidget(skin, drawer)
 
     private val testEvolveButton: TextButton = HUDFactory.createDebugButton("DEV: EVOLVE", skin)
 
@@ -67,11 +72,23 @@ class PlayScreen(
             it += ShieldComponent(current = 50f, max = 50f)
         }
 
-        // Setup Event Listeners
-        undockButton.addListener(object : ChangeListener() {
-            override fun changed(event: ChangeEvent?, actor: Actor?) {
-                dockingManager.undock()
+        // INITIAL TEST STATION
+        world.entity {
+            it += PositionComponent().apply { pos.set(500f, 500f) }
+            it += StationComponent(name = "Alpha Outpost", radius = 200f)
+            it += MarketComponent().apply {
+                offeredModule = WeaponModuleComponent(
+                    name = "T2 Heavy Proto",
+                    projectileTier = 2,
+                    damage = 35f,
+                    fireRate = 0.45f
+                )
             }
+            it += VisibleComponent()
+        }
+
+        undockButton.addListener(object : ChangeListener() {
+            override fun changed(event: ChangeEvent?, actor: Actor?) { dockingManager.undock() }
         })
 
         repairButton.addListener(object : ChangeListener() {
@@ -91,9 +108,7 @@ class PlayScreen(
                 val player = world.family { all(PlayerComponent, DockingComponent) }.firstOrNull()
                 if (player != null) {
                     val station = with(world) { player[DockingComponent].nearestStation }
-                    if (station != null) {
-                        marketManager.swapModule(player, station)
-                    }
+                    if (station != null) marketManager.swapModule(player, station)
                 }
             }
         })
@@ -103,20 +118,15 @@ class PlayScreen(
                 val player = world.family { all(PlayerComponent, DockingComponent) }.firstOrNull()
                 if (player != null) {
                     val station = with(world) { player[DockingComponent].nearestStation }
-                    if (station != null) {
-                        marketManager.scrapModule(player, station)
-                    }
+                    if (station != null) marketManager.scrapModule(player, station)
                 }
             }
         })
 
         testEvolveButton.addListener(object : ChangeListener() {
-            override fun changed(event: ChangeEvent?, actor: Actor?) {
-                evolutionManager.cheatEvolve()
-            }
+            override fun changed(event: ChangeEvent?, actor: Actor?) { evolutionManager.cheatEvolve() }
         })
 
-        // Add to Stage
         uiStage.addActor(moveJoystick)
         uiStage.addActor(aimJoystick)
         uiStage.addActor(fireButton)
@@ -124,7 +134,7 @@ class PlayScreen(
         uiStage.addActor(undockButton)
         uiStage.addActor(swapButton)
         uiStage.addActor(scrapButton)
-        uiStage.addActor(compareLabel)
+        uiStage.addActor(marketWidget)
         uiStage.addActor(testEvolveButton)
 
         Gdx.input.inputProcessor = uiStage
@@ -144,15 +154,12 @@ class PlayScreen(
                 val isTwinStickTier = evo.currentTier >= 4
                 val isFullyDocked = docking.isDocked && aperture.state == ApertureComponent.State.OPEN
 
-                // UI Visibility Logic
                 moveJoystick.isVisible = !isFullyDocked
                 aimJoystick.isVisible = !isFullyDocked && isTwinStickTier
                 fireButton.isVisible = !isFullyDocked && !isTwinStickTier
-
                 repairButton.isVisible = isFullyDocked
                 undockButton.isVisible = isFullyDocked
 
-                // Market Visibility & Logic
                 val station = docking.nearestStation
                 val hasOffer = if (station != null && station.has(MarketComponent)) {
                     station[MarketComponent].offeredModule != null
@@ -160,23 +167,13 @@ class PlayScreen(
 
                 swapButton.isVisible = isFullyDocked && hasOffer
                 scrapButton.isVisible = isFullyDocked && hasOffer
-                compareLabel.isVisible = isFullyDocked && hasOffer
+                marketWidget.isVisible = isFullyDocked && hasOffer
 
                 if (hasOffer && station != null) {
                     val offer = station[MarketComponent].offeredModule
-                    if (offer != null) {
-                        compareLabel.setText(
-                            """
-                            STATION OFFER: ${offer.name}
-                            [Damage: ${currentModule.damage} -> ${offer.damage}]
-                            [Rate: ${currentModule.fireRate}s -> ${offer.fireRate}s]
-                            [Tier: T${offer.projectileTier}]
-                            """.trimIndent()
-                        )
-                    }
+                    if (offer != null) marketWidget.update(currentModule, offer)
                 }
 
-                // Input Pass-through
                 inputSystem.joystickVector.set(moveJoystick.knobPercentX, moveJoystick.knobPercentY)
                 if (isTwinStickTier) {
                     inputSystem.aimVector.set(aimJoystick.knobPercentX, aimJoystick.knobPercentY)
@@ -200,13 +197,12 @@ class PlayScreen(
         moveJoystick.setPosition(50f, 50f)
         aimJoystick.setPosition(uiStage.width - aimJoystick.width - 50f, 50f)
         fireButton.setPosition(uiStage.width - fireButton.width - 50f, 50f)
+        repairButton.setPosition(uiStage.width / 2f - repairButton.width / 2f, uiStage.height / 2f + 180f)
+        undockButton.setPosition(uiStage.width / 2f - undockButton.width / 2f, uiStage.height / 2f - 220f)
 
-        repairButton.setPosition(uiStage.width / 2f - repairButton.width / 2f, uiStage.height / 2f + 100f)
-        undockButton.setPosition(uiStage.width / 2f - undockButton.width / 2f, uiStage.height / 2f - 150f)
-
-        swapButton.setPosition(uiViewport.worldWidth / 2f - 260f, uiViewport.worldHeight / 2f - 30f)
-        scrapButton.setPosition(uiViewport.worldWidth / 2f + 10f, uiViewport.worldHeight / 2f - 30f)
-        compareLabel.setPosition(uiViewport.worldWidth / 2f - 150f, uiViewport.worldHeight / 2f + 50f)
+        marketWidget.setPosition(uiViewport.worldWidth / 2f - marketWidget.width / 2f, uiViewport.worldHeight / 2f - 100f)
+        swapButton.setPosition(uiViewport.worldWidth / 2f - 260f, uiViewport.worldHeight / 2f - 180f)
+        scrapButton.setPosition(uiViewport.worldWidth / 2f + 10f, uiViewport.worldHeight / 2f - 180f)
 
         testEvolveButton.setPosition(uiStage.width / 2f - testEvolveButton.width / 2f, uiStage.height - 70f)
     }

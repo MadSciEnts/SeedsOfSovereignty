@@ -142,20 +142,21 @@ class StationSpawnSystem : IntervalSystem(interval = Fixed(10f)) {
         val playerPos = player[PositionComponent].pos
         val sensorRadius = player[SensorComponent].radius
 
-        if (world.family { all(StationComponent) }.numEntities == 0) {
-            val spawnDist = sensorRadius * 1.2f
+        // Allow up to 3 stations in the world at a time
+        if (world.family { all(StationComponent) }.numEntities < 3) {
+            // Spawn station between 1.0x and 2.5x sensor radius for better density
+            val spawnDist = sensorRadius * MathUtils.random(1.0f, 2.5f)
             val angle = MathUtils.random(0f, MathUtils.PI2)
             val spawnX = playerPos.x + MathUtils.cos(angle) * spawnDist
             val spawnY = playerPos.y + MathUtils.sin(angle) * spawnDist
 
             world.entity {
                 it += PositionComponent().apply { pos.set(spawnX, spawnY) }
-                it += StationComponent(name = "Nexus Prime", radius = 200f)
+                it += StationComponent(name = "Station ${MathUtils.random(100, 999)}", radius = 200f)
 
-                // Initialize Market with a random module
                 it += MarketComponent().apply {
                     offeredModule = createRandomModule(player[EvolutionComponent].currentTier)
-                    essencePrice = 25 // Placeholder price
+                    essencePrice = 25
                 }
             }
         }
@@ -164,7 +165,7 @@ class StationSpawnSystem : IntervalSystem(interval = Fixed(10f)) {
     private fun createRandomModule(playerTier: Int): WeaponModuleComponent {
         val tier = MathUtils.clamp(playerTier + MathUtils.random(-1, 1), 1, 9)
         return WeaponModuleComponent(
-            name = "Stolen T$tier Tech",
+            name = "Trade Tech T$tier",
             projectileTier = tier,
             damage = when(tier) {
                 1 -> 12f; 2 -> 28f; 3 -> 18f; 4 -> 45f; 5 -> 35f

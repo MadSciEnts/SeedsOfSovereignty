@@ -7,16 +7,22 @@
 - [x] **Weapon Module Transition:** [SUCCESS] Decoupled stats from hull.
 
 ## Tier 9 Implementation (IN PROGRESS)
-- [ ] **Tier 9 Hull DNA:** Define "Vanguard" (Tactical Interceptor) geometry in `ProceduralShipDrawer`.
-- [ ] **Tier 9 Weapon DNA:** Define Stock T9 module stats and visuals.
-- [ ] **Tactical System:** Implement "Smart-Brake" logic for high-speed precision.
-- [ ] **HUD Weapon Indicator:** Create a UI element showing the name/tier of the equipped module.
+- [x] **Tier 9 Hull DNA:** Vanguard (Tactical Interceptor) implemented.
+- [x] **Tier 9 Weapon DNA:** Stock T9 module stats and visuals implemented.
+- [x] **Tactical System:** Smart-Brake logic implemented.
+- [x] **HUD Weapon Indicator:** UI element showing equipped module implemented.
+
+## Station Market Enhancement (NEW)
+- [ ] **Projectile Visual Utility:** Extract drawing logic to `ProjectileDrawer` for UI reuse.
+- [ ] **Weapon Preview Icons:** Implement custom Actor to display projectile visuals in Market UI.
+- [ ] **Capability Bars:** Add visual progress bars for Damage, Rate, and Speed relative to Tier limits.
+- [ ] **Compare View Overhaul:** Redesign the Market UI in `PlayScreen` with icons and bars.
 
 ## Logic Implementation Status
 - [x] **Tier 8 Evolution:** Dreadnought (8a-8d) complete.
-- [ ] **Tier 9 Evolution:** [PENDING]
+- [x] **Tier 9 Evolution:** Vanguard (9a-9d) complete.
 
 ## Verification Protocol
-1. **Build Integrity:** Gradle `core:assemble` [PASSED]
+1. **Build Integrity:** Gradle `core:assemble` [PENDING]
 2. **Persistence:** Read-back verified for all domain files.
-3. **Mantra Check:** `HUDSystem` and `ProceduralShipDrawer` must stay modular.
+3. **Mantra Check:** Maintain 300-line limit. `UISystems.kt` might need splitting soon.
