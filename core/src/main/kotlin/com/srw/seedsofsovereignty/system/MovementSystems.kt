@@ -55,9 +55,37 @@ class MoveSystem : IteratingSystem(family { all(PositionComponent, VelocityCompo
         pos.pos.x += vel.v.x * deltaTime
         pos.pos.y += vel.v.y * deltaTime
 
-        val frictionFactor = if (entity.has(EssenceComponent)) 0.5f else vel.friction
+        // Domain-Specific Friction Logic
+        var frictionFactor = vel.friction
+
+        if (entity.has(EssenceComponent)) {
+            frictionFactor = 0.5f
+        } else if (entity.has(PlayerComponent) && entity.has(EvolutionComponent)) {
+            val evo = entity[EvolutionComponent]
+            val input = world.system<PlayerInputSystem>()
+
+            // SMART-BRAKE: Active deceleration for T9+ Advanced Pilots
+            if (evo.currentTier >= 9 && input.joystickVector.isZero && !Gdx.input.isKeyPressed(Keys.W) && !Gdx.input.isKeyPressed(Keys.S) && !Gdx.input.isKeyPressed(Keys.A) && !Gdx.input.isKeyPressed(Keys.D)) {
+                frictionFactor *= 5.0f // Heavy braking
+                if (vel.v.len2() > 100f) spawnBrakeFlare(pos.pos.x, pos.pos.y, vel.v.angleRad())
+            }
+        }
+
         if (!entity.has(ProjectileComponent)) {
             vel.v.scl(1f - (frictionFactor * deltaTime))
+        }
+    }
+
+    private fun spawnBrakeFlare(x: Float, y: Float, angleRad: Float) {
+        // Forward-facing sparks to simulate thruster counter-fire
+        world.entity {
+            it += PositionComponent().apply { pos.set(x + com.badlogic.gdx.math.MathUtils.cos(angleRad)*20f, y + com.badlogic.gdx.math.MathUtils.sin(angleRad)*20f) }
+            it += VelocityComponent().apply {
+                v.set(100f, 0f).setAngleRad(angleRad + com.badlogic.gdx.math.MathUtils.PI)
+                friction = 2f
+            }
+            it += ParticleComponent(type = ParticleComponent.Type.SPARK, color = com.badlogic.gdx.graphics.Color.ORANGE, size = 4f)
+            it += LifeSpanComponent(remaining = 0.15f)
         }
     }
 }
@@ -72,11 +100,6 @@ class CameraSystem(private val camera: OrthographicCamera) : IteratingSystem(fam
         val evo = entity[EvolutionComponent]
 
         val currentSize = ProceduralShipDrawer.getShipSize(evo.currentTier, evo.subTier)
-
-        // Heavily Dampened Camera Curve:
-        // Divisor increased to 85f to ensure the ship physically grows in screen-space as it evolves.
-        // T1a (8) -> 1.0f zoom
-        // T8a (105) -> 1.0 + (97 / 85) = ~2.14f zoom
         val baseZoom = 1.0f + (currentSize - 8f) / 85f
 
         targetPos.set(pos.x + (vel.x * 0.5f), pos.y + (vel.y * 0.5f))

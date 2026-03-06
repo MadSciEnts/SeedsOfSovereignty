@@ -24,6 +24,19 @@ data class StationComponent(
     companion object : ComponentType<StationComponent>()
 }
 
+/**
+ * Holds a module offered for trade or sale.
+ * Players can choose to Swap (Replace current) or Scrap (Destroy for Essence).
+ */
+data class MarketComponent(
+    var offeredModule: WeaponModuleComponent? = null,
+    var essencePrice: Int = 0,
+    var refreshTimer: Float = 60f // Seconds until stock changes
+) : Component<MarketComponent> {
+    override fun type() = MarketComponent
+    companion object : ComponentType<MarketComponent>()
+}
+
 data class DockingComponent(
     var isDocked: Boolean = false,
     var nearestStation: Entity? = null,

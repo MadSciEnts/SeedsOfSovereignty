@@ -124,7 +124,6 @@ class EnemySpawnSystem(
                     cooldown = MathUtils.random(0f, baseFireRate),
                     barrels = 1
                 )
-                // Enemies use default modules matching their "tier" visuals for now
                 it += WeaponModuleComponent(
                     fireRate = baseFireRate,
                     projectileTier = if (it[EnemyComponent].type == "Reaper") 2 else 1,
@@ -144,7 +143,6 @@ class StationSpawnSystem : IntervalSystem(interval = Fixed(10f)) {
         val sensorRadius = player[SensorComponent].radius
 
         if (world.family { all(StationComponent) }.numEntities == 0) {
-            // Spawn station at the edge of sensor range (1.2x radius to ensure it's hidden)
             val spawnDist = sensorRadius * 1.2f
             val angle = MathUtils.random(0f, MathUtils.PI2)
             val spawnX = playerPos.x + MathUtils.cos(angle) * spawnDist
@@ -153,8 +151,29 @@ class StationSpawnSystem : IntervalSystem(interval = Fixed(10f)) {
             world.entity {
                 it += PositionComponent().apply { pos.set(spawnX, spawnY) }
                 it += StationComponent(name = "Nexus Prime", radius = 200f)
-                // VisibleComponent is NOT added here; SensorSystem will add it when in range
+
+                // Initialize Market with a random module
+                it += MarketComponent().apply {
+                    offeredModule = createRandomModule(player[EvolutionComponent].currentTier)
+                    essencePrice = 25 // Placeholder price
+                }
             }
         }
+    }
+
+    private fun createRandomModule(playerTier: Int): WeaponModuleComponent {
+        val tier = MathUtils.clamp(playerTier + MathUtils.random(-1, 1), 1, 9)
+        return WeaponModuleComponent(
+            name = "Stolen T$tier Tech",
+            projectileTier = tier,
+            damage = when(tier) {
+                1 -> 12f; 2 -> 28f; 3 -> 18f; 4 -> 45f; 5 -> 35f
+                6 -> 45f; 7 -> 55f; 8 -> 110f; 9 -> 160f; else -> 10f
+            },
+            fireRate = when(tier) {
+                1 -> 0.45f; 2 -> 0.35f; 3 -> 0.3f; 4 -> 0.25f; 5 -> 0.35f
+                6 -> 0.25f; 7 -> 0.35f; 8 -> 0.5f; 9 -> 0.35f; else -> 0.5f
+            }
+        )
     }
 }

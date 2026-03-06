@@ -44,9 +44,7 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
         val weapon = entity[WeaponComponent]
         val vel = entity[VelocityComponent]
 
-        // Add WeaponModuleComponent if missing (safety check)
         if (!entity.has(WeaponModuleComponent)) {
-            // In Fleks, for immediate component addition during iteration:
             entity.configure { it += WeaponModuleComponent() }
         }
 
@@ -58,6 +56,7 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
             weapon.barrels = evo.subTier.coerceIn(1, 4)
             generateCenterOutSequence(weapon)
 
+            // Force update to Stock Module on every evolution/sub-tier change to maintain power baseline
             if (entity.has(WeaponModuleComponent)) {
                 updateStockModule(entity[WeaponModuleComponent], evo.currentTier, evo.subTier)
             }
@@ -68,7 +67,7 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
                         evo.currentTier = 2; evo.subTier = 1; weapon.barrels = 1
                         generateCenterOutSequence(weapon)
                         vel.acceleration += 150f
-                        if (entity.has(WeaponModuleComponent)) updateStockModule(entity[WeaponModuleComponent], 2, 1)
+                        updateStockModule(entity[WeaponModuleComponent], 2, 1)
                     }
                 }
                 2 -> {
@@ -76,7 +75,7 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
                         evo.currentTier = 3; evo.subTier = 1; weapon.barrels = 1
                         generateCenterOutSequence(weapon)
                         vel.acceleration += 100f
-                        if (entity.has(WeaponModuleComponent)) updateStockModule(entity[WeaponModuleComponent], 3, 1)
+                        updateStockModule(entity[WeaponModuleComponent], 3, 1)
                     }
                 }
                 3 -> {
@@ -87,7 +86,7 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
                             d += OrientationComponent()
                             d += DroneComponent(owner = entity, orbitRadius = 60f + myDrones.size * 10f)
                             d += WeaponComponent()
-                            d += WeaponModuleComponent(projectileTier = 3, damage = 15f, fireRate = 0.5f)
+                            d += WeaponModuleComponent(name = "Drone Pulse", projectileTier = 3, damage = 15f, fireRate = 0.5f)
                             d += VelocityComponent()
                             d += HealthComponent(max = 50f, current = 50f)
                             d += VisibleComponent()
@@ -96,7 +95,7 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
                     if (evo.subTier >= 5) {
                         evo.currentTier = 4; evo.subTier = 1; weapon.barrels = 1
                         generateCenterOutSequence(weapon)
-                        if (entity.has(WeaponModuleComponent)) updateStockModule(entity[WeaponModuleComponent], 4, 1)
+                        updateStockModule(entity[WeaponModuleComponent], 4, 1)
                     }
                 }
                 4 -> {
@@ -104,7 +103,7 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
                         evo.currentTier = 5; evo.subTier = 1; weapon.barrels = 1
                         generateCenterOutSequence(weapon)
                         vel.acceleration += 50f
-                        if (entity.has(WeaponModuleComponent)) updateStockModule(entity[WeaponModuleComponent], 5, 1)
+                        updateStockModule(entity[WeaponModuleComponent], 5, 1)
                         if (entity.has(ShieldComponent)) {
                             val shield = entity[ShieldComponent]
                             shield.max = 200f; shield.current = shield.max; shield.rechargeRate = 15f
@@ -118,7 +117,7 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
                         evo.currentTier = 6; evo.subTier = 1; weapon.barrels = 1
                         generateCenterOutSequence(weapon)
                         vel.acceleration += 25f
-                        if (entity.has(WeaponModuleComponent)) updateStockModule(entity[WeaponModuleComponent], 6, 1)
+                        updateStockModule(entity[WeaponModuleComponent], 6, 1)
                     }
                 }
                 6 -> {
@@ -128,7 +127,7 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
                             d += OrientationComponent()
                             d += DroneComponent(owner = entity, orbitRadius = 80f)
                             d += WeaponComponent()
-                            d += WeaponModuleComponent(projectileTier = 6, damage = 30f, fireRate = 0.4f)
+                            d += WeaponModuleComponent(name = "Drone Heavy", projectileTier = 6, damage = 30f, fireRate = 0.4f)
                             d += VelocityComponent()
                             d += HealthComponent(max = 100f, current = 100f)
                             d += ShieldComponent(max = 50f, current = 50f, rechargeRate = 5f)
@@ -139,7 +138,7 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
                         evo.currentTier = 7; evo.subTier = 1; weapon.barrels = 1
                         generateCenterOutSequence(weapon)
                         vel.acceleration += 100f
-                        if (entity.has(WeaponModuleComponent)) updateStockModule(entity[WeaponModuleComponent], 7, 1)
+                        updateStockModule(entity[WeaponModuleComponent], 7, 1)
                     }
                 }
                 7 -> {
@@ -148,7 +147,7 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
                         evo.currentTier = 8; evo.subTier = 1; weapon.barrels = 1
                         generateCenterOutSequence(weapon)
                         vel.acceleration = 250f
-                        if (entity.has(WeaponModuleComponent)) updateStockModule(entity[WeaponModuleComponent], 8, 1)
+                        updateStockModule(entity[WeaponModuleComponent], 8, 1)
                         if (entity.has(HealthComponent)) entity[HealthComponent].apply { max = 1000f; current = 1000f }
                         if (entity.has(ShieldComponent)) entity[ShieldComponent].apply { max = 1000f; current = 1000f; rechargeRate = 30f }
                     }
@@ -160,7 +159,7 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
                         evo.currentTier = 9; evo.subTier = 1; weapon.barrels = 1
                         generateCenterOutSequence(weapon)
                         vel.acceleration += 50f
-                        if (entity.has(WeaponModuleComponent)) updateStockModule(entity[WeaponModuleComponent], 9, 1)
+                        updateStockModule(entity[WeaponModuleComponent], 9, 1)
                     }
                 }
             }
@@ -177,10 +176,11 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
             2 -> 25f
             3 -> 15f
             4 -> 40f
-            5 -> 30f
-            6 -> 40f
-            7 -> 50f
+            5 -> 35f // Slightly increased
+            6 -> 45f // Slightly increased
+            7 -> 60f // Increased for Purple Bolt
             8 -> 100f
+            9 -> 150f
             else -> 10f
         }
 
@@ -189,10 +189,11 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
             2 -> 0.4f
             3 -> 0.35f
             4 -> 0.3f
-            5 -> 0.4f
-            6 -> 0.3f
+            5 -> 0.35f // Tightened
+            6 -> 0.25f // Very rapid Square Plasma
             7 -> 0.4f
             8 -> 0.6f
+            9 -> 0.4f
             else -> 0.5f
         }
     }

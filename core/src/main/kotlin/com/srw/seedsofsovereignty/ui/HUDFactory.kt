@@ -4,6 +4,7 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.BitmapFont
+import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.ui.Skin
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton
 import com.badlogic.gdx.scenes.scene2d.ui.Touchpad
@@ -21,6 +22,10 @@ object HUDFactory {
 
             this["white"] = whiteTex
             this["default"] = BitmapFont()
+
+            label {
+                font = this@skin.getFont("default")
+            }
 
             touchpad("default") {
                 background = this@skin.newDrawable("white", Color(0.2f, 0.2f, 0.2f, 0.5f))
@@ -50,6 +55,18 @@ object HUDFactory {
                 font = this@skin.getFont("default")
             }
 
+            textButton("market-swap") {
+                up = this@skin.newDrawable("white", Color(0.1f, 0.6f, 0.2f, 0.7f))
+                down = this@skin.newDrawable("white", Color(0.2f, 0.9f, 0.3f, 0.9f))
+                font = this@skin.getFont("default")
+            }
+
+            textButton("market-scrap") {
+                up = this@skin.newDrawable("white", Color(0.6f, 0.1f, 0.1f, 0.7f))
+                down = this@skin.newDrawable("white", Color(0.9f, 0.2f, 0.2f, 0.9f))
+                font = this@skin.getFont("default")
+            }
+
             textButton("debug") {
                 up = this@skin.newDrawable("white", Color(0.2f, 0.4f, 0.2f, 0.5f))
                 down = this@skin.newDrawable("white", Color(0.2f, 0.8f, 0.2f, 0.8f))
@@ -62,5 +79,7 @@ object HUDFactory {
     fun createAimJoystick(skin: Skin): Touchpad = Touchpad(10f, skin, "aim").apply { setSize(200f, 200f) }
     fun createFireButton(skin: Skin): TextButton = TextButton("FIRE", skin).apply { setSize(200f, 200f) }
     fun createStationButton(text: String, skin: Skin): TextButton = TextButton(text, skin, "station").apply { setSize(300f, 80f) }
+    fun createMarketButton(text: String, style: String, skin: Skin): TextButton = TextButton(text, skin, style).apply { setSize(250f, 70f) }
     fun createDebugButton(text: String, skin: Skin): TextButton = TextButton(text, skin, "debug").apply { setSize(150f, 50f) }
+    fun createLabel(text: String, skin: Skin): Label = Label(text, skin)
 }
