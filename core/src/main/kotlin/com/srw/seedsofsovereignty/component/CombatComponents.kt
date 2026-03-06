@@ -24,6 +24,7 @@ data class WeaponComponent(
  */
 data class WeaponModuleComponent(
     var name: String = "Stock Kinetic",
+    var description: String = "Standard kinetic stream.",
     var projectileTier: Int = 1,
     var damage: Float = 10f,
     var projectileSpeed: Float = 1000f,

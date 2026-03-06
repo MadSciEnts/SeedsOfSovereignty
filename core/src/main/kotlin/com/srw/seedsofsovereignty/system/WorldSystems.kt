@@ -125,7 +125,7 @@ class EnemySpawnSystem(
                     barrels = 1
                 )
                 it += WeaponModuleComponent(
-                    fireRate = baseFireRate,
+                    name = "Enemy Pulse",
                     projectileTier = if (it[EnemyComponent].type == "Reaper") 2 else 1,
                     damage = 5f,
                     projectileSpeed = 600f
@@ -142,9 +142,7 @@ class StationSpawnSystem : IntervalSystem(interval = Fixed(10f)) {
         val playerPos = player[PositionComponent].pos
         val sensorRadius = player[SensorComponent].radius
 
-        // Allow up to 3 stations in the world at a time
         if (world.family { all(StationComponent) }.numEntities < 3) {
-            // Spawn station between 1.0x and 2.5x sensor radius for better density
             val spawnDist = sensorRadius * MathUtils.random(1.0f, 2.5f)
             val angle = MathUtils.random(0f, MathUtils.PI2)
             val spawnX = playerPos.x + MathUtils.cos(angle) * spawnDist
@@ -152,11 +150,12 @@ class StationSpawnSystem : IntervalSystem(interval = Fixed(10f)) {
 
             world.entity {
                 it += PositionComponent().apply { pos.set(spawnX, spawnY) }
-                it += StationComponent(name = "Station ${MathUtils.random(100, 999)}", radius = 200f)
+                it += StationComponent(name = "Outpost ${MathUtils.random(100, 999)}", radius = 200f)
 
                 it += MarketComponent().apply {
-                    offeredModule = createRandomModule(player[EvolutionComponent].currentTier)
-                    essencePrice = 25
+                    for (i in 0 until 3) {
+                        weaponOffers.add(createRandomModule(player[EvolutionComponent].currentTier))
+                    }
                 }
             }
         }
@@ -164,17 +163,21 @@ class StationSpawnSystem : IntervalSystem(interval = Fixed(10f)) {
 
     private fun createRandomModule(playerTier: Int): WeaponModuleComponent {
         val tier = MathUtils.clamp(playerTier + MathUtils.random(-1, 1), 1, 9)
+        val damage = when(tier) {
+            1 -> 12f; 2 -> 28f; 3 -> 18f; 4 -> 45f; 5 -> 35f
+            6 -> 45f; 7 -> 55f; 8 -> 110f; 9 -> 160f; else -> 10f
+        }
+        val fireRate = when(tier) {
+            1 -> 0.45f; 2 -> 0.35f; 3 -> 0.3f; 4 -> 0.25f; 5 -> 0.35f
+            6 -> 0.25f; 7 -> 0.35f; 8 -> 0.5f; 9 -> 0.35f; else -> 0.5f
+        }
+
         return WeaponModuleComponent(
-            name = "Trade Tech T$tier",
+            name = "Tactical T$tier Unit",
+            description = "Enhanced T$tier module optimized for combat operations. Damage potential: $damage.",
             projectileTier = tier,
-            damage = when(tier) {
-                1 -> 12f; 2 -> 28f; 3 -> 18f; 4 -> 45f; 5 -> 35f
-                6 -> 45f; 7 -> 55f; 8 -> 110f; 9 -> 160f; else -> 10f
-            },
-            fireRate = when(tier) {
-                1 -> 0.45f; 2 -> 0.35f; 3 -> 0.3f; 4 -> 0.25f; 5 -> 0.35f
-                6 -> 0.25f; 7 -> 0.35f; 8 -> 0.5f; 9 -> 0.35f; else -> 0.5f
-            }
+            damage = damage,
+            fireRate = fireRate
         )
     }
 }

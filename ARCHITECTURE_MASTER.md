@@ -14,15 +14,19 @@ The game is divided into 4 Epochs. Every 12 Tiers, the perspective and primary g
 - **Tiers vs. Sub-Tiers:** Each Tier (e.g., Tier 1) is composed of 4 sub-tiers (a, b, c, d) representing incremental hardware upgrades.
 - **Twin-Stick Transition:** Control moves from Single-Stick (T1-T3) to Dual-Stick (T4-T12) once independent turret tracking is unlocked.
 
-## 3. The Power Baseline
-- **Tier 1: Interceptor**
-    - **1a-1d:** Single/Triple shots (Forward focus).
-- **Tier 2: Heavy Interceptor (Violet)**
-    - **2a-2d:** Rapid fire + Speed boost.
-- **Tier 3: Drone Carrier (Gold)**
-    - **3a-3d:** 1-4 autonomous orbiting combat drones.
-- **Tier 4: Sentinel (Twin-Stick Debut)**
-    - **4a:** Unlocks the **Independent Turret Mount**.
-    - **Controls:** Left Stick (Move), Right Stick (Aim).
-- **Tier 5-12:** [TBD]
-- **Tier 48:** A solar-system-sized intelligence that manipulates star-states.
+## 3. The Power Baseline (Epoch I)
+- **Tier 1: Proto-Interceptor** (Single-Stick)
+- **Tier 2: Violet Interceptor** (Agility Focus)
+- **Tier 3: Drone Carrier** (Initial AI Support)
+- **Tier 4: Sentinel** (Twin-Stick Debut)
+- **Tier 5: Shielded Bulwark** (Defense Focus)
+- **Tier 6: Sentinel+** (Advanced Tracking)
+- **Tier 7: Wraith** (Stealth/Speed)
+- **Tier 8: Dreadnought** (Heavy Kinetic)
+- **Tier 9: Vanguard** (Current Apex - High Energy)
+- **Tier 10-12:** [TBD] Final Epoch I Evolutions.
+
+## 4. Technical Milestones
+- **Status:** Professional Market UI implemented with procedural data-links.
+- **Status:** Multi-offer module logic integrated into Station Markets.
+- **Status:** Tier 9 "Vanguard" chassis active.

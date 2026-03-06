@@ -1,6 +1,6 @@
 # DEVELOPMENT PROGRESS LOG
 
-## Current Milestone: Tier 9 - [TBD] (Preparation)
+## Current Milestone: Tier 9 - Vanguard Evolution (In Progress)
 - [x] GDX-Liftoff Setup
 - [x] Knowledge Base Created (25 files)
 - [x] Tier 1 Pilot Movement System (WASD + Joystick)
@@ -19,9 +19,10 @@
 - [x] Tier 6 Evolution (Sentinel+) (Complete & Labeled)
 - [x] Tier 7 Evolution (Wraith) (Complete & Labeled)
 - [x] Tier 8 Evolution (Dreadnought) (8a-8d implemented & visual DNA verified)
-- [ ] Tier 9 Evolution (Next)
+- [x] Tier 9 Evolution (Vanguard) (Base Chassis & Logic)
+- [x] Professional Station Market UI (Weapon detail scaling & Data-link visual fix)
 
 ## Current Global Stats
-- **Active Tier:** 8/48
+- **Active Tier:** 9/48
 - **Active Epoch:** 1/4
-- **Build Version:** 0.1.0 (Pre-Alpha)
+- **Build Version:** 0.1.1 (Pre-Alpha)

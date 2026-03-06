@@ -3,26 +3,26 @@
 ## Current Refactoring State
 - [x] **Components Modularized:** Domain split complete.
 - [x] **Systems Modularized:** Domain split complete.
-- [x] **Drone Domain Consolidation:** [SUCCESS]
-- [x] **Weapon Module Transition:** [SUCCESS] Decoupled stats from hull.
+- [x] **Weapon Module Transition:** Decoupled stats from hull.
 
-## Tier 9 Implementation (IN PROGRESS)
-- [x] **Tier 9 Hull DNA:** Vanguard (Tactical Interceptor) implemented.
-- [x] **Tier 9 Weapon DNA:** Stock T9 module stats and visuals implemented.
-- [x] **Tactical System:** Smart-Brake logic implemented.
-- [x] **HUD Weapon Indicator:** UI element showing equipped module implemented.
-
-## Station Market Enhancement (NEW)
-- [ ] **Projectile Visual Utility:** Extract drawing logic to `ProjectileDrawer` for UI reuse.
-- [ ] **Weapon Preview Icons:** Implement custom Actor to display projectile visuals in Market UI.
-- [ ] **Capability Bars:** Add visual progress bars for Damage, Rate, and Speed relative to Tier limits.
-- [ ] **Compare View Overhaul:** Redesign the Market UI in `PlayScreen` with icons and bars.
+## Professional Station Market UI (COMPLETED)
+- [x] **Procedural Textures:** Scifi panels and buttons implemented.
+- [x] **Ship Preview:** Live ship rendering in UI.
+- [x] **Multi-Offer Support:** `MarketComponent` now holds `MutableList<WeaponModuleComponent>`.
+- [x] **Market UI Overhaul:**
+    - Split screen: Equipped (Left) vs. Market List (Center) vs. Offer Detail (Right).
+    - Equipped side: Large visual, stats, and tactical description.
+    - Market side: Scrollable list of available modules with their icons.
+- [x] **Icon Scaling:** Weapon projectile icons scaled to 4.5x for clarity.
+- [x] **Data-Link Visuals:** Procedural connection lines with precise local-space targeting (0.78y) and clip-awareness.
+- [x] **Comparison Logic:** Selecting a module from the list updates the right-hand details widget.
+- [x] **Manager Update:** `MarketManager` handles specific module selection via index.
 
 ## Logic Implementation Status
-- [x] **Tier 8 Evolution:** Dreadnought (8a-8d) complete.
-- [x] **Tier 9 Evolution:** Vanguard (9a-9d) complete.
+- [x] **Tier 9 Evolution:** Vanguard chassis logic and base evolution criteria implemented.
+- [x] **Hangar Base UI:** Multi-state flow (Welcome -> Categories -> Market) verified.
 
 ## Verification Protocol
-1. **Build Integrity:** Gradle `core:assemble` [PENDING]
-2. **Persistence:** Read-back verified for all domain files.
-3. **Mantra Check:** Maintain 300-line limit. `UISystems.kt` might need splitting soon.
+1. **Build Integrity:** Gradle `core:assemble` passed.
+2. **Mantra Check:** `StationHangarUI.kt` maintained under 300 lines (currently ~260). Logic decoupled into `MarketManager`.
+3. **Visual Integrity:** Connection lines verified for alignment across various screen resolutions.

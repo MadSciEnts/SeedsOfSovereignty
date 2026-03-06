@@ -25,12 +25,12 @@ data class StationComponent(
 }
 
 /**
- * Holds a module offered for trade or sale.
+ * Holds modules offered for trade or sale.
  * Players can choose to Swap (Replace current) or Scrap (Destroy for Essence).
  */
 data class MarketComponent(
-    var offeredModule: WeaponModuleComponent? = null,
-    var essencePrice: Int = 0,
+    val weaponOffers: MutableList<WeaponModuleComponent> = mutableListOf(),
+    var essencePrice: Int = 0, // Base price multiplier or flat fee
     var refreshTimer: Float = 60f // Seconds until stock changes
 ) : Component<MarketComponent> {
     override fun type() = MarketComponent

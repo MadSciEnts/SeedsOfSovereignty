@@ -4,13 +4,16 @@
 - [x] Components modularized into domain files.
 - [x] Systems modularized into domain files.
 - [x] SovereigntyGame.kt updated as clean orchestrator.
+- [x] UI logic decoupled into Manager classes (DockingManager, MarketManager).
 
-## Verified Baseline (Tier 1-4)
-- [x] **Enemy Accuracy:** Predictive Aiming verified. Shooter velocity inheritance removed. Aim is perfect.
-- [x] **Combat Feedback:** Contact damage is registered. Linear vitals bars update correctly.
-- [x] **Station Systems:** Docking, physical HUD buttons, and Safe Haven logic are verified active.
+## Verified Baseline (Tier 1-9)
+- [x] **Enemy Accuracy:** Predictive Aiming verified. Shooter velocity inheritance removed.
+- [x] **Combat Feedback:** Contact damage is registered. Shield vs Hull VFX distinction verified.
+- [x] **Station Systems:** Docking, physical HUD buttons, and Multi-Offer Market logic are verified active.
+- [x] **Station UI:** "Data-Link" visual connection verified with precise local-space targeting and scroll-clip awareness.
+- [x] **Visual DNA:** Projectile icons scaled to 4.5x for high-fidelity technical analysis.
 
-## Current Priorities (Visual Refinement)
-- [ ] **Fix Spark Physics:** Convert static impact "glows" into velocity-based spark bursts.
-- [ ] **Differentiate Player Damage:** Move hull sparks inside the health-damage block to distinguish from shield ripples.
-- [ ] **Verify T5 Prep:** Document Bulwark geometry specs.
+## Current Priorities (Evolution & Drones)
+- [ ] **Tier 9 Vanguard Polish:** Fine-tune high-energy projectile visuals.
+- [ ] **Drone Module Integration:** Implement `DroneLauncherComponent` and autonomous behavior logic.
+- [ ] **Market Expansion:** Add "Drone" and "Utility" categories to the Station Hangar UI.
