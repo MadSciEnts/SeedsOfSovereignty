@@ -65,6 +65,12 @@ class PlayScreen(
             it += ApertureComponent()
             it += HealthComponent(current = 100f, max = 100f)
             it += ShieldComponent(current = 50f, max = 50f)
+
+            // New Module Slots for the Ship Analysis view
+            it += ModuleSlotComponent(mutableListOf(
+                ModuleSlot(SlotType.WEAPON, 1, "Stock Kinetic", 1),
+                ModuleSlot(SlotType.DRONE, 1, "EMPTY", 0)
+            ))
         }
 
         // INITIAL TEST STATION (Now with 10 offers for scrolling test)
