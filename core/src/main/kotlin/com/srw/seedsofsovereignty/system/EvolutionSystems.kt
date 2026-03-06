@@ -44,6 +44,12 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
         val weapon = entity[WeaponComponent]
         val vel = entity[VelocityComponent]
 
+        // Add WeaponModuleComponent if missing (safety check)
+        if (!entity.has(WeaponModuleComponent)) {
+            // In Fleks, for immediate component addition during iteration:
+            entity.configure { it += WeaponModuleComponent() }
+        }
+
         if (evo.essenceCollected >= evo.essenceRequired) {
             evo.subTier++
             evo.essenceCollected = 0
@@ -52,14 +58,17 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
             weapon.barrels = evo.subTier.coerceIn(1, 4)
             generateCenterOutSequence(weapon)
 
+            if (entity.has(WeaponModuleComponent)) {
+                updateStockModule(entity[WeaponModuleComponent], evo.currentTier, evo.subTier)
+            }
+
             when (evo.currentTier) {
                 1 -> {
                     if (evo.subTier == 5) {
                         evo.currentTier = 2; evo.subTier = 1; weapon.barrels = 1
                         generateCenterOutSequence(weapon)
-                        weapon.fireRate = 0.4f; vel.acceleration += 150f
-                    } else {
-                        weapon.fireRate = 0.5f
+                        vel.acceleration += 150f
+                        if (entity.has(WeaponModuleComponent)) updateStockModule(entity[WeaponModuleComponent], 2, 1)
                     }
                 }
                 2 -> {
@@ -67,31 +76,35 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
                         evo.currentTier = 3; evo.subTier = 1; weapon.barrels = 1
                         generateCenterOutSequence(weapon)
                         vel.acceleration += 100f
-                    } else {
-                        weapon.fireRate = 0.35f
+                        if (entity.has(WeaponModuleComponent)) updateStockModule(entity[WeaponModuleComponent], 3, 1)
                     }
                 }
                 3 -> {
                     val myDrones = droneFamily.filter { it[DroneComponent].owner == entity }
                     if (myDrones.size < evo.subTier) {
                         world.entity { d ->
-                            d += PositionComponent(); d += OrientationComponent()
+                            d += PositionComponent()
+                            d += OrientationComponent()
                             d += DroneComponent(owner = entity, orbitRadius = 60f + myDrones.size * 10f)
-                            d += WeaponComponent(fireRate = 0.5f); d += VelocityComponent()
-                            d += HealthComponent(max = 50f, current = 50f); d += VisibleComponent()
+                            d += WeaponComponent()
+                            d += WeaponModuleComponent(projectileTier = 3, damage = 15f, fireRate = 0.5f)
+                            d += VelocityComponent()
+                            d += HealthComponent(max = 50f, current = 50f)
+                            d += VisibleComponent()
                         }
                     }
                     if (evo.subTier >= 5) {
                         evo.currentTier = 4; evo.subTier = 1; weapon.barrels = 1
                         generateCenterOutSequence(weapon)
-                        weapon.fireRate = 0.3f
+                        if (entity.has(WeaponModuleComponent)) updateStockModule(entity[WeaponModuleComponent], 4, 1)
                     }
                 }
                 4 -> {
                     if (evo.subTier == 5) {
                         evo.currentTier = 5; evo.subTier = 1; weapon.barrels = 1
                         generateCenterOutSequence(weapon)
-                        weapon.fireRate = 0.4f; vel.acceleration += 50f
+                        vel.acceleration += 50f
+                        if (entity.has(WeaponModuleComponent)) updateStockModule(entity[WeaponModuleComponent], 5, 1)
                         if (entity.has(ShieldComponent)) {
                             val shield = entity[ShieldComponent]
                             shield.max = 200f; shield.current = shield.max; shield.rechargeRate = 15f
@@ -104,15 +117,19 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
                     if (evo.subTier == 5) {
                         evo.currentTier = 6; evo.subTier = 1; weapon.barrels = 1
                         generateCenterOutSequence(weapon)
-                        weapon.fireRate = 0.3f; vel.acceleration += 25f
+                        vel.acceleration += 25f
+                        if (entity.has(WeaponModuleComponent)) updateStockModule(entity[WeaponModuleComponent], 6, 1)
                     }
                 }
                 6 -> {
                     if (evo.subTier == 3) {
                         world.entity { d ->
-                            d += PositionComponent(); d += OrientationComponent()
+                            d += PositionComponent()
+                            d += OrientationComponent()
                             d += DroneComponent(owner = entity, orbitRadius = 80f)
-                            d += WeaponComponent(fireRate = 0.4f); d += VelocityComponent()
+                            d += WeaponComponent()
+                            d += WeaponModuleComponent(projectileTier = 6, damage = 30f, fireRate = 0.4f)
+                            d += VelocityComponent()
                             d += HealthComponent(max = 100f, current = 100f)
                             d += ShieldComponent(max = 50f, current = 50f, rechargeRate = 5f)
                             d += VisibleComponent()
@@ -121,7 +138,8 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
                     if (evo.subTier == 5) {
                         evo.currentTier = 7; evo.subTier = 1; weapon.barrels = 1
                         generateCenterOutSequence(weapon)
-                        vel.acceleration += 100f; weapon.fireRate = 0.4f
+                        vel.acceleration += 100f
+                        if (entity.has(WeaponModuleComponent)) updateStockModule(entity[WeaponModuleComponent], 7, 1)
                     }
                 }
                 7 -> {
@@ -129,8 +147,8 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
                     if (evo.subTier == 5) {
                         evo.currentTier = 8; evo.subTier = 1; weapon.barrels = 1
                         generateCenterOutSequence(weapon)
-                        weapon.fireRate = 0.6f
-                        vel.acceleration = 250f // MASSIVE SPEED UP
+                        vel.acceleration = 250f
+                        if (entity.has(WeaponModuleComponent)) updateStockModule(entity[WeaponModuleComponent], 8, 1)
                         if (entity.has(HealthComponent)) entity[HealthComponent].apply { max = 1000f; current = 1000f }
                         if (entity.has(ShieldComponent)) entity[ShieldComponent].apply { max = 1000f; current = 1000f; rechargeRate = 30f }
                     }
@@ -142,9 +160,40 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
                         evo.currentTier = 9; evo.subTier = 1; weapon.barrels = 1
                         generateCenterOutSequence(weapon)
                         vel.acceleration += 50f
+                        if (entity.has(WeaponModuleComponent)) updateStockModule(entity[WeaponModuleComponent], 9, 1)
                     }
                 }
             }
+        }
+    }
+
+    private fun updateStockModule(module: WeaponModuleComponent, tier: Int, subTier: Int) {
+        module.projectileTier = tier
+        module.name = "Stock T$tier"
+        module.projectileSpeed = 1000f
+
+        module.damage = when (tier) {
+            1 -> 10f
+            2 -> 25f
+            3 -> 15f
+            4 -> 40f
+            5 -> 30f
+            6 -> 40f
+            7 -> 50f
+            8 -> 100f
+            else -> 10f
+        }
+
+        module.fireRate = when (tier) {
+            1 -> if (subTier >= 2) 0.5f else 0.6f
+            2 -> 0.4f
+            3 -> 0.35f
+            4 -> 0.3f
+            5 -> 0.4f
+            6 -> 0.3f
+            7 -> 0.4f
+            8 -> 0.6f
+            else -> 0.5f
         }
     }
 

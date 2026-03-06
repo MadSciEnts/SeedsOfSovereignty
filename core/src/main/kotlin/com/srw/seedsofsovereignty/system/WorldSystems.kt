@@ -121,9 +121,15 @@ class EnemySpawnSystem(
                 }
 
                 it += WeaponComponent(
-                    fireRate = baseFireRate,
                     cooldown = MathUtils.random(0f, baseFireRate),
                     barrels = 1
+                )
+                // Enemies use default modules matching their "tier" visuals for now
+                it += WeaponModuleComponent(
+                    fireRate = baseFireRate,
+                    projectileTier = if (it[EnemyComponent].type == "Reaper") 2 else 1,
+                    damage = 5f,
+                    projectileSpeed = 600f
                 )
             }
         }

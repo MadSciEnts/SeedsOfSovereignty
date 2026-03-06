@@ -7,7 +7,6 @@ import com.github.quillraven.fleks.IteratingSystem
 import com.github.quillraven.fleks.World.Companion.family
 import com.srw.seedsofsovereignty.component.*
 import com.srw.seedsofsovereignty.util.ProceduralShipDrawer
-import kotlin.math.sqrt
 
 class WeaponSystem : IteratingSystem(family { all(WeaponComponent, PositionComponent, VelocityComponent, OrientationComponent) }) {
     private val mountOffsetsBuffer = mutableListOf<Vector2>()
@@ -17,6 +16,13 @@ class WeaponSystem : IteratingSystem(family { all(WeaponComponent, PositionCompo
         val pos = entity[PositionComponent].pos
         val hullAngle = entity[OrientationComponent].angleRad
         val aimAngle = weapon.aimAngleRad
+
+        // Pull module stats if available, otherwise fallback to defaults
+        val module = if (entity.has(WeaponModuleComponent)) entity[WeaponModuleComponent] else null
+        val baseFireRate = module?.fireRate ?: 0.5f
+        val projectileTier = module?.projectileTier ?: 1
+        val projectileDamage = module?.damage ?: 10f
+        val projectileSpeed = module?.projectileSpeed ?: 1000f
 
         val isEnemy = entity.has(EnemyComponent)
         val evo = if (entity.has(EvolutionComponent)) entity[EvolutionComponent] else null
@@ -28,13 +34,12 @@ class WeaponSystem : IteratingSystem(family { all(WeaponComponent, PositionCompo
         }
 
         if (weapon.isFiring && weapon.cooldown <= 0f) {
-            // CUMULATIVE ROF: Cooldown is divided by barrel count to increase cumulative fire rate
-            weapon.cooldown = weapon.fireRate / weapon.barrels.coerceAtLeast(1)
+            // CUMULATIVE ROF: Reset cooldown using the module's fireRate
+            weapon.cooldown = baseFireRate / weapon.barrels.coerceAtLeast(1)
 
             val shipSize = ProceduralShipDrawer.getShipSize(tier, subTier)
             ProceduralShipDrawer.getMountOffsets(tier, subTier, shipSize, hullAngle, mountOffsetsBuffer)
 
-            // SEQUENTIAL FIRING: Fire one shot from each mount using the current barrel index
             mountOffsetsBuffer.forEach { mountOffset ->
                 val firePosX = pos.x + mountOffset.x
                 val firePosY = pos.y + mountOffset.y
@@ -54,19 +59,18 @@ class WeaponSystem : IteratingSystem(family { all(WeaponComponent, PositionCompo
                         this.pos.add(ox, oy)
                     }
                     e += VelocityComponent().apply {
-                        val bulletSpeed = if (isEnemy) 600f else 1000f
+                        val bulletSpeed = if (isEnemy) 600f else projectileSpeed
                         this.v.set(bulletSpeed, 0f).setAngleRad(aimAngle)
                     }
                     e += ProjectileComponent(
-                        tier = tier,
-                        damage = if (isEnemy) 5f else (if (tier >= 6) 40f else if (tier >= 2) 25f else 10f),
+                        tier = if (isEnemy) tier else projectileTier,
+                        damage = if (isEnemy) 5f else projectileDamage,
                         ownerIsEnemy = isEnemy
                     )
                     e += LifeSpanComponent(remaining = if (isEnemy) 2.5f else 1.5f)
                 }
             }
 
-            // Increment barrel index for the NEXT sequential shot
             if (weapon.barrels > 1) {
                 weapon.currentBarrel = (weapon.currentBarrel + 1) % weapon.barrels
             }

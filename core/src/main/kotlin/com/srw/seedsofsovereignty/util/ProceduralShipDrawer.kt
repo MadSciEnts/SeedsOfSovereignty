@@ -9,9 +9,7 @@ import space.earlygrey.shapedrawer.ShapeDrawer
 object ProceduralShipDrawer {
 
     fun getShipSize(tier: Int, subTier: Int): Float {
-        // Linear growth for T1-T7, T8 jumps to "Heavy Capital" scale
         val tierBase = 8f + (tier - 1) * 7.5f
-        // T8a is now 105 units (previously 90)
         val finalSize = if (tier >= 8) tierBase + 45f else tierBase
         return finalSize + (subTier - 1) * 2.5f
     }
@@ -22,11 +20,19 @@ object ProceduralShipDrawer {
 
         if (tier < 8) {
             out.add(Vector2(0f, 0f))
-        } else {
-            // Distributed Mounts for Dreadnought (Square spread scaled to hull)
+        } else if (tier == 8) {
             val spread = size * 0.42f
             val count = subTier.coerceIn(1, 4)
             val locals = arrayOf(Vector2(spread, spread), Vector2(spread, -spread), Vector2(-spread, -spread), Vector2(-spread, spread))
+            for (i in 0 until count) {
+                out.add(Vector2(locals[i].x * cos - locals[i].y * sin, locals[i].x * sin + locals[i].y * cos))
+            }
+        } else {
+            // Tier 9+ Vanguard Mounts: Dual Forward-Pylons
+            val spreadX = size * 0.7f
+            val spreadY = size * 0.35f
+            val count = subTier.coerceIn(1, 4)
+            val locals = arrayOf(Vector2(spreadX, spreadY), Vector2(spreadX, -spreadY), Vector2(spreadX * 0.8f, spreadY * 1.5f), Vector2(spreadX * 0.8f, -spreadY * 1.5f))
             for (i in 0 until count) {
                 out.add(Vector2(locals[i].x * cos - locals[i].y * sin, locals[i].x * sin + locals[i].y * cos))
             }
@@ -38,11 +44,13 @@ object ProceduralShipDrawer {
         val color = when(tier) {
             1 -> Color.CYAN; 2 -> Color.VIOLET; 3 -> Color.GOLD; 4 -> Color.ORANGE
             5 -> Color.CHARTREUSE; 6 -> Color.SKY; 7 -> Color.PURPLE; 8 -> Color.SLATE
+            9 -> Color.FIREBRICK // Vanguard Red
             else -> Color.CYAN
         }
         drawer.setColor(color)
 
         when (tier) {
+            9 -> drawVanguardHull(drawer, x, y, hullRotation, size)
             8 -> drawDreadnoughtHull(drawer, x, y, hullRotation, size)
             6 -> drawSentinelPlusHull(drawer, x, y, hullRotation, size)
             7 -> drawWraithHull(drawer, x, y, hullRotation, size, color)
@@ -73,6 +81,27 @@ object ProceduralShipDrawer {
             val offset = (i - (numBarrels - 1) * 0.5f) * spacing
             drawer.line(x - offset * sin, y + offset * cos, x + (barrelL * cos) - offset * sin, y + (barrelL * sin) + offset * cos, barrelW)
         }
+    }
+
+    private fun drawVanguardHull(drawer: ShapeDrawer, x: Float, y: Float, rotation: Float, size: Float) {
+        val cos = MathUtils.cos(rotation); val sin = MathUtils.sin(rotation)
+        // Split Boom Design
+        val boomL = size * 1.2f; val boomW = size * 0.25f; val boomGap = size * 0.4f
+
+        // Pylon 1
+        val p1x = x - (size * 0.2f) * cos - (boomGap) * sin; val p1y = y - (size * 0.2f) * sin + (boomGap) * cos
+        drawer.line(p1x, p1y, p1x + boomL * cos, p1y + boomL * sin, boomW)
+
+        // Pylon 2
+        val p2x = x - (size * 0.2f) * cos + (boomGap) * sin; val p2y = y - (size * 0.2f) * sin - (boomGap) * cos
+        drawer.line(p2x, p2y, p2x + boomL * cos, p2y + boomL * sin, boomW)
+
+        // Core Connector (Trapezoid)
+        val cx1 = x - (size * 0.5f) * cos; val cy1 = y - (size * 0.5f) * sin
+        val cx2 = x + (size * 0.3f) * cos
+        drawer.line(cx1 - boomGap * sin, cy1 + boomGap * cos, cx1 + boomGap * sin, cy1 - boomGap * cos, 4f)
+        drawer.line(cx1 - boomGap * sin, cy1 + boomGap * cos, cx2 - (boomGap*0.5f) * sin, y + (size * 0.3f) * sin + (boomGap*0.5f) * cos, 2f)
+        drawer.line(cx1 + boomGap * sin, cy1 - boomGap * cos, cx2 + (boomGap*0.5f) * sin, y + (size * 0.3f) * sin - (boomGap*0.5f) * cos, 2f)
     }
 
     private fun drawDreadnoughtHull(drawer: ShapeDrawer, x: Float, y: Float, rotation: Float, size: Float) {

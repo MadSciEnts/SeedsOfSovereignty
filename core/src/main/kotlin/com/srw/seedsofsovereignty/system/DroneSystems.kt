@@ -31,11 +31,18 @@ class DroneRegenSystem : IteratingSystem(family { all(DroneLauncherComponent, Po
         world.entity { d ->
             d += PositionComponent().apply { pos.set(owner[PositionComponent].pos) }
             d += OrientationComponent()
-            // Inherit behavior from launcher
             d += DroneComponent(owner = owner, orbitRadius = 60f)
-            d += WeaponComponent(fireRate = 0.5f)
+            d += WeaponComponent()
+            // Drones use a specific "Drone Kinetic" module
+            d += WeaponModuleComponent(
+                name = "Drone Kinetic",
+                projectileTier = 3,
+                damage = 15f,
+                projectileSpeed = 800f,
+                fireRate = 0.5f
+            )
             d += VelocityComponent()
-            d += HealthComponent(max = 30f, current = 30f) // Drones are currently fragile sponges
+            d += HealthComponent(max = 30f, current = 30f)
             d += VisibleComponent()
         }
     }
@@ -46,7 +53,6 @@ class DroneFormationSystem(
 ) : IteratingSystem(family { all(DroneComponent, PositionComponent, OrientationComponent) }) {
     private val enemyFamily by lazy { world.family { all(EnemyComponent, PositionComponent) } }
     private val droneFamily by lazy { world.family { all(DroneComponent) } }
-    private val playerFamily by lazy { world.family { all(PlayerComponent, FleetCommandComponent) } }
     private val droneListBuffer = mutableListOf<Entity>()
     private var globalOrbitBase = 0f
 
@@ -67,10 +73,8 @@ class DroneFormationSystem(
             return
         }
 
-        // 1. SYNC BEHAVIOR WITH FLEET COMMAND
         val fleetCommand = if (owner.has(FleetCommandComponent)) owner[FleetCommandComponent].command else FleetCommandComponent.Command.DEFEND
 
-        // 2. TARGETING
         var targetEntity: Entity? = null
         var minDistSq = Float.MAX_VALUE
 
@@ -84,7 +88,6 @@ class DroneFormationSystem(
             }
         }
 
-        // 3. POSITIONING (OFFENSIVE VS DEFENSIVE)
         droneListBuffer.clear()
         droneFamily.forEach { if (it[DroneComponent].owner == owner) droneListBuffer.add(it) }
         val index = droneListBuffer.indexOf(entity)
@@ -92,9 +95,9 @@ class DroneFormationSystem(
         val finalAngle = globalOrbitBase + (index * MathUtils.PI2 / total)
 
         val centerPoint = if (fleetCommand != FleetCommandComponent.Command.DEFEND && targetEntity != null) {
-            targetEntity!![PositionComponent].pos // Orbit the target
+            targetEntity!![PositionComponent].pos
         } else {
-            owner[PositionComponent].pos // Orbit the player
+            owner[PositionComponent].pos
         }
 
         pos.set(
@@ -102,7 +105,6 @@ class DroneFormationSystem(
             centerPoint.y + MathUtils.sin(finalAngle) * drone.orbitRadius
         )
 
-        // 4. AIMING
         targetEntity?.let { enemy ->
             val aimAngle = Vector2(enemy[PositionComponent].pos).sub(pos).angleRad()
             orientation.angleRad = aimAngle

@@ -34,51 +34,36 @@ class RenderSystem(
                 val angleRad = if (entity.has(OrientationComponent)) entity[OrientationComponent].angleRad else MathUtils.PI / 2f
                 val evo = if (entity.has(EvolutionComponent)) entity[EvolutionComponent] else null
                 val weapon = if (entity.has(WeaponComponent)) entity[WeaponComponent] else null
-
-                // Extract Aim Angle for Independent Weapon Mounts
                 val aimAngle = weapon?.aimAngleRad ?: angleRad
 
                 if (evo != null && evo.currentTier >= 5 && entity.has(ShieldComponent)) {
                     val shield = entity[ShieldComponent]
                     if (shield.active && shield.current > 0) {
-                        val shieldColor = if (evo.currentTier == 8) Color.SLATE else Color.CYAN
+                        val shieldColor = when(evo.currentTier) { 8 -> Color.SLATE; 9 -> Color.FIREBRICK; else -> Color.CYAN }
                         drawer.setColor(shieldColor.r, shieldColor.g, shieldColor.b, 0.2f)
                         val size = ProceduralShipDrawer.getShipSize(evo.currentTier, evo.subTier)
-                        val shieldSize = size * 1.3f
-                        drawer.filledCircle(pos.x, pos.y, shieldSize)
-                        drawer.setColor(shieldColor)
-                        drawer.circle(pos.x, pos.y, shieldSize, 2f)
+                        drawer.filledCircle(pos.x, pos.y, size * 1.3f)
+                        drawer.setColor(shieldColor); drawer.circle(pos.x, pos.y, size * 1.3f, 2f)
                     }
                 }
-
-                // Pass both Hull Rotation and Aim Rotation to the Utility
-                ProceduralShipDrawer.drawPlayerShip(
-                    drawer, pos.x, pos.y, angleRad, aimAngle,
-                    evo?.currentTier ?: 1, evo?.subTier ?: 1
-                )
+                ProceduralShipDrawer.drawPlayerShip(drawer, pos.x, pos.y, angleRad, aimAngle, evo?.currentTier ?: 1, evo?.subTier ?: 1)
             } else if (entity.has(ProjectileComponent)) {
                 val proj = entity[ProjectileComponent]
                 val vel = entity[VelocityComponent].v
                 drawProjectile(pos.x, pos.y, vel.angleRad(), proj.tier)
             } else if (entity.has(EnemyComponent)) {
-                val enemy = entity[EnemyComponent]
-                drawEnemy(pos.x, pos.y, enemy.type)
+                drawEnemy(pos.x, pos.y, entity[EnemyComponent].type)
             } else if (entity.has(EssenceComponent)) {
                 drawEssence(pos.x, pos.y)
             } else if (entity.has(DroneComponent)) {
                 val angleRad = entity[OrientationComponent].angleRad
                 val health = if (entity.has(HealthComponent)) entity[HealthComponent] else null
                 val shield = if (entity.has(ShieldComponent)) entity[ShieldComponent] else null
-                ProceduralShipDrawer.drawDrone(
-                    drawer, pos.x, pos.y, angleRad,
-                    health?.current ?: 1f, health?.max ?: 1f, shield?.current ?: 0f
-                )
+                ProceduralShipDrawer.drawDrone(drawer, pos.x, pos.y, angleRad, health?.current ?: 1f, health?.max ?: 1f, shield?.current ?: 0f)
             } else if (entity.has(StationComponent)) {
                 drawStation(pos.x, pos.y)
             } else if (entity.has(ParticleComponent)) {
-                val part = entity[ParticleComponent]
-                val life = entity[LifeSpanComponent].remaining
-                drawParticle(pos.x, pos.y, part, life)
+                drawParticle(pos.x, pos.y, entity[ParticleComponent], entity[LifeSpanComponent].remaining)
             } else {
                 drawDetectedObject(pos.x, pos.y)
             }
@@ -92,20 +77,11 @@ class RenderSystem(
             2 -> { drawer.setColor(Color.VIOLET); drawer.line(x, y, x + 12f * cos, y + 12f * sin, 3f) }
             3 -> { drawer.setColor(Color.GOLD); drawer.filledCircle(x, y, 3f); drawer.line(x, y, x + 10f * cos, y + 10f * sin, 2f) }
             4 -> { drawer.setColor(Color.ORANGE); drawer.filledCircle(x, y, 4f); drawer.setColor(Color.WHITE); drawer.circle(x, y, 6f, 1f) }
-            5 -> { drawer.setColor(Color.CHARTREUSE); val s = 4f
-                drawer.line(x - s*cos + s*sin, y - s*sin - s*cos, x + s*cos + s*sin, y + s*sin - s*cos, 2f)
-                drawer.line(x + s*cos + s*sin, y + s*sin - s*cos, x + s*cos - s*sin, y + s*sin + s*cos, 2f)
-                drawer.line(x + s*cos - s*sin, y + s*sin + s*cos, x - s*cos - s*sin, y - s*sin + s*cos, 2f)
-                drawer.line(x - s*cos - s*sin, y - s*sin + s*cos, x - s*cos + s*sin, y - s*sin - s*cos, 2f)
-            }
-            6 -> { drawer.setColor(Color.SKY); val s = 5f
-                drawer.line(x - s*cos + s*sin, y - s*sin - s*cos, x + s*cos + s*sin, y + s*sin - s*cos, 3f)
-                drawer.line(x + s*cos + s*sin, y + s*sin - s*cos, x + s*cos - s*sin, y + s*sin + s*cos, 3f)
-                drawer.line(x + s*cos - s*sin, y + s*sin + s*cos, x - s*cos - s*sin, y - s*sin + s*cos, 3f)
-                drawer.line(x - s*cos - s*sin, y - s*sin + s*cos, x - s*cos + s*sin, y - s*sin - s*cos, 3f)
-            }
-            7 -> { drawer.setColor(Color.PURPLE); drawer.line(x, y, x + 20f * cos, y + 20f * sin, 2.5f); drawer.setColor(Color.WHITE); drawer.filledCircle(x, y, 3f) }
             8 -> { drawer.setColor(Color.LIGHT_GRAY); drawer.line(x, y, x + 25f * cos, y + 25f * sin, 6f); drawer.setColor(Color.WHITE); drawer.line(x + 15f * cos, y + 15f * sin, x + 25f * cos, y + 25f * sin, 3f) }
+            9 -> { // Vanguard Heavy Bolt
+                drawer.setColor(Color.FIREBRICK); drawer.line(x, y, x + 30f * cos, y + 30f * sin, 8f)
+                drawer.setColor(Color.WHITE); drawer.line(x + 10f * cos, y + 10f * sin, x + 25f * cos, y + 25f * sin, 3f)
+            }
             else -> { drawer.setColor(Color.WHITE); drawer.line(x, y, x + 8f * cos, y + 8f * sin, 1.5f) }
         }
     }

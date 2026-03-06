@@ -40,13 +40,11 @@ class RadarRenderSystem(
         val centerX = uiViewport.worldWidth - radarRadius - 40f
         val centerY = uiViewport.worldHeight - radarRadius - 40f
 
-        // Draw Radar Background (Tactical Green)
         drawer.setColor(0f, 0.15f, 0f, 0.5f)
         drawer.filledCircle(centerX, centerY, radarRadius)
         drawer.setColor(Color.GREEN)
         drawer.circle(centerX, centerY, radarRadius, 2f)
 
-        // Draw Scan Sweep
         val scanAngle = (timeCount * 2.5f) % MathUtils.PI2
         drawer.setColor(Color.LIME.r, Color.LIME.g, Color.LIME.b, 0.4f)
         drawer.line(centerX, centerY, centerX + MathUtils.cos(scanAngle) * radarRadius, centerY + MathUtils.sin(scanAngle) * radarRadius, 2f)
@@ -62,31 +60,24 @@ class RadarRenderSystem(
             val distFromCenter = Vector2.dst(centerX, centerY, rx, ry)
 
             if (distFromCenter <= radarRadius) {
-                // BLIP LOGIC
                 when {
                     target.has(StationComponent) -> {
-                        drawer.setColor(Color.CYAN)
-                        drawer.rectangle(rx - 4f, ry - 4f, 8f, 8f, 2f)
+                        drawer.setColor(Color.CYAN); drawer.rectangle(rx - 4f, ry - 4f, 8f, 8f, 2f)
                     }
                     target.has(EnemyComponent) -> {
-                        // Flickering red dot for hostiles
                         val flicker = 0.5f + 0.5f * MathUtils.sin(timeCount * 15f)
-                        drawer.setColor(1f, 0f, 0f, flicker)
-                        drawer.filledCircle(rx, ry, 3f)
+                        drawer.setColor(1f, 0f, 0f, flicker); drawer.filledCircle(rx, ry, 3f)
                     }
                     target.has(EssenceComponent) -> {
-                        drawer.setColor(Color.GOLD)
-                        drawer.filledCircle(rx, ry, 2f)
+                        drawer.setColor(Color.GOLD); drawer.filledCircle(rx, ry, 2f)
                     }
                     else -> {
-                        drawer.setColor(Color.WHITE)
-                        drawer.filledCircle(rx, ry, 2f)
+                        drawer.setColor(Color.WHITE); drawer.filledCircle(rx, ry, 2f)
                     }
                 }
             }
         }
 
-        // Player Indicator (White Chevron)
         val playerAngle = entity[OrientationComponent].angleRad
         drawer.setColor(Color.WHITE)
         val pSize = 6f
@@ -116,21 +107,26 @@ class HUDSystem(
             val x = (uiViewport.worldWidth - barWidth) / 2f
             val y = 30f
 
-            drawer.setColor(Color.DARK_GRAY)
-            drawer.filledRectangle(x, y, barWidth, 10f)
+            drawer.setColor(Color.DARK_GRAY); drawer.filledRectangle(x, y, barWidth, 10f)
             val progress = (evo.essenceCollected.toFloat() / evo.essenceRequired.toFloat()).coerceIn(0f, 1f)
-            drawer.setColor(Color.CYAN)
-            drawer.filledRectangle(x, y, barWidth * progress, 10f)
-            drawer.setColor(Color.WHITE)
-            drawer.rectangle(x, y, barWidth, 10f, 1f)
+            drawer.setColor(Color.CYAN); drawer.filledRectangle(x, y, barWidth * progress, 10f)
+            drawer.setColor(Color.WHITE); drawer.rectangle(x, y, barWidth, 10f, 1f)
 
             val tierName = when(evo.currentTier) {
                 1 -> "PILOT"; 2 -> "INTERCEPTOR"; 3 -> "CARRIER"; 4 -> "SENTINEL"
                 5 -> "BULWARK"; 6 -> "SENTINEL+"; 7 -> "WRAITH"; 8 -> "DREADNOUGHT"
+                9 -> "VANGUARD"
                 else -> "CAPITAL"
             }
             font.color = Color.CYAN
             font.draw(batch, "TIER ${evo.currentTier}: $tierName [Sub-${evo.subTier}]", x, y + 35f)
+
+            // WEAPON INDICATOR
+            if (entity.has(WeaponModuleComponent)) {
+                val module = entity[WeaponModuleComponent]
+                font.color = Color.WHITE
+                font.draw(batch, "EQP: ${module.name} [T${module.projectileTier}]", x, y + 55f)
+            }
         }
 
         val barWidth = 250f

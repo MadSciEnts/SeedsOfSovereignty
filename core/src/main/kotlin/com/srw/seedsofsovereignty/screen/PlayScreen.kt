@@ -43,7 +43,14 @@ class PlayScreen(
             it += PositionComponent()
             it += OrientationComponent()
             it += VelocityComponent()
-            it += WeaponComponent(fireRate = 0.5f) // Increased baseline ROF (2 per second)
+            it += WeaponComponent()
+            it += WeaponModuleComponent(
+                name = "Stock T1",
+                projectileTier = 1,
+                damage = 10f,
+                projectileSpeed = 1000f,
+                fireRate = 0.6f
+            )
             it += SensorComponent(radius = 1000f)
             it += EvolutionComponent(currentTier = 1, subTier = 1, essenceCollected = 0, essenceRequired = 5)
             it += DockingComponent()
