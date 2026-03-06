@@ -3,10 +3,26 @@ package com.srw.seedsofsovereignty.component
 import com.github.quillraven.fleks.Component
 import com.github.quillraven.fleks.ComponentType
 import com.badlogic.gdx.math.MathUtils
+import com.badlogic.gdx.graphics.Color
 
-/**
- * Defines the ship's physical firing infrastructure (barrels, sequence, current state).
- */
+enum class Rarity { COMMON, UNCOMMON, RARE, EPIC, LEGENDARY }
+
+enum class EffectType {
+    HULL_DAMAGE, SHIELD_DAMAGE, SPEED_MULTIPLIER,
+    COOLDOWN_MULTIPLIER, SHIELD_PIERCE, REPAIR_HULL
+}
+
+enum class ImpactVfxType {
+    SPARK_YELLOW, SPARK_RED, SHIELD_RIPPLE_BLUE, ACID_GREEN, REPAIR_GLOW
+}
+
+data class ProjectileEffect(
+    val type: EffectType,
+    val potency: Float,
+    val duration: Float = 0f,
+    val vfx: ImpactVfxType = ImpactVfxType.SPARK_YELLOW
+)
+
 data class WeaponComponent(
     var cooldown: Float = 0f,
     var isFiring: Boolean = false,
@@ -19,16 +35,18 @@ data class WeaponComponent(
     companion object : ComponentType<WeaponComponent>()
 }
 
-/**
- * The swappable "Brain" of the weapon. Defines projectile stats and fire rate.
- */
 data class WeaponModuleComponent(
     var name: String = "Stock Kinetic",
     var description: String = "Standard kinetic stream.",
     var projectileTier: Int = 1,
-    var damage: Float = 10f,
+    var rarity: Rarity = Rarity.COMMON,
     var projectileSpeed: Float = 1000f,
-    var fireRate: Float = 0.5f // Base cooldown duration
+    var fireRate: Float = 0.5f,
+    var projectileColor: Color = Color.YELLOW,
+    val effects: MutableList<ProjectileEffect> = mutableListOf(
+        ProjectileEffect(EffectType.HULL_DAMAGE, 10f),
+        ProjectileEffect(EffectType.SHIELD_DAMAGE, 10f)
+    )
 ) : Component<WeaponModuleComponent> {
     override fun type() = WeaponModuleComponent
     companion object : ComponentType<WeaponModuleComponent>()
@@ -36,7 +54,9 @@ data class WeaponModuleComponent(
 
 data class ProjectileComponent(
     var tier: Int = 1,
-    var damage: Float = 10f,
+    var damage: Float = 10f, // Legacy field for system migration
+    var color: Color = Color.YELLOW,
+    val effects: MutableList<ProjectileEffect> = mutableListOf(),
     var ownerIsEnemy: Boolean = false
 ) : Component<ProjectileComponent> {
     override fun type() = ProjectileComponent

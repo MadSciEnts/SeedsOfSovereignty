@@ -24,6 +24,7 @@
 - **Verification Protocol:** Before claiming a task is complete, execute a `gradle core:assemble` check to ensure the project compiles.
 - **Status Sync:** In every multi-file update, explicitly list the "Disk Status" to confirm which files were successfully written.
 - **Log-First Workflow:** Update `TASK_SYNC.log` *before* modifying logic files to maintain a clear "source of truth" for complex refactors.
+- **Write Verification Rule:** Always read the file you have just written to. Ensure that the expected 'write' command was received and executed by the remote IDE.
 
 ## 6. Design Ethics
 - **The "No-Inventory" Rule:** All weapon/ship changes are immediate "Swap or Scrap."

@@ -1,11 +1,12 @@
 package com.srw.seedsofsovereignty.ui
 
+import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.g2d.Batch
 import com.badlogic.gdx.scenes.scene2d.ui.Widget
 import com.srw.seedsofsovereignty.util.ProjectileDrawer
 import space.earlygrey.shapedrawer.ShapeDrawer
 
-class ProjectileIcon(private val drawer: ShapeDrawer, var tier: Int = 1, var iconScale: Float = 1f) : Widget() {
+class ProjectileIcon(private val drawer: ShapeDrawer, var tier: Int = 1, var iconScale: Float = 1f, var projectileColor: Color = Color.YELLOW) : Widget() {
 
     private fun getNormalizationScale(tier: Int): Float {
         return when (tier) {
@@ -30,6 +31,6 @@ class ProjectileIcon(private val drawer: ShapeDrawer, var tier: Int = 1, var ico
         val finalScale = iconScale * getNormalizationScale(tier)
 
         // 1.57f is roughly PI/2 (upwards)
-        ProjectileDrawer.draw(drawer, centerX, centerY, 1.57f, tier, finalScale)
+        ProjectileDrawer.draw(drawer, centerX, centerY, 1.57f, tier, projectileColor, finalScale)
     }
 }

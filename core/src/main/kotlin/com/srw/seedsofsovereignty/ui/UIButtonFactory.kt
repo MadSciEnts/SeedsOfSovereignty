@@ -43,7 +43,6 @@ object UIButtonFactory {
             else -> "scifi"
         }
 
-        // Subclass to maintain center origin for animations
         val button = object : Button(skin, styleName) {
             override fun sizeChanged() {
                 super.sizeChanged()
@@ -52,18 +51,23 @@ object UIButtonFactory {
         }
         button.setTransform(true)
 
-        // 1. Standardized Layout Construction
-        // Decoupled from ButtonType: If an icon is provided, we use the horizontal layout.
+        // Standardized Layout Construction
         if (icon != null) {
-            button.add(icon).size(40f).padLeft(15f).padRight(15f)
+            // Fix Task #2: Ensure icon has a fixed container and text is truncated if too long
+            val iconTable = Table(skin)
+            iconTable.add(icon).size(40f).center()
+            button.add(iconTable).width(60f).padLeft(5f)
+
             val label = Label(text, skin)
-            button.add(label).expandX().left()
+            label.setEllipsis(true) // Truncate with "..." if too long
+            label.setAlignment(Align.left)
+            button.add(label).expandX().fillX().padLeft(10f).padRight(15f)
         } else {
             val label = Label(text, skin)
             button.add(label).center().pad(10f)
         }
 
-        // 2. Responsive Animation Logic
+        // Responsive Animation Logic
         if (anim == AnimationType.PULSE) {
             button.addListener(object : ClickListener() {
                 override fun clicked(event: InputEvent?, x: Float, y: Float) {

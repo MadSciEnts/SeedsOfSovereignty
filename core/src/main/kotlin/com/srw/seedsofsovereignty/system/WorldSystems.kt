@@ -1,6 +1,7 @@
 package com.srw.seedsofsovereignty.system
 
 import com.badlogic.gdx.Gdx
+import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
@@ -12,6 +13,7 @@ import com.github.quillraven.fleks.Fixed
 import com.github.quillraven.fleks.IntervalSystem
 import com.github.quillraven.fleks.World.Companion.family
 import com.srw.seedsofsovereignty.component.*
+import com.srw.seedsofsovereignty.util.ModuleGenerator
 import ktx.graphics.use
 
 class ClearScreenSystem : IntervalSystem() {
@@ -124,11 +126,16 @@ class EnemySpawnSystem(
                     cooldown = MathUtils.random(0f, baseFireRate),
                     barrels = 1
                 )
+
+                val enemyTier = if (it[EnemyComponent].type == "Reaper") 2 else 1
                 it += WeaponModuleComponent(
                     name = "Enemy Pulse",
-                    projectileTier = if (it[EnemyComponent].type == "Reaper") 2 else 1,
-                    damage = 5f,
-                    projectileSpeed = 600f
+                    projectileTier = enemyTier,
+                    projectileSpeed = 600f,
+                    effects = mutableListOf(
+                        ProjectileEffect(EffectType.HULL_DAMAGE, 5f, vfx = ImpactVfxType.SPARK_RED),
+                        ProjectileEffect(EffectType.SHIELD_DAMAGE, 5f, vfx = ImpactVfxType.SHIELD_RIPPLE_BLUE)
+                    )
                 )
             }
         }
@@ -153,31 +160,11 @@ class StationSpawnSystem : IntervalSystem(interval = Fixed(10f)) {
                 it += StationComponent(name = "Outpost ${MathUtils.random(100, 999)}", radius = 200f)
 
                 it += MarketComponent().apply {
-                    for (i in 0 until 3) {
-                        weaponOffers.add(createRandomModule(player[EvolutionComponent].currentTier))
+                    for (i in 0 until 5) { // Generate 5 tier-appropriate items
+                        weaponOffers.add(ModuleGenerator.generateWeapon(player[EvolutionComponent].currentTier))
                     }
                 }
             }
         }
-    }
-
-    private fun createRandomModule(playerTier: Int): WeaponModuleComponent {
-        val tier = MathUtils.clamp(playerTier + MathUtils.random(-1, 1), 1, 9)
-        val damage = when(tier) {
-            1 -> 12f; 2 -> 28f; 3 -> 18f; 4 -> 45f; 5 -> 35f
-            6 -> 45f; 7 -> 55f; 8 -> 110f; 9 -> 160f; else -> 10f
-        }
-        val fireRate = when(tier) {
-            1 -> 0.45f; 2 -> 0.35f; 3 -> 0.3f; 4 -> 0.25f; 5 -> 0.35f
-            6 -> 0.25f; 7 -> 0.35f; 8 -> 0.5f; 9 -> 0.35f; else -> 0.5f
-        }
-
-        return WeaponModuleComponent(
-            name = "Tactical T$tier Unit",
-            description = "Enhanced T$tier module optimized for combat operations. Damage potential: $damage.",
-            projectileTier = tier,
-            damage = damage,
-            fireRate = fireRate
-        )
     }
 }

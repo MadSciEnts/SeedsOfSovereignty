@@ -9,6 +9,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.*
 import com.github.quillraven.fleks.World
 import com.srw.seedsofsovereignty.component.*
 import com.srw.seedsofsovereignty.manager.MarketManager
+import com.srw.seedsofsovereignty.util.ModuleGenerator
 import space.earlygrey.shapedrawer.ShapeDrawer
 
 class MarketTable(
@@ -44,8 +45,18 @@ class MarketTable(
         val swapBtn = UIButtonFactory.createButton(skin, "CONFIRM SWAP", UIButtonFactory.ButtonType.MARKET) {
             val player = world.family { all(PlayerComponent, DockingComponent) }.first()
             val station = with(world) { player[DockingComponent].nearestStation!! }
-            marketManager.swapModule(player, station, selectedModuleIndex)
-            refreshCatalog()
+
+            // Map the relative UI selection index back to the absolute station inventory index
+            val playerTier = with(world) { player[EvolutionComponent].currentTier }
+            val market = with(world) { station[MarketComponent] }
+            val visibleOffers = market.weaponOffers.filter { it.projectileTier == playerTier }
+
+            if (selectedModuleIndex in visibleOffers.indices) {
+                val targetModule = visibleOffers[selectedModuleIndex]
+                val absoluteIndex = market.weaponOffers.indexOf(targetModule)
+                marketManager.swapModule(player, station, absoluteIndex)
+                refreshCatalog()
+            }
         }
         centerColumn.add(swapBtn).size(450f, 90f).padTop(20f).row()
 
@@ -63,13 +74,26 @@ class MarketTable(
         catalogScrollTable.clear()
         selectedOfferButton = null
 
-        val player = world.family { all(PlayerComponent, DockingComponent) }.first()
+        val player = world.family { all(PlayerComponent, DockingComponent, EvolutionComponent) }.first()
+        val playerTier = with(world) { player[EvolutionComponent].currentTier }
         val station = with(world) { player[DockingComponent].nearestStation ?: return }
         val market = with(world) { if (station.has(MarketComponent)) station[MarketComponent] else null } ?: return
 
-        market.weaponOffers.forEachIndexed { index, offer ->
+        // ENFORCE RULE #1: Filter for compatible modules
+        var visibleOffers = market.weaponOffers.filter { it.projectileTier == playerTier }
+
+        // Dynamic Restocking: If no compatible items (like evolving at the Alpha Outpost)
+        if (visibleOffers.isEmpty()) {
+            market.weaponOffers.clear() // Clear old tier items
+            for (i in 0 until 10) {
+                market.weaponOffers.add(ModuleGenerator.generateWeapon(playerTier))
+            }
+            visibleOffers = market.weaponOffers
+        }
+
+        visibleOffers.forEachIndexed { index, offer ->
             val type = if (index == selectedModuleIndex) UIButtonFactory.ButtonType.SELECTED else UIButtonFactory.ButtonType.MODULE
-            val icon = ProjectileIcon(drawer, offer.projectileTier, 1.5f)
+            val icon = ProjectileIcon(drawer, offer.projectileTier, 1.5f, offer.projectileColor)
 
             val offerBtn = UIButtonFactory.createButton(skin, "${offer.name} [T${offer.projectileTier}]", type, icon) {
                 selectedModuleIndex = index
@@ -79,18 +103,19 @@ class MarketTable(
             if (index == selectedModuleIndex) selectedOfferButton = offerBtn
             catalogScrollTable.add(offerBtn).size(420f, 75f).padBottom(8f).row()
         }
-        updateSymmetry()
+
+        // Ensure index stays in bounds after a refresh/filter
+        if (selectedModuleIndex >= visibleOffers.size) selectedModuleIndex = 0
+
+        updateSymmetry(player, station, visibleOffers)
     }
 
-    private fun updateSymmetry() {
-        val player = world.family { all(PlayerComponent, WeaponModuleComponent, DockingComponent) }.first()
+    private fun updateSymmetry(player: com.github.quillraven.fleks.Entity, station: com.github.quillraven.fleks.Entity, visibleOffers: List<WeaponModuleComponent>) {
         val currentModule = with(world) { player[WeaponModuleComponent] }
-        val station = with(world) { player[DockingComponent].nearestStation!! }
-        val market = with(world) { station[MarketComponent] }
-
         equippedDetails.update(currentModule)
-        val selectedOffer = if (selectedModuleIndex >= 0 && selectedModuleIndex < market.weaponOffers.size) {
-            market.weaponOffers[selectedModuleIndex]
+
+        val selectedOffer = if (selectedModuleIndex >= 0 && selectedModuleIndex < visibleOffers.size) {
+            visibleOffers[selectedModuleIndex]
         } else null
         offeredDetails.update(selectedOffer)
     }

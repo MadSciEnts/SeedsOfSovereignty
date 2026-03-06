@@ -37,7 +37,10 @@ class DroneRegenSystem : IteratingSystem(family { all(DroneLauncherComponent, Po
             d += WeaponModuleComponent(
                 name = "Drone Kinetic",
                 projectileTier = 3,
-                damage = 15f,
+                effects = mutableListOf(
+                    ProjectileEffect(EffectType.HULL_DAMAGE, 15f, vfx = ImpactVfxType.SPARK_YELLOW),
+                    ProjectileEffect(EffectType.SHIELD_DAMAGE, 10f, vfx = ImpactVfxType.SHIELD_RIPPLE_BLUE)
+                ),
                 projectileSpeed = 800f,
                 fireRate = 0.5f
             )

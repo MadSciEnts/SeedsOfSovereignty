@@ -6,6 +6,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.ui.Skin
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.ui.Widget
+import com.srw.seedsofsovereignty.component.EffectType
 import com.srw.seedsofsovereignty.component.WeaponModuleComponent
 import space.earlygrey.shapedrawer.ShapeDrawer
 
@@ -64,10 +65,16 @@ class WeaponComparisonWidget(private val skin: Skin, private val drawer: ShapeDr
     fun update(current: WeaponModuleComponent, offered: WeaponModuleComponent) {
         currentIcon.tier = current.projectileTier
         offeredIcon.tier = offered.projectileTier
+        currentIcon.color = current.projectileColor
+        offeredIcon.color = offered.projectileColor
 
-        val maxDmg = (maxOf(current.damage, offered.damage) * 1.2f).coerceAtLeast(50f)
-        dmgBar.current = current.damage
-        dmgBar.offered = offered.damage
+        // Sum the Hull damage for comparison power
+        val currentDmg = current.effects.filter { it.type == EffectType.HULL_DAMAGE }.sumOf { it.potency.toDouble() }.toFloat()
+        val offeredDmg = offered.effects.filter { it.type == EffectType.HULL_DAMAGE }.sumOf { it.potency.toDouble() }.toFloat()
+
+        val maxDmg = (maxOf(currentDmg, offeredDmg) * 1.2f).coerceAtLeast(50f)
+        dmgBar.current = currentDmg
+        dmgBar.offered = offeredDmg
         dmgBar.max = maxDmg
 
         rateBar.current = 1f - current.fireRate.coerceIn(0f, 1f)

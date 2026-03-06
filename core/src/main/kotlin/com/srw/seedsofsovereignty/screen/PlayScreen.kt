@@ -1,6 +1,7 @@
 package com.srw.seedsofsovereignty.screen
 
 import com.badlogic.gdx.Gdx
+import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.ui.Skin
@@ -15,6 +16,7 @@ import com.srw.seedsofsovereignty.manager.MarketManager
 import com.srw.seedsofsovereignty.system.PlayerInputSystem
 import com.srw.seedsofsovereignty.ui.HUDFactory
 import com.srw.seedsofsovereignty.ui.StationHangarUI
+import com.srw.seedsofsovereignty.util.ModuleGenerator
 import ktx.app.KtxScreen
 import space.earlygrey.shapedrawer.ShapeDrawer
 
@@ -55,94 +57,37 @@ class PlayScreen(
                 name = "Stock T1",
                 description = "Standard kinetic stream. Reliable but primitive.",
                 projectileTier = 1,
-                damage = 10f,
                 projectileSpeed = 1000f,
-                fireRate = 0.6f
+                fireRate = 0.6f,
+                rarity = Rarity.COMMON,
+                projectileColor = Color.YELLOW,
+                effects = mutableListOf(
+                    ProjectileEffect(EffectType.HULL_DAMAGE, 10f, vfx = ImpactVfxType.SPARK_YELLOW),
+                    ProjectileEffect(EffectType.SHIELD_DAMAGE, 10f, vfx = ImpactVfxType.SHIELD_RIPPLE_BLUE)
+                )
             )
             it += SensorComponent(radius = 1000f)
             it += EvolutionComponent(currentTier = 1, subTier = 1, essenceCollected = 0, essenceRequired = 5)
             it += DockingComponent()
             it += ApertureComponent()
+            it += ChoiceComponent()
             it += HealthComponent(current = 100f, max = 100f)
             it += ShieldComponent(current = 50f, max = 50f)
+
+            it += ModuleSlotComponent(mutableListOf(
+                ModuleSlot(SlotType.WEAPON, 1, "Stock Kinetic", 1),
+                ModuleSlot(SlotType.DRONE, 1, "EMPTY", 0)
+            ))
         }
 
-        // INITIAL TEST STATION (Now with 10 offers for scrolling test)
+        // INITIAL TEST STATION
         world.entity {
             it += PositionComponent().apply { pos.set(500f, 500f) }
             it += StationComponent(name = "Alpha Outpost", radius = 200f)
             it += MarketComponent().apply {
-                weaponOffers.add(WeaponModuleComponent(
-                    name = "T2 Heavy Proto",
-                    description = "Experimental high-yield plasma bolt.",
-                    projectileTier = 2,
-                    damage = 35f,
-                    fireRate = 0.45f
-                ))
-                weaponOffers.add(WeaponModuleComponent(
-                    name = "Rapid Kinetic",
-                    description = "Modified tier 1 rounds with increased cycling speed.",
-                    projectileTier = 1,
-                    damage = 15f,
-                    fireRate = 0.3f
-                ))
-                weaponOffers.add(WeaponModuleComponent(
-                    name = "Sniper Unit",
-                    description = "Low rate of fire but extremely high velocity and precision.",
-                    projectileTier = 3,
-                    damage = 50f,
-                    projectileSpeed = 1800f,
-                    fireRate = 1.2f
-                ))
-                weaponOffers.add(WeaponModuleComponent(
-                    name = "Spreadshot Alpha",
-                    description = "Wide-angle kinetic dispersal system.",
-                    projectileTier = 1,
-                    damage = 8f,
-                    fireRate = 0.8f
-                ))
-                weaponOffers.add(WeaponModuleComponent(
-                    name = "Pulse Wave",
-                    description = "Short-range electromagnetic pulses.",
-                    projectileTier = 4,
-                    damage = 45f,
-                    fireRate = 0.7f
-                ))
-                weaponOffers.add(WeaponModuleComponent(
-                    name = "Viper Beam",
-                    description = "High-energy concentrated light stream.",
-                    projectileTier = 9,
-                    damage = 60f,
-                    fireRate = 0.1f
-                ))
-                weaponOffers.add(WeaponModuleComponent(
-                    name = "Dread Volley",
-                    description = "Sustained heavy kinetic bombardment.",
-                    projectileTier = 8,
-                    damage = 55f,
-                    fireRate = 0.5f
-                ))
-                weaponOffers.add(WeaponModuleComponent(
-                    name = "Bio-Acidic",
-                    description = "Corrosive biological agent projectiles.",
-                    projectileTier = 5,
-                    damage = 25f,
-                    fireRate = 0.4f
-                ))
-                weaponOffers.add(WeaponModuleComponent(
-                    name = "Neutron Slug",
-                    description = "Dense metallic projectiles with high impact force.",
-                    projectileTier = 2,
-                    damage = 40f,
-                    fireRate = 0.65f
-                ))
-                weaponOffers.add(WeaponModuleComponent(
-                    name = "Phantom Bolt",
-                    description = "Translucent projectiles that bypass early shielding.",
-                    projectileTier = 7,
-                    damage = 30f,
-                    fireRate = 0.35f
-                ))
+                for (i in 0 until 30) {
+                    weaponOffers.add(ModuleGenerator.generateWeapon(1))
+                }
             }
             it += VisibleComponent()
         }
@@ -164,26 +109,27 @@ class PlayScreen(
 
     override fun render(delta: Float) {
         val inputSystem = world.system<PlayerInputSystem>()
-        val player = world.family { all(PlayerComponent, EvolutionComponent, DockingComponent, ApertureComponent) }.firstOrNull()
+        val player = world.family { all(PlayerComponent, EvolutionComponent, DockingComponent, ApertureComponent, ChoiceComponent) }.firstOrNull()
 
         if (player != null) {
             with(world) {
                 val evo = player[EvolutionComponent]
                 val docking = player[DockingComponent]
                 val aperture = player[ApertureComponent]
+                val choice = player[ChoiceComponent]
 
                 val isTwinStickTier = evo.currentTier >= 4
                 val isFullyDocked = docking.isDocked && aperture.state == ApertureComponent.State.OPEN
+                val isUiRequested = isFullyDocked || choice.isAwaitingChoice
 
-                // UI Visibility
-                moveJoystick.isVisible = !isFullyDocked
-                aimJoystick.isVisible = !isFullyDocked && isTwinStickTier
-                fireButton.isVisible = !isFullyDocked && !isTwinStickTier
-                testEvolveButton.isVisible = !isFullyDocked
+                moveJoystick.isVisible = !isUiRequested
+                aimJoystick.isVisible = !isUiRequested && isTwinStickTier
+                fireButton.isVisible = !isUiRequested && !isTwinStickTier
+                testEvolveButton.isVisible = !isUiRequested
 
-                if (isFullyDocked) {
+                if (isUiRequested) {
                     if (!wasDocked) {
-                        hangarUI.resetToWelcome()
+                        if (!choice.isAwaitingChoice) hangarUI.resetToWelcome()
                         wasDocked = true
                     }
                     hangarUI.isVisible = true
@@ -216,7 +162,10 @@ class PlayScreen(
         aimJoystick.setPosition(uiStage.width - aimJoystick.width - 50f, 50f)
         fireButton.setPosition(uiStage.width - fireButton.width - 50f, 50f)
 
-        hangarUI.setSize(uiStage.width * 0.9f, uiStage.height * 0.8f)
+        // Fix: Explicitly bound Hangar UI to ensure it never overflows vertically
+        val hangarW = uiStage.width * 0.95f
+        val hangarH = uiStage.height * 0.9f // Increased to 90% but capped
+        hangarUI.setSize(hangarW, hangarH)
         hangarUI.setPosition(uiStage.width / 2f - hangarUI.width / 2f, uiStage.height / 2f - hangarUI.height / 2f)
 
         testEvolveButton.setPosition(uiStage.width / 2f - testEvolveButton.width / 2f, uiStage.height - 100f)

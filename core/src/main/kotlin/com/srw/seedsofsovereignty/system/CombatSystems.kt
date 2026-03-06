@@ -1,5 +1,6 @@
 package com.srw.seedsofsovereignty.system
 
+import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Vector2
 import com.github.quillraven.fleks.Entity
@@ -17,16 +18,9 @@ class WeaponSystem : IteratingSystem(family { all(WeaponComponent, PositionCompo
         val hullAngle = entity[OrientationComponent].angleRad
         val aimAngle = weapon.aimAngleRad
 
-        // Pull module stats if available, otherwise fallback to defaults
-        val module = if (entity.has(WeaponModuleComponent)) entity[WeaponModuleComponent] else null
-        val baseFireRate = module?.fireRate ?: 0.5f
-        val projectileTier = module?.projectileTier ?: 1
-        val projectileDamage = module?.damage ?: 10f
-        val projectileSpeed = module?.projectileSpeed ?: 1000f
-
         val isEnemy = entity.has(EnemyComponent)
         val evo = if (entity.has(EvolutionComponent)) entity[EvolutionComponent] else null
-        val tier = if (isEnemy) (if (entity[EnemyComponent].type == "Reaper") 2 else 1) else (evo?.currentTier ?: 1)
+        val tier = if (isEnemy) (if (entity.has(EnemyComponent) && entity[EnemyComponent].type == "Reaper") 2 else 1) else (evo?.currentTier ?: 1)
         val subTier = evo?.subTier ?: 1
 
         if (weapon.cooldown > 0f) {
@@ -34,8 +28,8 @@ class WeaponSystem : IteratingSystem(family { all(WeaponComponent, PositionCompo
         }
 
         if (weapon.isFiring && weapon.cooldown <= 0f) {
-            // CUMULATIVE ROF: Reset cooldown using the module's fireRate
-            weapon.cooldown = baseFireRate / weapon.barrels.coerceAtLeast(1)
+            val module = if (entity.has(WeaponModuleComponent)) entity[WeaponModuleComponent] else null
+            weapon.cooldown = (module?.fireRate ?: 0.5f) / weapon.barrels.coerceAtLeast(1)
 
             val shipSize = ProceduralShipDrawer.getShipSize(tier, subTier)
             ProceduralShipDrawer.getMountOffsets(tier, subTier, shipSize, hullAngle, mountOffsetsBuffer)
@@ -47,24 +41,23 @@ class WeaponSystem : IteratingSystem(family { all(WeaponComponent, PositionCompo
                 world.entity { e ->
                     e += PositionComponent().apply {
                         this.pos.set(firePosX, firePosY)
-
-                        // Calculate lateral offset for the SPECIFIC sequential barrel
                         val spreadWidth = if (tier >= 8) 30f else if (tier >= 6) 40f else 20f
                         val lateralOffset = if (weapon.barrels <= 1) 0f else {
                             (weapon.currentBarrel - (weapon.barrels - 1) * 0.5f) * (spreadWidth / (weapon.barrels - 1).coerceAtLeast(1))
                         }
-
                         val ox = MathUtils.cos(aimAngle + MathUtils.PI/2f) * lateralOffset
                         val oy = MathUtils.sin(aimAngle + MathUtils.PI/2f) * lateralOffset
                         this.pos.add(ox, oy)
                     }
                     e += VelocityComponent().apply {
-                        val bulletSpeed = if (isEnemy) 600f else projectileSpeed
+                        val bulletSpeed = module?.projectileSpeed ?: (if (isEnemy) 600f else 1000f)
                         this.v.set(bulletSpeed, 0f).setAngleRad(aimAngle)
                     }
+                    // Fix Task #4: Ensure in-game projectiles match module DNA
                     e += ProjectileComponent(
-                        tier = if (isEnemy) tier else projectileTier,
-                        damage = if (isEnemy) 5f else projectileDamage,
+                        tier = module?.projectileTier ?: tier,
+                        color = module?.projectileColor ?: Color.YELLOW,
+                        effects = module?.effects?.toMutableList() ?: mutableListOf(ProjectileEffect(EffectType.HULL_DAMAGE, 10f)),
                         ownerIsEnemy = isEnemy
                     )
                     e += LifeSpanComponent(remaining = if (isEnemy) 2.5f else 1.5f)
@@ -91,21 +84,8 @@ class CombatSystem : IteratingSystem(family { all(ProjectileComponent, PositionC
             enemyFamily.forEach { enemy ->
                 val enemyPos = enemy[PositionComponent].pos
                 if (projPos.dst2(enemyPos) < 1600f) {
-                    val enemyComp = enemy[EnemyComponent]
-                    enemyComp.health -= projComp.damage
-                    spawnSparkBurst(projPos.x, projPos.y, com.badlogic.gdx.graphics.Color.WHITE, 8f)
+                    applyEffects(enemy, projComp.effects, projPos)
                     world -= entity
-
-                    if (enemyComp.health <= 0f) {
-                        val ePos = Vector2(enemyPos)
-                        world.entity { e ->
-                            e += PositionComponent().apply { pos.set(ePos) }
-                            e += VelocityComponent().apply { friction = 0.5f }
-                            e += EssenceComponent()
-                            e += LifeSpanComponent(remaining = 15f)
-                        }
-                        world -= enemy
-                    }
                     return@forEach
                 }
             }
@@ -113,23 +93,75 @@ class CombatSystem : IteratingSystem(family { all(ProjectileComponent, PositionC
             droneFamily.forEach { drone ->
                 val dronePos = drone[PositionComponent].pos
                 if (projPos.dst2(dronePos) < 600f) {
-                    applyDamage(drone, projComp.damage, projPos.x, projPos.y)
+                    applyEffects(drone, projComp.effects, projPos)
                     world -= entity
                     return@forEach
                 }
             }
-
             playerFamily.firstOrNull()?.let { player ->
                 val playerPos = player[PositionComponent].pos
                 if (projPos.dst2(playerPos) < 900f) {
-                    applyDamage(player, projComp.damage, projPos.x, projPos.y)
+                    applyEffects(player, projComp.effects, projPos)
                     world -= entity
                 }
             }
         }
     }
 
-    private fun spawnSparkBurst(x: Float, y: Float, color: com.badlogic.gdx.graphics.Color, baseSize: Float) {
+    private fun applyEffects(target: Entity, effects: List<ProjectileEffect>, effectPos: Vector2) {
+        effects.forEach { effect ->
+            spawnVfx(effect.vfx, effectPos.x, effectPos.y)
+
+            when (effect.type) {
+                EffectType.HULL_DAMAGE -> {
+                    if (target.has(HealthComponent)) {
+                        target[HealthComponent].current -= effect.potency
+                        if (target[HealthComponent].current <= 0f && (target.has(EnemyComponent) || target.has(DroneComponent))) {
+                            handleTargetDestruction(target)
+                        }
+                    }
+                }
+                EffectType.SHIELD_DAMAGE -> {
+                    if (target.has(ShieldComponent) && target[ShieldComponent].active) {
+                        val shield = target[ShieldComponent]
+                        shield.current = (shield.current - effect.potency).coerceAtLeast(0f)
+                    }
+                }
+                else -> {}
+            }
+        }
+    }
+
+    private fun handleTargetDestruction(target: Entity) {
+        if (target.has(EnemyComponent)) {
+            val ePos = target[PositionComponent].pos
+            world.entity {
+                it += PositionComponent().apply { pos.set(ePos) }
+                it += VelocityComponent().apply { friction = 0.5f }
+                it += EssenceComponent()
+                it += LifeSpanComponent(remaining = 15f)
+            }
+        }
+        world -= target
+    }
+
+    private fun spawnVfx(vfxType: ImpactVfxType, x: Float, y: Float) {
+        when (vfxType) {
+            ImpactVfxType.SPARK_YELLOW -> spawnSparkBurst(x, y, Color.YELLOW, 8f)
+            ImpactVfxType.SHIELD_RIPPLE_BLUE -> {
+                world.entity {
+                    it += PositionComponent().apply { pos.set(x, y) }
+                    it += ParticleComponent(type = ParticleComponent.Type.SHIELD_RIPPLE, color = Color.CYAN, size = 40f)
+                    it += LifeSpanComponent(remaining = 0.4f)
+                }
+            }
+            ImpactVfxType.ACID_GREEN -> spawnSparkBurst(x, y, Color.GREEN, 10f)
+            ImpactVfxType.SPARK_RED -> spawnSparkBurst(x, y, Color.RED, 12f)
+            else -> spawnSparkBurst(x, y, Color.WHITE, 6f)
+        }
+    }
+
+    private fun spawnSparkBurst(x: Float, y: Float, color: Color, baseSize: Float) {
         for (i in 0 until 5) {
             world.entity {
                 it += PositionComponent().apply { pos.set(x, y) }
@@ -140,27 +172,6 @@ class CombatSystem : IteratingSystem(family { all(ProjectileComponent, PositionC
                 it += ParticleComponent(type = ParticleComponent.Type.SPARK, color = color, size = baseSize * MathUtils.random(0.5f, 1.5f))
                 it += LifeSpanComponent(remaining = MathUtils.random(0.2f, 0.4f))
             }
-        }
-    }
-
-    private fun applyDamage(target: Entity, damage: Float, x: Float, y: Float) {
-        var remainingDamage = damage
-        if (target.has(ShieldComponent)) {
-            val shield = target[ShieldComponent]
-            if (shield.active && shield.current > 0) {
-                world.entity {
-                    it += PositionComponent().apply { pos.set(x, y) }
-                    it += ParticleComponent(type = ParticleComponent.Type.SHIELD_RIPPLE, color = com.badlogic.gdx.graphics.Color.CYAN, size = 40f)
-                    it += LifeSpanComponent(remaining = 0.4f)
-                }
-                val shieldDamage = remainingDamage.coerceAtMost(shield.current)
-                shield.current -= shieldDamage
-                remainingDamage -= shieldDamage
-            }
-        }
-        if (remainingDamage > 0 && target.has(HealthComponent)) {
-            target[HealthComponent].current -= remainingDamage
-            spawnSparkBurst(x, y, if (target.has(PlayerComponent)) com.badlogic.gdx.graphics.Color.ORANGE else com.badlogic.gdx.graphics.Color.GOLD, 10f)
         }
     }
 }
