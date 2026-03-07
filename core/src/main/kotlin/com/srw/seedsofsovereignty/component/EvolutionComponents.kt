@@ -2,8 +2,11 @@ package com.srw.seedsofsovereignty.component
 
 import com.github.quillraven.fleks.Component
 import com.github.quillraven.fleks.ComponentType
-import com.github.quillraven.fleks.Entity
 
+/**
+ * Tracks the ship's evolutionary progress.
+ * Collection logic moved to Salvage Pipeline (v0.1.9).
+ */
 data class EvolutionComponent(
     var currentTier: Int = 1,
     var subTier: Int = 1,
@@ -12,12 +15,4 @@ data class EvolutionComponent(
 ) : Component<EvolutionComponent> {
     override fun type() = EvolutionComponent
     companion object : ComponentType<EvolutionComponent>()
-}
-
-data class EssenceComponent(
-    var amount: Int = 1,
-    var isCollected: Boolean = false
-) : Component<EssenceComponent> {
-    override fun type() = EssenceComponent
-    companion object : ComponentType<EssenceComponent>()
 }

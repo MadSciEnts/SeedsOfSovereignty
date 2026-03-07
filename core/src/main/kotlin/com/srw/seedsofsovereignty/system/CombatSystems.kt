@@ -53,7 +53,6 @@ class WeaponSystem : IteratingSystem(family { all(WeaponComponent, PositionCompo
                         val bulletSpeed = module?.projectileSpeed ?: (if (isEnemy) 600f else 1000f)
                         this.v.set(bulletSpeed, 0f).setAngleRad(aimAngle)
                     }
-                    // FIX: Projectiles must have orientation to be rendered with rotation
                     e += OrientationComponent().apply { angleRad = aimAngle }
                     e += ProjectileComponent(
                         tier = module?.projectileTier ?: tier,
@@ -134,11 +133,13 @@ class CombatSystem : IteratingSystem(family { all(ProjectileComponent, PositionC
 
     private fun handleTargetDestruction(target: Entity) {
         if (target.has(EnemyComponent)) {
-            val ePos = target[PositionComponent].pos
+            val ePos = Vector2(target[PositionComponent].pos)
             world.entity {
                 it += PositionComponent().apply { pos.set(ePos) }
                 it += VelocityComponent().apply { friction = 0.5f }
-                it += EssenceComponent()
+                // Task Fix: Replace legacy EssenceComponent with Salvage Pipeline (v0.1.9)
+                it += SalvageComponent(type = SalvageType.ESSENCE, amount = 1)
+                it += VisibleComponent()
                 it += LifeSpanComponent(remaining = 15f)
             }
         }

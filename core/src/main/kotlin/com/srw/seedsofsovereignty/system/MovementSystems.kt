@@ -9,7 +9,7 @@ import com.github.quillraven.fleks.World.Companion.family
 import com.srw.seedsofsovereignty.component.*
 import com.srw.seedsofsovereignty.util.ProceduralShipDrawer
 
-class PlayerInputSystem : IteratingSystem(family { all(PlayerComponent, VelocityComponent, OrientationComponent) }) {
+class PlayerInputSystem : IteratingSystem(family { all(PlayerComponent, VelocityComponent) }) {
     private val moveForce = Vector2()
     val joystickVector = Vector2()
     val aimVector = Vector2()
@@ -42,42 +42,22 @@ class PlayerInputSystem : IteratingSystem(family { all(PlayerComponent, Velocity
         }
 
         if (weapon != null) {
-            if (fleet.controlMode == FleetCommandComponent.ControlMode.ATTACK_DIRECTION) {
-                // WEAPON MODE
-                if (!aimVector.isZero) {
-                    weapon.aimAngleRad = aimVector.angleRad()
-                    weapon.isFiring = isFiringRequested || Gdx.input.isKeyPressed(Keys.SPACE)
-                } else if (!vel.v.isZero(0.1f)) {
-                    weapon.aimAngleRad = vel.v.angleRad()
-                    weapon.isFiring = isFiringRequested || Gdx.input.isKeyPressed(Keys.SPACE)
+            if (!aimVector.isZero) {
+                val angle = aimVector.angleRad()
+
+                if (fleet.controlMode == FleetCommandComponent.ControlMode.ATTACK_DIRECTION) {
+                    weapon.aimAngleRad = angle
                 } else {
-                    weapon.isFiring = Gdx.input.isKeyPressed(Keys.SPACE)
-                }
-            } else {
-                // DRONE MODE
-                weapon.isFiring = false
-
-                if (!aimVector.isZero) {
-                    // APPLY LOCALIZATION
-                    var angle = aimVector.angleRad()
-                    if (fleet.localization == FleetCommandComponent.LocalizationMode.SHIP) {
-                        // In SHIP mode, joystick +Y (angle PI/2) should point in ship's forward direction.
-                        // We add the ship's current orientation angle (minus PI/2 to align joystick Y-up with ship forward).
-                        angle += orientation.angleRad - (com.badlogic.gdx.math.MathUtils.PI / 2f)
-                    }
-
                     val idx = fleet.selectedSlotIndex.coerceIn(0, 3)
                     fleet.slotFocusAngles[idx] = angle
-                    val mag = aimVector.len().coerceIn(0f, 1f)
-                    fleet.slotFocusPoints[idx].set(
-                        com.badlogic.gdx.math.MathUtils.cos(angle) * (mag * 150f),
-                        com.badlogic.gdx.math.MathUtils.sin(angle) * (mag * 150f)
-                    )
-                } else {
-                    val idx = fleet.selectedSlotIndex.coerceIn(0, 3)
-                    fleet.slotFocusPoints[idx].set(0f, 0f)
+                    fleet.slotFocusPoints[idx].set(com.badlogic.gdx.math.MathUtils.cos(angle) * 150f, com.badlogic.gdx.math.MathUtils.sin(angle) * 150f)
+                }
+            } else if (!vel.v.isZero(0.1f)) {
+                if (fleet.controlMode == FleetCommandComponent.ControlMode.ATTACK_DIRECTION) {
+                    weapon.aimAngleRad = vel.v.angleRad()
                 }
             }
+            weapon.isFiring = isFiringRequested || Gdx.input.isKeyPressed(Keys.SPACE)
         }
     }
 }
@@ -92,7 +72,8 @@ class MoveSystem : IteratingSystem(family { all(PositionComponent, VelocityCompo
 
         var frictionFactor = vel.friction
 
-        if (entity.has(EssenceComponent)) {
+        // Task Fix: Replace legacy EssenceComponent with Salvage Pipeline (v0.1.9)
+        if (entity.has(SalvageComponent)) {
             frictionFactor = 0.5f
         } else if (entity.has(PlayerComponent) && entity.has(EvolutionComponent)) {
             val evo = entity[EvolutionComponent]

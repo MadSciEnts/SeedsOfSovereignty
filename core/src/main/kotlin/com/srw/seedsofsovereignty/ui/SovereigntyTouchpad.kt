@@ -26,10 +26,6 @@ class SovereigntyTouchpad(deadzone: Float, skin: Skin, styleName: String) : Touc
 
     override fun act(delta: Float) {
         // Capture live percentage BEFORE calling super.act()
-        // because super.act() or the internal listener might have already cleared the touch state.
-        // Actually, in LibGDX, Listeners run before act().
-        // If the user released, isTouched is already false here.
-        // So we capture while it IS touched.
         if (isTouched) {
             persistentX = super.getKnobPercentX()
             persistentY = super.getKnobPercentY()
@@ -39,6 +35,7 @@ class SovereigntyTouchpad(deadzone: Float, skin: Skin, styleName: String) : Touc
 
     /**
      * Programmatically sets the persistent knob position.
+     * Fixes: Unresolved reference 'setKnobPosition' in PlayScreen.
      */
     fun setKnobPosition(px: Float, py: Float) {
         persistentX = px
@@ -60,9 +57,8 @@ class SovereigntyTouchpad(deadzone: Float, skin: Skin, styleName: String) : Touc
 
         val knob = style.knob
         if (knob != null) {
-            // Use our overridden percentages which respect persistence
-            val kpx = knobPercentX
-            val kpy = knobPercentY
+            val kpx = if (isTouched) super.getKnobPercentX() else (if (isPersistent) persistentX else 0f)
+            val kpy = if (isTouched) super.getKnobPercentY() else (if (isPersistent) persistentY else 0f)
 
             val bg = style.background
             val bgLeft = bg?.leftWidth ?: 0f
@@ -72,7 +68,6 @@ class SovereigntyTouchpad(deadzone: Float, skin: Skin, styleName: String) : Touc
 
             val radius = (Math.min(width - bgLeft - bgRight, height - bgBottom - bgTop)) / 2f
 
-            // Replicate LibGDX internal centering logic
             val knobX = x + width / 2f + (kpx * radius) - knob.minWidth / 2f
             val knobY = y + height / 2f + (kpy * radius) - knob.minHeight / 2f
 

@@ -100,14 +100,18 @@ class EnemySpawnSystem(
                     friction = 1.0f
                 }
                 it += OrientationComponent()
+
+                // Unified Vitals: Every enemy MUST have a HealthComponent to take damage and drop loot
+                val hp = when(currentTier) {
+                    1 -> 20f
+                    2 -> 40f
+                    3 -> 60f
+                    4 -> 100f
+                    else -> 20f
+                }
+                it += HealthComponent(current = hp, max = hp)
+
                 it += EnemyComponent(
-                    health = when(currentTier) {
-                        1 -> 20f
-                        2 -> 40f
-                        3 -> 60f
-                        4 -> 100f
-                        else -> 20f
-                    },
                     type = when(currentTier) {
                         1 -> "Swarm"
                         2 -> "Reaper"
@@ -137,6 +141,8 @@ class EnemySpawnSystem(
                         ProjectileEffect(EffectType.SHIELD_DAMAGE, 5f, vfx = ImpactVfxType.SHIELD_RIPPLE_BLUE)
                     )
                 )
+
+                it += VisibleComponent()
             }
         }
     }
@@ -164,7 +170,6 @@ class StationSpawnSystem : IntervalSystem(interval = Fixed(10f)) {
                     for (i in 0 until 3) {
                         weaponOffers.add(ModuleGenerator.generateWeapon(tier))
                     }
-                    // Rule #8: Drone Slots only appear at T5+
                     if (tier >= 5) {
                         for (i in 0 until 2) {
                             droneOffers.add(ModuleGenerator.generateDroneModule(tier))

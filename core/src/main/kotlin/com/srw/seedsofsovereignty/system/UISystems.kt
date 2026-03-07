@@ -68,7 +68,7 @@ class RadarRenderSystem(
                         val flicker = 0.5f + 0.5f * MathUtils.sin(timeCount * 15f)
                         drawer.setColor(1f, 0f, 0f, flicker); drawer.filledCircle(rx, ry, 3f)
                     }
-                    target.has(EssenceComponent) -> {
+                    target.has(SalvageComponent) -> { // Fix: Support v0.1.9 Unified Salvage
                         drawer.setColor(Color.GOLD); drawer.filledCircle(rx, ry, 2f)
                     }
                     else -> {
@@ -121,7 +121,6 @@ class HUDSystem(
             font.color = Color.CYAN
             font.draw(batch, "TIER ${evo.currentTier}: $tierName [Sub-${evo.subTier}]", x, y + 35f)
 
-            // WEAPON INDICATOR
             if (entity.has(WeaponModuleComponent)) {
                 val module = entity[WeaponModuleComponent]
                 font.color = Color.WHITE
@@ -135,7 +134,7 @@ class HUDSystem(
 
         if (entity.has(HealthComponent)) {
             val health = entity[HealthComponent]
-            drawer.setColor(0.3f, 0f, 0f, 0.6f); drawer.filledRectangle(startX, currentY, barWidth, 14f)
+            drawer.setColor(0.3f, 0.05f, 0.05f, 0.6f); drawer.filledRectangle(startX, currentY, barWidth, 14f)
             drawer.setColor(Color.RED); drawer.filledRectangle(startX, currentY, barWidth * (health.current / health.max).coerceIn(0f, 1f), 14f)
             drawer.setColor(Color.WHITE); drawer.rectangle(startX, currentY, barWidth, 14f, 1.5f)
             currentY -= 24f

@@ -60,18 +60,16 @@ class SovereigntyGame : KtxGame<KtxScreen>() {
                 add(CollisionDamageSystem())
                 add(VitalsSystem())
                 add(StatusEffectSystem())
-                add(EffectSystem())
                 add(LifeSpanSystem())
 
-                add(CollectionSystem())
                 add(EvolutionSystem(evolutionManager))
                 add(EvolutionCelebrationSystem(batch, drawer, uiViewport))
 
                 add(SensorSystem())
                 add(StationSystem())
+                add(SalvageSystem()) // New: Unified recovery logic (v0.1.9)
                 add(ApertureSystem(batch, drawer, uiViewport))
 
-                // High-fidelity rendering systems
                 add(EntityRenderSystem(batch, drawer, viewport, skin))
                 add(RenderSystem(batch, camera, drawer, skin))
 

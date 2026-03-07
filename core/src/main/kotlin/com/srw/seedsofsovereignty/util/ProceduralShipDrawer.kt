@@ -73,6 +73,10 @@ object ProceduralShipDrawer {
         drawer.setColor(Color.WHITE); drawer.filledCircle(x, y, (size * 0.1f).coerceAtLeast(1.5f))
     }
 
+    /**
+     * RESTORED: Unique red technical designs for enemies.
+     * Prevents mirroring of player hulls.
+     */
     fun drawEnemyShip(
         drawer: ShapeDrawer,
         x: Float, y: Float,
@@ -80,35 +84,51 @@ object ProceduralShipDrawer {
         type: String,
         color: Color = Color.RED
     ) {
-        drawer.setColor(color)
         val cos = MathUtils.cos(rotation); val sin = MathUtils.sin(rotation)
+        val time = System.currentTimeMillis() / 1000f
 
         when(type) {
             "Swarm" -> {
                 val s = 15f
-                // Angular diamond shape
-                drawer.line(x + s * cos, y + s * sin, x - (s*0.5f) * cos + (s*0.5f) * sin, y - (s*0.5f) * sin - (s*0.5f) * cos, 2f)
-                drawer.line(x + s * cos, y + s * sin, x - (s*0.5f) * cos - (s*0.5f) * sin, y - (s*0.5f) * sin + (s*0.5f) * cos, 2f)
-                drawer.line(x - (s*0.5f) * cos + (s*0.5f) * sin, y - (s*0.5f) * sin - (s*0.5f) * cos, x - (s*0.2f) * cos, y - (s*0.2f) * sin, 2f)
-                drawer.line(x - (s*0.5f) * cos - (s*0.5f) * sin, y - (s*0.5f) * sin + (s*0.5f) * cos, x - (s*0.2f) * cos, y - (s*0.2f) * sin, 2f)
+                drawer.setColor(color.r, color.g, color.b, 0.3f)
+                drawer.filledCircle(x, y, s * 0.8f)
+                drawer.setColor(color)
+                drawer.circle(x, y, s * 0.8f, 2f)
+                // Rotating tech bar
+                val rot = time * 4f
+                drawer.line(x + MathUtils.cos(rot) * s, y + MathUtils.sin(rot) * s, x - MathUtils.cos(rot) * s, y - MathUtils.sin(rot) * s, 1.5f)
             }
             "Reaper" -> {
                 val s = 25f
-                // Scythe-like wings
-                drawer.line(x + s * cos, y + s * sin, x - s * cos + s * sin, y - s * sin - s * cos, 3f)
-                drawer.line(x + s * cos, y + s * sin, x - s * cos - s * sin, y - s * sin + s * cos, 3f)
-                drawer.line(x - s * cos + s * sin, y - s * sin - s * cos, x - (s*0.5f) * cos, y - (s*0.5f) * sin, 2f)
-                drawer.line(x - s * cos - s * sin, y - s * sin + s * cos, x - (s*0.5f) * cos, y - (s*0.5f) * sin, 2f)
+                drawer.setColor(color.r, color.g, color.b, 0.2f)
+                drawer.filledCircle(x, y, s)
+                drawer.setColor(color)
+                drawer.circle(x, y, s, 3f)
+                drawer.circle(x, y, s * 0.6f, 1.5f)
+                // Aggressive Spikes
+                for (i in 0 until 4) {
+                    val angle = rotation + (i * MathUtils.PI / 2f)
+                    drawer.line(x + MathUtils.cos(angle) * s, y + MathUtils.sin(angle) * s, x + MathUtils.cos(angle) * (s + 10f), y + MathUtils.sin(angle) * (s + 10f), 2f)
+                }
+            }
+            "Phantom" -> {
+                val s = 20f
+                val flicker = 0.4f + 0.4f * MathUtils.sin(time * 10f)
+                drawer.setColor(color.r, color.g, color.b, flicker)
+                drawer.rectangle(x - s/2f, y - s/2f, s, s, 2f)
+                drawer.setColor(Color.WHITE)
+                drawer.filledCircle(x + cos * 5f, y + sin * 5f, 3f)
             }
             else -> {
                 val s = 30f
+                drawer.setColor(color)
                 drawer.circle(x, y, s * 0.5f, 2f)
                 drawer.line(x + s * cos, y + s * sin, x - s * cos, y - s * sin, 4f)
             }
         }
-        // Core eye
+
         drawer.setColor(Color.WHITE)
-        drawer.filledCircle(x + (5f * cos), y + (5f * sin), 2f)
+        drawer.filledCircle(x + (cos * 2f), y + (sin * 2f), 1.5f)
     }
 
     private fun drawWeaponMount(drawer: ShapeDrawer, x: Float, y: Float, rotation: Float, size: Float, color: Color, subTier: Int) {
@@ -202,24 +222,17 @@ object ProceduralShipDrawer {
     }
 
     fun drawStation(drawer: ShapeDrawer, x: Float, y: Float, radius: Float, skin: Skin, batch: com.badlogic.gdx.graphics.g2d.Batch) {
-        // 1. Blueprint Background
         if (skin.has("station-blueprint", com.badlogic.gdx.graphics.g2d.TextureRegion::class.java)) {
             val bp = skin.getRegion("station-blueprint")
             val bSize = radius * 2.2f
             batch.draw(bp, x - bSize/2f, y - bSize/2f, bSize, bSize)
         }
-
-        // 2. Atmosphere/Field
         drawer.setColor(0.1f, 0.5f, 0.9f, 0.15f)
         drawer.filledCircle(x, y, radius)
-
-        // 3. Structural Rings
         drawer.setColor(Color.CYAN)
         drawer.circle(x, y, radius, 4f)
         drawer.setColor(0.4f, 0.9f, 1f, 0.6f)
         drawer.circle(x, y, radius * 0.7f, 2f)
-
-        // 4. Technical Core (Using specimen frame if available for "texture")
         if (skin.has("specimen-frame", com.badlogic.gdx.scenes.scene2d.utils.Drawable::class.java)) {
             val frame = skin.getDrawable("specimen-frame")
             val s = radius * 0.5f
@@ -228,8 +241,6 @@ object ProceduralShipDrawer {
             drawer.setColor(Color.WHITE)
             drawer.rectangle(x - 20f, y - 20f, 40f, 40f, 2f)
         }
-
-        // 5. Power Core
         drawer.setColor(Color.WHITE)
         drawer.filledCircle(x, y, 15f)
     }

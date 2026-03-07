@@ -5,8 +5,7 @@ import com.badlogic.gdx.math.MathUtils
 import com.srw.seedsofsovereignty.component.*
 
 /**
- * Procedural generation utility for ship modules.
- * Refactored to support tiered drone scaling.
+ * Procedural generation utility for ship modules and salvage rewards.
  */
 object ModuleGenerator {
 
@@ -32,26 +31,14 @@ object ModuleGenerator {
         return module
     }
 
-    /**
-     * Generates a unique Drone Module with tiered drone counts.
-     * Scaling: T5(1) -> T13(16)
-     */
     fun generateDroneModule(tier: Int, rarity: Rarity = rollRarity()): DroneModuleComponent {
         val theme = rollTheme()
         val rarityMult = getRarityMultiplier(rarity)
 
-        // Task: Implement drone count scaling rules
         val droneCount = when {
-            tier >= 13 -> 16
-            tier == 12 -> 14
-            tier == 11 -> 12
-            tier == 10 -> 10
-            tier == 9 -> 8
-            tier == 8 -> 6
-            tier == 7 -> 4
-            tier == 6 -> 2
-            tier == 5 -> 1
-            else -> 1
+            tier >= 13 -> 16; tier == 12 -> 14; tier == 11 -> 12; tier == 10 -> 10
+            tier == 9 -> 8; tier == 8 -> 6; tier == 7 -> 4; tier == 6 -> 2
+            tier == 5 -> 1; else -> 1
         }
 
         return DroneModuleComponent(
@@ -61,6 +48,30 @@ object ModuleGenerator {
             maxDrones = droneCount,
             rarity = rarity,
             weaponDNA = generateWeapon(tier, rarity)
+        )
+    }
+
+    /**
+     * Task: Unified Salvage Pipeline.
+     * Generates a procedural salvage payload based on enemy difficulty.
+     */
+    fun generateSalvage(tier: Int): SalvageComponent {
+        val rarity = rollRarity()
+        val roll = MathUtils.random(100)
+
+        val type = when {
+            roll > 95 -> SalvageType.MODULE_CRATE
+            roll > 80 -> SalvageType.SCRAP
+            else -> SalvageType.ESSENCE
+        }
+
+        return SalvageComponent(
+            type = type,
+            rarity = rarity,
+            amount = if (type == SalvageType.ESSENCE) 1 else tier * 5,
+            visualScale = when(rarity) {
+                Rarity.COMMON -> 1.0f; Rarity.RARE -> 1.4f; Rarity.LEGENDARY -> 2.0f; else -> 1.2f
+            }
         )
     }
 
@@ -94,9 +105,7 @@ object ModuleGenerator {
         }
     }
 
-    private fun getTierDPSBaseline(tier: Int): Float {
-        return 20f * Math.pow(3.2, tier.toDouble() - 1).toFloat()
-    }
+    private fun getTierDPSBaseline(tier: Int): Float = 20f * Math.pow(3.2, tier.toDouble() - 1).toFloat()
 
     private fun getRarityMultiplier(rarity: Rarity): Float {
         return when (rarity) {

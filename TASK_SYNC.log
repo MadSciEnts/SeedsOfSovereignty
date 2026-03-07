@@ -1,27 +1,17 @@
 # ARCHITECTURAL SYNCHRONIZATION LOG
 
-## Drone Control Refinement (v0.1.4 Complete)
-- [x] SovereigntyTouchpad Upgrade: Implemented custom input tracking and draw overrides for persistent state.
-- [x] Dual-Mode Joystick UI: Yellow drone mode style and persistence restoration.
-- [x] Fleet Logic Separation: Ship firing disabled in drone mode, Orbit-on-Origin implemented.
+## Visual Identity Restoration (v0.1.8 Complete)
+- [x] Enemy Ship Restoration: Unique Red Technical Circles/Rings for Swarms and Reapers.
+- [x] Essence Visibility Foundation: Initial components and tags restored.
 
-## Drone Localization Toggle (v0.1.5 Complete)
-- [x] Component Update: Added LocalizationMode to FleetCommandComponent.
-- [x] UI Extension: Added "LOC" toggle button to HUD.
-- [x] Input Logic: Implemented Ship-relative rotation math in PlayerInputSystem.
+## Salvage & Tactical Recovery System (v0.1.9 Complete)
+- [x] Architecture Overhaul: Legacy Essence system purged and replaced with Unified Salvage Pipeline.
+- [x] High-Fidelity Renders: Implemented TacticalScannerSystem with procedural Amber brackets and dynamic zoom-scaling.
+- [x] Visual Logic: Implemented "Specimen Shimmer" (Sine-wave pulse + technical core rotation).
+- [x] Physical Interaction: Implemented SalvageSystem with Kinetic Ejection and collection grace periods.
+- [x] Radar Sync: Updated RadarRenderSystem to detect and display Salvage entities.
 
-## HUD Loadout Visualization (v0.1.6 Complete)
-- [x] Widget Creation: Implemented EquippedSlotsWidget to display ModuleSlotComponent contents.
-- [x] Visual Refinement: icons scaled to 60x60 with tight framing and high-prominence DNA rendering.
-- [x] Integration: Placed loadout icons below status bars in PlayScreen HUD.
-
-## Seamless Evolution Celebration (v0.1.7 Complete)
-- [x] Logic Refactor: Updated EvolutionSystem to trigger celebration instead of modal.
-- [x] Visual Presentation: EvolutionCelebrationSystem handles full-screen flashes.
-- [x] Animation: Flying icon sequence implemented in PlayScreen using KTX Actions.
-- [x] Stability: Fixed EntityRenderSystem dependency injection crash and restored technical station designs.
-
-## HANDOVER: Current State (v0.1.7 Stable)
-- All systems synchronized and build verified.
-- Visual foundation restored: Stations are textured blueprints, projectiles rotate, and impacts are translucent.
-- Gameplay flow is now continuous during evolution.
+## HANDOVER: Current State (v0.1.9 Stable)
+- Build 0.1.9 verified stable.
+- All enemy deaths produce highly visible, technical reward drops.
+- Gameplay flow is smooth and rewarding.

@@ -5,37 +5,10 @@ import com.github.quillraven.fleks.World.Companion.family
 import com.srw.seedsofsovereignty.component.*
 import com.srw.seedsofsovereignty.manager.EvolutionManager
 
-class CollectionSystem : IteratingSystem(family { all(PlayerComponent, PositionComponent, EvolutionComponent) }) {
-    private val essenceFamily by lazy { world.family { all(EssenceComponent, PositionComponent, VelocityComponent) } }
-    private val pullRadiusSq = 40000f
-    private val collectRadiusSq = 900f
-
-    override fun onTickEntity(entity: Entity) {
-        val playerPos = entity[PositionComponent].pos
-        val evolution = entity[EvolutionComponent]
-
-        essenceFamily.forEach { essence ->
-            val essencePos = essence[PositionComponent].pos
-            val vel = essence[VelocityComponent].v
-            val distSq = playerPos.dst2(essencePos)
-
-            if (distSq < pullRadiusSq) {
-                val pullForce = com.badlogic.gdx.math.Vector2(playerPos).sub(essencePos).nor().scl(800f * deltaTime)
-                vel.add(pullForce)
-
-                if (distSq < collectRadiusSq) {
-                    val essComp = essence[EssenceComponent]
-                    if (!essComp.isCollected) {
-                        essComp.isCollected = true
-                        evolution.essenceCollected += essComp.amount
-                        world -= essence
-                    }
-                }
-            }
-        }
-    }
-}
-
+/**
+ * Manages major tier jumps and sub-tier barrel scaling.
+ * Collection logic removed in favor of Unified Salvage Pipeline (v0.1.9).
+ */
 class EvolutionSystem(
     private val evolutionManager: EvolutionManager
 ) : IteratingSystem(family { all(PlayerComponent, EvolutionComponent, WeaponComponent, VelocityComponent) }) {
@@ -64,8 +37,7 @@ class EvolutionSystem(
                     // Apply the actual hardware change
                     evolutionManager.applyTierBaseline(world, entity, nextTier)
 
-                    // TRIGGER CELEBRATION (v0.1.7)
-                    // We add the component which will be picked up by the EvolutionCelebrationSystem
+                    // TRIGGER CELEBRATION
                     entity.configure {
                         it += EvolutionCelebrationComponent(
                             newTier = nextTier,

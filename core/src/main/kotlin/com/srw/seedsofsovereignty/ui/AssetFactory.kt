@@ -11,7 +11,6 @@ import com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable
 
 /**
  * Generates procedural assets at runtime to ensure high-bit pixel art consistency.
- * Optimized for high-contrast "Chamber Layering" aesthetics.
  */
 object AssetFactory {
 
@@ -55,7 +54,7 @@ object AssetFactory {
     }
 
     fun addProceduralAssets(skin: Skin) {
-        // 1. Specimen Frame (Station Core)
+        // 1. SPECIMEN FRAME
         val s = 64
         val pix = Pixmap(s, s, Pixmap.Format.RGBA8888)
         val c = 12
@@ -64,53 +63,51 @@ object AssetFactory {
         drawChamferedRect(pix, 0, 0, s, s, c, 2)
         pix.setColor(1f, 1f, 1f, 0.5f)
         drawChamferedRect(pix, 2, 2, s - 4, s - 4, c - 2, 1)
-
+        pix.setColor(0f, 0f, 0f, 0.3f)
+        drawChamferedRect(pix, 3, 3, s - 6, s - 6, c - 3, 1)
         val tex = Texture(pix)
         skin.add("specimen-frame", NinePatchDrawable(NinePatch(tex, 20, 20, 20, 20)), Drawable::class.java)
         pix.dispose()
 
-        // 2. Data Node
+        // 2. DATA NODE
         val pix2 = Pixmap(12, 12, Pixmap.Format.RGBA8888)
         pix2.setColor(Color.WHITE); pix2.fillRectangle(0, 0, 12, 12)
         pix2.setColor(Color.CYAN); pix2.drawRectangle(0, 0, 12, 12)
         skin.add("data-node", TextureRegion(Texture(pix2)))
         pix2.dispose()
 
-        // 3. Spark Texture (Cross-hair style high-bit spark)
-        val spSize = 16
-        val sparkPix = Pixmap(spSize, spSize, Pixmap.Format.RGBA8888)
-        sparkPix.setColor(0f,0f,0f,0f); sparkPix.fill()
-        sparkPix.setColor(Color.WHITE)
-        sparkPix.fillRectangle(spSize/2 - 1, 2, 2, spSize - 4)
-        sparkPix.fillRectangle(2, spSize/2 - 1, spSize - 4, 2)
-        skin.add("vfx-spark", TextureRegion(Texture(sparkPix)))
-        sparkPix.dispose()
+        // 3. ESSENCE CORE (UPDATED: High-visibility tritone core)
+        val pix3 = Pixmap(32, 32, Pixmap.Format.RGBA8888)
+        pix3.setColor(0f, 0f, 0f, 0f); pix3.fill()
+        pix3.setColor(1f, 0.6f, 0f, 0.4f); pix3.fillCircle(16, 16, 15)
+        pix3.setColor(1f, 0.8f, 0.1f, 0.9f); pix3.drawCircle(16, 16, 10); pix3.drawCircle(16, 16, 9)
+        pix3.setColor(Color.WHITE); pix3.fillCircle(16, 16, 5)
+        pix3.setColor(Color.CYAN); pix3.drawCircle(16, 16, 4)
+        skin.add("essence-core", TextureRegion(Texture(pix3)))
+        pix3.dispose()
 
-        // 4. Glow Texture (Soft radial)
-        val glSize = 32
-        val glowPix = Pixmap(glSize, glSize, Pixmap.Format.RGBA8888)
-        glowPix.setColor(0f,0f,0f,0f); glowPix.fill()
-        for(i in 0 until glSize/2) {
-            val alpha = 1f - (i.toFloat() / (glSize/2f))
-            glowPix.setColor(1f, 1f, 1f, alpha * alpha)
-            glowPix.drawCircle(glSize/2, glSize/2, i)
-        }
-        skin.add("vfx-glow", TextureRegion(Texture(glowPix)))
-        glowPix.dispose()
+        // 4. SALVAGE BRACKET (New: High-contrast technical frame)
+        val pix4 = Pixmap(32, 32, Pixmap.Format.RGBA8888)
+        pix4.setColor(0f, 0f, 0f, 0f); pix4.fill()
+        pix4.setColor(1f, 0.7f, 0f, 1f)
+        val bS = 8
+        pix4.drawLine(0, 0, bS, 0); pix4.drawLine(0, 0, 0, bS)
+        pix4.drawLine(31, 0, 31 - bS, 0); pix4.drawLine(31, 0, 31, bS)
+        pix4.drawLine(0, 31, bS, 31); pix4.drawLine(0, 31, 0, 31 - bS)
+        pix4.drawLine(31, 31, 31 - bS, 31); pix4.drawLine(31, 31, 31, 31 - bS)
+        skin.add("salvage-bracket", TextureRegion(Texture(pix4)))
+        pix4.dispose()
 
-        // 5. Station Blueprint Texture
-        val bSize = 128
-        val bPix = Pixmap(bSize, bSize, Pixmap.Format.RGBA8888)
-        bPix.setColor(0f,0f,0f,0f); bPix.fill()
-        bPix.setColor(0.2f, 0.6f, 1f, 0.3f)
-        for (i in 0 until bSize step 16) {
-            bPix.drawLine(i, 0, i, bSize)
-            bPix.drawLine(0, i, bSize, i)
-        }
-        bPix.setColor(0.2f, 0.6f, 1f, 0.8f)
-        bPix.drawRectangle(0, 0, bSize, bSize)
-        skin.add("station-blueprint", TextureRegion(Texture(bPix)))
-        bPix.dispose()
+        // 5. VFX ASSETS
+        val pix5 = Pixmap(8, 8, Pixmap.Format.RGBA8888)
+        pix5.setColor(Color.WHITE); pix5.fill()
+        skin.add("vfx-spark", TextureRegion(Texture(pix5)))
+        pix5.dispose()
+
+        val pix6 = Pixmap(32, 32, Pixmap.Format.RGBA8888)
+        pix6.setColor(1f, 1f, 1f, 1f); pix6.fillCircle(16, 16, 14)
+        skin.add("vfx-glow", TextureRegion(Texture(pix6)))
+        pix6.dispose()
     }
 
     private fun drawChamferedRect(pix: Pixmap, x: Int, y: Int, w: Int, h: Int, c: Int, thickness: Int) {

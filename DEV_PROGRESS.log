@@ -27,8 +27,10 @@
 - [x] Drone Localization Toggle (CAMERA vs SHIP) (v0.1.5)
 - [x] HUD Loadout Visualization (Equipped Icons) (v0.1.6)
 - [x] Seamless Evolution Celebration (No-modal flow) (v0.1.7)
+- [x] Visual Identity Restoration (Enemy Hulls & Essence Drops) (v0.1.8)
+- [x] Unified Salvage Pipeline (v0.1.9): Replaced brittle Essence with scalable Loot Architecture.
 
 ## Current Global Stats
 - **Active Tier:** 9/48
 - **Active Epoch:** 1/4
-- **Build Version:** 0.1.7 (Stable Alpha)
+- **Build Version:** 0.1.9 (Stable Alpha)
