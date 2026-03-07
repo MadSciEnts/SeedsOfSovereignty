@@ -45,12 +45,14 @@ class EvolutionSystem(
         val weapon = entity[WeaponComponent]
 
         if (!entity.has(WeaponModuleComponent)) entity.configure { it += WeaponModuleComponent() }
+
+        // Ensure choice component exists for other interactions (like docking/loot)
         if (!entity.has(ChoiceComponent)) entity.configure { it += ChoiceComponent() }
 
         val choice = entity[ChoiceComponent]
 
-        // Only process progress if NOT currently viewing a discovery report
-        if (!choice.isAwaitingChoice && evo.essenceCollected >= evo.essenceRequired) {
+        // SEAMLESS EVOLUTION: No longer blocked by choice modal
+        if (evo.essenceCollected >= evo.essenceRequired) {
             evo.subTier++
             evo.essenceCollected = 0
             evo.essenceRequired = (evo.essenceRequired * 1.5f).toInt()
@@ -59,12 +61,18 @@ class EvolutionSystem(
             if (evo.subTier == 4) {
                 val nextTier = evo.currentTier + 1
                 if (nextTier <= 48) {
-                    // Fix: Pass world as the first parameter to applyTierBaseline
+                    // Apply the actual hardware change
                     evolutionManager.applyTierBaseline(world, entity, nextTier)
 
-                    // Trigger the visual technical briefing
-                    choice.isAwaitingChoice = true
-                    choice.choiceType = ChoiceComponent.ChoiceType.EVOLUTION_UPGRADE
+                    // TRIGGER CELEBRATION (v0.1.7)
+                    // We add the component which will be picked up by the EvolutionCelebrationSystem
+                    entity.configure {
+                        it += EvolutionCelebrationComponent(
+                            newTier = nextTier,
+                            newSubTier = 1,
+                            newWeaponDNA = entity[WeaponModuleComponent].copy()
+                        )
+                    }
                 } else {
                     evo.subTier = 3 // Max progression for this build
                 }

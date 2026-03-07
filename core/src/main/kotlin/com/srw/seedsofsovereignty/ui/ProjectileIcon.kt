@@ -17,8 +17,12 @@ class ProjectileIcon(
     private val skin: Skin,
     var tier: Int = 1,
     var iconScale: Float = 1f,
-    var projectileColor: Color = Color.YELLOW
+    var projectileColor: Color = Color.YELLOW,
+    var isEmpty: Boolean = false
 ) : Widget() {
+
+    override fun getPrefWidth(): Float = width
+    override fun getPrefHeight(): Float = height
 
     private fun getNormalizationScale(tier: Int): Float {
         return when (tier) {
@@ -28,46 +32,68 @@ class ProjectileIcon(
     }
 
     override fun draw(batch: Batch, parentAlpha: Float) {
-        val centerX = x + width / 2f
-        val centerY = y + height / 2f
+        val drawW = if (width > 0) width else 64f
+        val drawH = if (height > 0) height else 64f
+
+        val centerX = x + drawW / 2f
+        val centerY = y + drawH / 2f
         val time = System.currentTimeMillis() / 1000f
 
-        // 1. ADVANCED SPECIMEN CHAMBER (Task: Complicated low-res border)
+        // 1. BACKGROUND / INTERNAL FILL
+        val fillAlpha = if (isEmpty) 0.2f else 0.8f
+        drawer.setColor(0.01f, 0.02f, 0.05f, fillAlpha * parentAlpha)
+        drawer.filledRectangle(x, y, drawW, drawH)
+
+        if (!isEmpty) {
+            // 2. ROTATING APERTURE SEAL (Animated Layer - Inside)
+            drawer.setColor(Color.CYAN.r, Color.CYAN.g, Color.CYAN.b, 0.15f * parentAlpha)
+            val rot = time * 0.5f
+            val radius = drawW / 2.6f
+            for (i in 0 until 4) {
+                val angle = rot + (i * MathUtils.PI / 2f)
+                drawer.arc(centerX, centerY, radius, angle, 0.7f, 2.5f)
+            }
+
+            // 3. PROJECTILE SPECIMEN (Top Layer - Inside)
+            val finalScale = iconScale * getNormalizationScale(tier)
+            ProjectileDrawer.draw(drawer, centerX, centerY, 1.57f, tier, projectileColor, finalScale)
+        } else {
+            // Draw a subtle "Empty" indicator (e.g., a dim X or ghost frame)
+            drawer.setColor(1f, 1f, 1f, 0.05f * parentAlpha)
+            drawer.line(x + 10f, y + 10f, x + drawW - 10f, y + drawH - 10f, 1f)
+            drawer.line(x + 10f, y + drawH - 10f, x + drawW - 10f, y + 10f, 1f)
+        }
+
+        // 4. METADATA DECORATIONS (Inside)
+        val metaAlpha = if (isEmpty) 0.05f else 0.1f
+        drawer.setColor(1f, 1f, 1f, metaAlpha * parentAlpha)
+        drawer.line(centerX - 15f, y + 10f, centerX + 15f, y + 10f, 1f)
+        drawer.line(x + 10f, centerY - 8f, x + 10f, centerY + 8f, 1f)
+
+        // 5. EXTERNAL BORDER FRAME
+        val frameAlpha = if (isEmpty) 0.3f else 1.0f
         if (skin.has("specimen-frame", com.badlogic.gdx.scenes.scene2d.utils.Drawable::class.java)) {
             val frame = skin.getDrawable("specimen-frame")
-            frame.draw(batch, x, y, width, height)
+            val offset = 2f
+            val oldColor = batch.color.cpy()
+            batch.setColor(oldColor.r, oldColor.g, oldColor.b, oldColor.a * frameAlpha)
+            frame.draw(batch, x - offset, y - offset, drawW + offset * 2f, drawH + offset * 2f)
+            batch.setColor(oldColor)
         } else {
-            drawer.setColor(0.1f, 0.2f, 0.3f, 0.5f * parentAlpha)
-            drawer.rectangle(x, y, width, height, 1f)
+            drawer.setColor(Color.CYAN.r, Color.CYAN.g, Color.CYAN.b, 0.6f * frameAlpha * parentAlpha)
+            drawer.rectangle(x, y, drawW, drawH, 2f)
         }
 
-        // 2. DATA NODES (VERIFIED 8x8 SOURCE)
+        // 6. DATA NODES (On corners of the frame)
         if (skin.has("data-node", com.badlogic.gdx.graphics.g2d.TextureRegion::class.java)) {
             val node = skin.getRegion("data-node")
-            val nS = 14f // Increased node size for the new 64x64 frame
-            drawer.setColor(1f, 1f, 1f, 0.8f * parentAlpha)
-            batch.draw(node, x - nS/2f, y + height - nS/2f, nS, nS) // TL
-            batch.draw(node, x + width - nS/2f, y + height - nS/2f, nS, nS) // TR
-            batch.draw(node, x - nS/2f, y - nS/2f, nS, nS) // BL
-            batch.draw(node, x + width - nS/2f, y - nS/2f, nS, nS) // BR
+            val nS = 16f
+            val nodeAlpha = if (isEmpty) 0.2f else 0.9f
+            drawer.setColor(1f, 1f, 1f, nodeAlpha * parentAlpha)
+            batch.draw(node, x - nS/2f, y + drawH - nS/2f, nS, nS)
+            batch.draw(node, x + drawW - nS/2f, y + drawH - nS/2f, nS, nS)
+            batch.draw(node, x - nS/2f, y - nS/2f, nS, nS)
+            batch.draw(node, x + drawW - nS/2f, y - nS/2f, nS, nS)
         }
-
-        // 3. ROTATING APERTURE SEAL (Animated Layer)
-        drawer.setColor(Color.CYAN.r, Color.CYAN.g, Color.CYAN.b, 0.2f * parentAlpha)
-        val rot = time * 0.5f
-        val radius = width / 2.6f
-        for (i in 0 until 4) {
-            val angle = rot + (i * MathUtils.PI / 2f)
-            drawer.arc(centerX, centerY, radius, angle, 0.7f, 2.5f)
-        }
-
-        // 4. METADATA DECORATIONS
-        drawer.setColor(1f, 1f, 1f, 0.15f * parentAlpha)
-        drawer.line(centerX - 15f, y + 6f, centerX + 15f, y + 6f, 1f)
-        drawer.line(x + 6f, centerY - 8f, x + 6f, centerY + 8f, 1f)
-
-        // 5. PROJECTILE SPECIMEN (Top Layer)
-        val finalScale = iconScale * getNormalizationScale(tier)
-        ProjectileDrawer.draw(drawer, centerX, centerY, 1.57f, tier, projectileColor, finalScale)
     }
 }

@@ -2,6 +2,7 @@ package com.srw.seedsofsovereignty
 
 import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
+import com.badlogic.gdx.scenes.scene2d.ui.Skin
 import com.badlogic.gdx.utils.viewport.ExtendViewport
 import com.github.quillraven.fleks.World
 import com.github.quillraven.fleks.configureWorld
@@ -9,6 +10,7 @@ import com.srw.seedsofsovereignty.manager.EvolutionManager
 import com.srw.seedsofsovereignty.screen.PlayScreen
 import com.srw.seedsofsovereignty.system.*
 import com.srw.seedsofsovereignty.ui.AssetFactory
+import com.srw.seedsofsovereignty.ui.HUDFactory
 import ktx.app.KtxGame
 import ktx.app.KtxScreen
 import ktx.async.KtxAsync
@@ -23,6 +25,7 @@ class SovereigntyGame : KtxGame<KtxScreen>() {
     private val whitePixel by lazy { AssetFactory.createWhitePixel() }
     private val starTextures by lazy { AssetFactory.createStarLayers() }
     private val drawer by lazy { ShapeDrawer(batch, whitePixel) }
+    private val skin: Skin by lazy { HUDFactory.createSkin() }
 
     private val evolutionManager = EvolutionManager()
 
@@ -30,6 +33,7 @@ class SovereigntyGame : KtxGame<KtxScreen>() {
         configureWorld {
             injectables {
                 add(batch)
+                add(skin)
                 add(camera)
                 add("gameViewport", viewport)
                 add("uiViewport", uiViewport)
@@ -56,15 +60,21 @@ class SovereigntyGame : KtxGame<KtxScreen>() {
                 add(CollisionDamageSystem())
                 add(VitalsSystem())
                 add(StatusEffectSystem())
+                add(EffectSystem())
                 add(LifeSpanSystem())
 
                 add(CollectionSystem())
                 add(EvolutionSystem(evolutionManager))
+                add(EvolutionCelebrationSystem(batch, drawer, uiViewport))
 
                 add(SensorSystem())
                 add(StationSystem())
                 add(ApertureSystem(batch, drawer, uiViewport))
+
+                // High-fidelity rendering systems
+                add(EntityRenderSystem(batch, drawer, viewport, skin))
                 add(RenderSystem(batch, camera, drawer))
+
                 add(RadarRenderSystem(batch, drawer, uiViewport))
                 add(HUDSystem(batch, drawer, uiViewport))
 
@@ -82,6 +92,7 @@ class SovereigntyGame : KtxGame<KtxScreen>() {
     override fun dispose() {
         super.dispose()
         batch.dispose()
+        skin.dispose()
         whitePixel.texture.dispose()
         starTextures.forEach { it.dispose() }
         world.dispose()

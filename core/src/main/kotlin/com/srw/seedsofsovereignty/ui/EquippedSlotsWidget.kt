@@ -10,7 +10,7 @@ import space.earlygrey.shapedrawer.ShapeDrawer
 
 /**
  * HUD Widget that displays the player's currently equipped modules (Weapons, Drones).
- * Optimized for compact HUD display with high-visibility icons.
+ * Optimized for high visibility with tight framing at a compact size.
  */
 class EquippedSlotsWidget(
     private val drawer: ShapeDrawer,
@@ -19,7 +19,7 @@ class EquippedSlotsWidget(
 ) : HorizontalGroup() {
 
     init {
-        space(8f) // Tighter spacing for HUD
+        space(12f) // Tighter spacing for smaller icons
         pad(5f)
     }
 
@@ -27,41 +27,51 @@ class EquippedSlotsWidget(
      * Rebuilds the icons based on the player's current ModuleSlotComponent.
      */
     fun update(player: Entity) {
-        clearChildren()
-
         with(world) {
             if (!player.has(ModuleSlotComponent)) return
             val slots = player[ModuleSlotComponent].slots
 
-            for (slot in slots) {
-                // We use a specialized icon scale and smaller frame bounds for the HUD
-                val icon = ProjectileIcon(drawer, skin).apply {
-                    // Increase the internal projectile scale relative to the frame
-                    iconScale = 1.4f
-
-                    val slotEntity = slot.slotEntity
-                    if (slotEntity != null && world.contains(slotEntity)) {
-                        if (slotEntity.has(WeaponModuleComponent)) {
-                            val weapon = slotEntity[WeaponModuleComponent]
-                            tier = weapon.projectileTier
-                            projectileColor = weapon.projectileColor
-                        } else if (slotEntity.has(DroneModuleComponent)) {
-                            val drone = slotEntity[DroneModuleComponent]
-                            tier = drone.weaponDNA.projectileTier
-                            projectileColor = drone.weaponDNA.projectileColor
-                        }
-                    } else {
-                        tier = if (slot.equippedTier > 0) slot.equippedTier else 1
-                        projectileColor = when(slot.type) {
-                            SlotType.WEAPON -> Color.YELLOW
-                            SlotType.DRONE -> Color.ORANGE
-                            else -> Color.GRAY
-                        }
-                    }
+            if (children.size == slots.size) {
+                for (i in 0 until slots.size) {
+                    val icon = getChild(i) as? ProjectileIcon ?: continue
+                    updateIconData(icon, slots[i])
                 }
+                return
+            }
+
+            clearChildren()
+            for (slot in slots) {
+                val icon = ProjectileIcon(drawer, skin).apply {
+                    iconScale = 1.8f // Reduced scale slightly to fit better in smaller frame
+                }
+                updateIconData(icon, slot)
                 addActor(icon)
-                // Reduced size for HUD compact look (48x48)
-                icon.setSize(48f, 48f)
+                // Reduced to 60x60 (half of 120x120)
+                icon.setSize(60f, 60f)
+            }
+        }
+    }
+
+    private fun updateIconData(icon: ProjectileIcon, slot: ModuleSlot) {
+        val slotEntity = slot.slotEntity
+        with(world) {
+            if (slotEntity != null && world.contains(slotEntity)) {
+                if (slotEntity.has(WeaponModuleComponent)) {
+                    val weapon = slotEntity[WeaponModuleComponent]
+                    icon.tier = weapon.projectileTier
+                    icon.projectileColor = weapon.projectileColor
+                } else if (slotEntity.has(DroneModuleComponent)) {
+                    val drone = slotEntity[DroneModuleComponent]
+                    icon.tier = drone.weaponDNA.projectileTier
+                    icon.projectileColor = drone.weaponDNA.projectileColor
+                }
+            } else {
+                icon.tier = if (slot.equippedTier > 0) slot.equippedTier else 1
+                icon.projectileColor = when(slot.type) {
+                    SlotType.WEAPON -> Color.YELLOW
+                    SlotType.DRONE -> Color.ORANGE
+                    else -> Color.GRAY
+                }
             }
         }
     }

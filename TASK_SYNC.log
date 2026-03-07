@@ -3,18 +3,25 @@
 ## Drone Control Refinement (v0.1.4 Complete)
 ... (previous entries)
 
-## Drone Localization Toggle (v0.1.5 Plan)
-- [ ] **Component Update:** Add `LocalizationMode` (CAMERA vs SHIP) to `FleetCommandComponent`.
-- [ ] **UI Extension:**
-    - [ ] Create `localizeButton` in `PlayScreen`.
-    - [ ] Position it to the left of the `aimJoystick`.
-    - [ ] Implement toggle logic: `CAMERA` (World-relative) vs `SHIP` (Ship-heading relative).
-- [ ] **Input Logic Update:**
-    - [ ] Update `PlayerInputSystem` to rotate the `aimVector` by the ship's current `OrientationComponent` when in `SHIP` mode.
-    - [ ] If in `SHIP` mode, +Y on joystick = ship's forward.
-- [ ] **Visual Feedback:** Update button text/style to reflect the current mode (e.g., "LOC: CAM" vs "LOC: SHIP").
+## HUD Loadout Visualization (v0.1.6 Complete)
+... (previous entries)
+
+## Seamless Evolution Celebration (v0.1.7 Plan)
+- [ ] **Logic Refactor:**
+    - [ ] Update `EvolutionSystem` to stop triggering `ChoiceComponent.isAwaitingChoice`.
+    - [ ] Introduce `EvolutionCelebrationComponent` to track the state of the flying icon and effects.
+- [ ] **Visual Presentation:**
+    - [ ] Create `EvolutionCelebrationSystem` to handle:
+        - [ ] Global screen flash/particle burst on Tier change.
+        - [ ] Spawning a "Flying" `ProjectileIcon` at screen center.
+        - [ ] Interpolating (sliding) the icon from center to the `EquippedSlotsWidget` position.
+- [ ] **HUD Integration:**
+    - [ ] Coordinate mapping: Translate `EquippedSlotsWidget` slot positions to stage coordinates for the flying icon's target.
+    - [ ] "Seating" effect: Trigger a small visual pop/glitch when the icon reaches the HUD.
+- [ ] **Clean up:** Deprecate or remove `EvolutionReportPopup` and related `ChoiceComponent` triggers for standard level-ups.
 
 ## Verification Protocol
-1. **Camera Mode:** Up on joystick always points to top of screen.
-2. **Ship Mode:** Up on joystick always points where the ship is facing, regardless of screen orientation.
-3. **Persistence:** The localization setting is remembered between drone mode swaps.
+1. **Seamlessness:** Player can still move/shoot during the entire evolution sequence.
+2. **Visual Flow:** Icon starts large at center, shrinks and slides to the correct HUD slot.
+3. **Accuracy:** The flying icon matches the new Tier's "Stock" weapon DNA.
+4. **Stability:** No crashes during high-action evolution events.

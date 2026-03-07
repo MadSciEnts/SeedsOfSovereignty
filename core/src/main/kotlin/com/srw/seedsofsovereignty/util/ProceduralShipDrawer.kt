@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Vector2
+import com.badlogic.gdx.scenes.scene2d.ui.Skin
 import space.earlygrey.shapedrawer.ShapeDrawer
 
 object ProceduralShipDrawer {
@@ -28,7 +29,6 @@ object ProceduralShipDrawer {
                 out.add(Vector2(locals[i].x * cos - locals[i].y * sin, locals[i].x * sin + locals[i].y * cos))
             }
         } else {
-            // Tier 9+ Vanguard Mounts: Dual Forward-Pylons
             val spreadX = size * 0.7f
             val spreadY = size * 0.35f
             val count = subTier.coerceIn(1, 4)
@@ -39,12 +39,18 @@ object ProceduralShipDrawer {
         }
     }
 
-    fun drawPlayerShip(drawer: ShapeDrawer, x: Float, y: Float, hullRotation: Float, aimRotation: Float, tier: Int, subTier: Int) {
+    fun drawPlayerShip(
+        drawer: ShapeDrawer,
+        x: Float, y: Float,
+        hullRotation: Float, aimRotation: Float,
+        tier: Int, subTier: Int,
+        colorOverride: Color? = null
+    ) {
         val size = getShipSize(tier, subTier)
-        val color = when(tier) {
+        val color = colorOverride ?: when(tier) {
             1 -> Color.CYAN; 2 -> Color.VIOLET; 3 -> Color.GOLD; 4 -> Color.ORANGE
             5 -> Color.CHARTREUSE; 6 -> Color.SKY; 7 -> Color.PURPLE; 8 -> Color.SLATE
-            9 -> Color.FIREBRICK // Vanguard Red
+            9 -> Color.FIREBRICK
             else -> Color.CYAN
         }
         drawer.setColor(color)
@@ -85,18 +91,11 @@ object ProceduralShipDrawer {
 
     private fun drawVanguardHull(drawer: ShapeDrawer, x: Float, y: Float, rotation: Float, size: Float) {
         val cos = MathUtils.cos(rotation); val sin = MathUtils.sin(rotation)
-        // Split Boom Design
         val boomL = size * 1.2f; val boomW = size * 0.25f; val boomGap = size * 0.4f
-
-        // Pylon 1
         val p1x = x - (size * 0.2f) * cos - (boomGap) * sin; val p1y = y - (size * 0.2f) * sin + (boomGap) * cos
         drawer.line(p1x, p1y, p1x + boomL * cos, p1y + boomL * sin, boomW)
-
-        // Pylon 2
         val p2x = x - (size * 0.2f) * cos + (boomGap) * sin; val p2y = y - (size * 0.2f) * sin - (boomGap) * cos
         drawer.line(p2x, p2y, p2x + boomL * cos, p2y + boomL * sin, boomW)
-
-        // Core Connector (Trapezoid)
         val cx1 = x - (size * 0.5f) * cos; val cy1 = y - (size * 0.5f) * sin
         val cx2 = x + (size * 0.3f) * cos
         drawer.line(cx1 - boomGap * sin, cy1 + boomGap * cos, cx1 + boomGap * sin, cy1 - boomGap * cos, 4f)
@@ -162,5 +161,31 @@ object ProceduralShipDrawer {
         drawer.circle(x, y, 6f, 1.5f)
         val cos = MathUtils.cos(rotation); val sin = MathUtils.sin(rotation)
         drawer.line(x, y, x + 8f * cos, y + 8f * sin, 1f)
+    }
+
+    fun drawStation(drawer: ShapeDrawer, x: Float, y: Float, radius: Float, skin: Skin, batch: com.badlogic.gdx.graphics.g2d.Batch) {
+        // 1. Atmosphere/Field
+        drawer.setColor(0.1f, 0.5f, 0.9f, 0.15f)
+        drawer.filledCircle(x, y, radius)
+
+        // 2. Structural Rings
+        drawer.setColor(Color.CYAN)
+        drawer.circle(x, y, radius, 4f)
+        drawer.setColor(0.4f, 0.9f, 1f, 0.6f)
+        drawer.circle(x, y, radius * 0.7f, 2f)
+
+        // 3. Technical Core (Using specimen frame if available for "texture")
+        if (skin.has("specimen-frame", com.badlogic.gdx.scenes.scene2d.utils.Drawable::class.java)) {
+            val frame = skin.getDrawable("specimen-frame")
+            val s = radius * 0.4f
+            frame.draw(batch, x - s/2f, y - s/2f, s, s)
+        } else {
+            drawer.setColor(Color.WHITE)
+            drawer.rectangle(x - 20f, y - 20f, 40f, 40f, 2f)
+        }
+
+        // 4. Power Core
+        drawer.setColor(Color.WHITE)
+        drawer.filledCircle(x, y, 15f)
     }
 }

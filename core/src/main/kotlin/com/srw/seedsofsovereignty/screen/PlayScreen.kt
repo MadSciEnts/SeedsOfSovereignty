@@ -3,12 +3,15 @@ package com.srw.seedsofsovereignty.screen
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
+import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.Stage
+import com.badlogic.gdx.scenes.scene2d.actions.Actions
 import com.badlogic.gdx.scenes.scene2d.ui.Skin
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton
 import com.badlogic.gdx.scenes.scene2d.ui.Touchpad
+import com.badlogic.gdx.utils.Align
 import com.badlogic.gdx.utils.viewport.Viewport
-import com.github.quillraven.fleks.World
+import com.github.quillraven.fleks.*
 import com.srw.seedsofsovereignty.component.*
 import com.srw.seedsofsovereignty.manager.DockingManager
 import com.srw.seedsofsovereignty.manager.EvolutionManager
@@ -49,6 +52,7 @@ class PlayScreen(
     private val hangarUI = StationHangarUI(skin, drawer, world, dockingManager, marketManager)
 
     private var wasDocked = false
+    private val tempCoords = Vector2()
 
     init {
         // Initialize Player Entity
@@ -164,6 +168,15 @@ class PlayScreen(
                 // Update equipped icons
                 equippedWidget.update(player)
 
+                // Handle Evolution Celebration Sequence (v0.1.7)
+                if (player.has(EvolutionCelebrationComponent)) {
+                    val celeb = player[EvolutionCelebrationComponent]
+                    if (celeb.phase == EvolutionCelebrationComponent.Phase.FLASH && celeb.timer > 0.1f) {
+                        triggerFlyingIcon(player, celeb)
+                        celeb.phase = EvolutionCelebrationComponent.Phase.FLYING_ICON
+                    }
+                }
+
                 val isTwinStickTier = evo.currentTier >= 4
                 val hasDrones = player.has(DroneLauncherComponent) ||
                                (player.has(ModuleSlotComponent) && player[ModuleSlotComponent].slots.any { it.type == SlotType.DRONE })
@@ -208,6 +221,58 @@ class PlayScreen(
         uiStage.draw()
     }
 
+    private fun triggerFlyingIcon(player: Entity, celeb: EvolutionCelebrationComponent) {
+        val dna = celeb.newWeaponDNA ?: return
+
+        // 1. Create the Celebratory Icon
+        val flyingIcon = ProjectileIcon(drawer, skin).apply {
+            tier = dna.projectileTier
+            projectileColor = dna.projectileColor
+            iconScale = 4.0f // Start very large
+            setSize(300f, 300f)
+            setOrigin(Align.center)
+            setPosition(uiViewport.worldWidth / 2f, uiViewport.worldHeight / 2f, Align.center)
+        }
+
+        // 2. Add Celebration Label
+        val congratsLabel = HUDFactory.createLabel("EVOLUTION COMPLETE: TIER ${celeb.newTier}", skin, "title").apply {
+            setAlignment(Align.center)
+            setPosition(uiViewport.worldWidth / 2f, uiViewport.worldHeight / 2f + 250f, Align.center)
+            color.a = 0f
+        }
+
+        // 3. Coordinate Mapping
+        // Target the center of the first slot in the equipped widget
+        tempCoords.set(30f, 30f) // Local center of a 60x60 icon
+        equippedWidget.localToStageCoordinates(tempCoords)
+        val targetX = tempCoords.x
+        val targetY = tempCoords.y
+
+        // 4. Tween Logic
+        congratsLabel.addAction(Actions.sequence(
+            Actions.fadeIn(0.3f),
+            Actions.delay(1.5f),
+            Actions.fadeOut(0.5f),
+            Actions.removeActor()
+        ))
+
+        flyingIcon.addAction(Actions.sequence(
+            Actions.delay(0.5f), // Pause at center
+            Actions.parallel(
+                Actions.moveToAligned(targetX, targetY, Align.center, 1.2f, com.badlogic.gdx.math.Interpolation.pow3Out),
+                Actions.scaleTo(0.2f, 0.2f, 1.2f, com.badlogic.gdx.math.Interpolation.pow3Out),
+                Actions.rotateBy(720f, 1.2f)
+            ),
+            Actions.run {
+                celeb.phase = EvolutionCelebrationComponent.Phase.COMPLETED
+            },
+            Actions.removeActor()
+        ))
+
+        uiStage.addActor(congratsLabel)
+        uiStage.addActor(flyingIcon)
+    }
+
     override fun resize(width: Int, height: Int) {
         viewport.update(width, height)
         uiViewport.update(width, height, true)
@@ -218,7 +283,6 @@ class PlayScreen(
         modeToggle.setPosition(uiStage.width - modeToggle.width - 50f, aimJoystick.y + aimJoystick.height + 20f)
         localizeButton.setPosition(aimJoystick.x - localizeButton.width - 20f, aimJoystick.y + (aimJoystick.height / 2f) - (localizeButton.height / 2f))
 
-        // Position Equipped Icons on left side, below where HUDSystem renders bars (startX=30, currentY starts at worldHeight-40)
         equippedWidget.setPosition(30f, uiViewport.worldHeight - 140f)
 
         hangarUI.setSize(uiStage.width * 0.95f, uiStage.height * 0.9f)

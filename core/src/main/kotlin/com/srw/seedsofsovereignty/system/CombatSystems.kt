@@ -20,7 +20,7 @@ class WeaponSystem : IteratingSystem(family { all(WeaponComponent, PositionCompo
 
         val isEnemy = entity.has(EnemyComponent)
         val evo = if (entity.has(EvolutionComponent)) entity[EvolutionComponent] else null
-        val tier = if (isEnemy) (if (entity.has(EnemyComponent) && entity[EnemyComponent].type == "Reaper") 2 else 1) else (evo?.currentTier ?: 1)
+        val tier = if (isEnemy) 1 else (evo?.currentTier ?: 1)
         val subTier = evo?.subTier ?: 1
 
         if (weapon.cooldown > 0f) {
@@ -53,6 +53,8 @@ class WeaponSystem : IteratingSystem(family { all(WeaponComponent, PositionCompo
                         val bulletSpeed = module?.projectileSpeed ?: (if (isEnemy) 600f else 1000f)
                         this.v.set(bulletSpeed, 0f).setAngleRad(aimAngle)
                     }
+                    // FIX: Projectiles must have orientation to be rendered with rotation
+                    e += OrientationComponent().apply { angleRad = aimAngle }
                     e += ProjectileComponent(
                         tier = module?.projectileTier ?: tier,
                         color = module?.projectileColor ?: Color.YELLOW,
@@ -108,12 +110,8 @@ class CombatSystem : IteratingSystem(family { all(ProjectileComponent, PositionC
     }
 
     private fun applyEffects(target: Entity, effects: List<ProjectileEffect>, effectPos: Vector2) {
-        // Task Fix: Support Shield Piercing (Rule #6)
-        val isPiercing = effects.any { it.type == EffectType.SHIELD_PIERCE }
-
         effects.forEach { effect ->
             spawnVfx(effect.vfx, effectPos.x, effectPos.y)
-
             when (effect.type) {
                 EffectType.HULL_DAMAGE -> {
                     if (target.has(HealthComponent)) {
@@ -124,20 +122,10 @@ class CombatSystem : IteratingSystem(family { all(ProjectileComponent, PositionC
                     }
                 }
                 EffectType.SHIELD_DAMAGE -> {
-                    // Piercing rounds ignore this effect type or don't carry it
-                    if (!isPiercing && target.has(ShieldComponent) && target[ShieldComponent].active) {
+                    if (target.has(ShieldComponent)) {
                         val shield = target[ShieldComponent]
-                        shield.current = (shield.current - effect.potency).coerceAtLeast(0f)
+                        if (shield.active) shield.current = (shield.current - effect.potency).coerceAtLeast(0f)
                     }
-                }
-                EffectType.SPEED_MULTIPLIER, EffectType.COOLDOWN_MULTIPLIER -> {
-                    // Strategic Infection: Apply duration-based effect
-                    if (!target.has(StatusEffectComponent)) {
-                        target.configure { it += StatusEffectComponent() }
-                    }
-                    target[StatusEffectComponent].activeEffects.add(
-                        ActiveEffect(effect.type, effect.potency, effect.duration, effect.vfx)
-                    )
                 }
                 else -> {}
             }
@@ -163,7 +151,13 @@ class CombatSystem : IteratingSystem(family { all(ProjectileComponent, PositionC
             ImpactVfxType.SHIELD_RIPPLE_BLUE -> {
                 world.entity {
                     it += PositionComponent().apply { pos.set(x, y) }
-                    it += ParticleComponent(type = ParticleComponent.Type.SHIELD_RIPPLE, color = Color.CYAN, size = 40f)
+                    it += ParticleComponent(
+                        type = ParticleComponent.Type.SHIELD_RIPPLE,
+                        color = Color.CYAN,
+                        size = 40f,
+                        alpha = 0.8f,
+                        fadeRate = 2.0f
+                    )
                     it += LifeSpanComponent(remaining = 0.4f)
                 }
             }
@@ -181,7 +175,13 @@ class CombatSystem : IteratingSystem(family { all(ProjectileComponent, PositionC
                     v.set(MathUtils.random(-200f, 200f), MathUtils.random(-200f, 200f))
                     friction = 2f
                 }
-                it += ParticleComponent(type = ParticleComponent.Type.SPARK, color = color, size = baseSize * MathUtils.random(0.5f, 1.5f))
+                it += ParticleComponent(
+                    type = ParticleComponent.Type.SPARK,
+                    color = color,
+                    size = baseSize * MathUtils.random(0.5f, 1.5f),
+                    alpha = 1.0f,
+                    fadeRate = 3.0f
+                )
                 it += LifeSpanComponent(remaining = MathUtils.random(0.2f, 0.4f))
             }
         }

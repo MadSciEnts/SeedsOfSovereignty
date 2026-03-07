@@ -56,10 +56,10 @@ class CollisionDamageSystem : IteratingSystem(family { all(PlayerComponent, Posi
         if (target.has(ShieldComponent)) {
             val shield = target[ShieldComponent]
             if (shield.active && shield.current > 0) {
-                // Spawn Shield Ripple
+                // Spawn Shield Ripple (Using GLOW as proxy for ripple in this build)
                 world.entity {
                     it += PositionComponent().apply { pos.set(x, y) }
-                    it += ParticleComponent(type = ParticleComponent.Type.SHIELD_RIPPLE, color = Color.CYAN, size = 40f)
+                    it += ParticleComponent(type = ParticleComponent.Type.GLOW, color = Color.CYAN, size = 40f)
                     it += LifeSpanComponent(remaining = 0.4f)
                 }
 
