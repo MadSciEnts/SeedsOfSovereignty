@@ -14,8 +14,7 @@ import com.srw.seedsofsovereignty.manager.DockingManager
 import com.srw.seedsofsovereignty.manager.EvolutionManager
 import com.srw.seedsofsovereignty.manager.MarketManager
 import com.srw.seedsofsovereignty.system.PlayerInputSystem
-import com.srw.seedsofsovereignty.ui.HUDFactory
-import com.srw.seedsofsovereignty.ui.StationHangarUI
+import com.srw.seedsofsovereignty.ui.*
 import com.srw.seedsofsovereignty.util.ModuleGenerator
 import ktx.app.KtxScreen
 import space.earlygrey.shapedrawer.ShapeDrawer
@@ -31,11 +30,15 @@ class PlayScreen(
     private val uiStage = Stage(uiViewport, batch)
     private val skin: Skin = HUDFactory.createSkin()
 
+    // 1. Core Controls
     private val moveJoystick: Touchpad = HUDFactory.createMoveJoystick(skin)
-    private val aimJoystick: Touchpad = HUDFactory.createAimJoystick(skin)
+    private val aimJoystick: SovereigntyTouchpad = HUDFactory.createAimJoystick(skin) as SovereigntyTouchpad
     private val fireButton: TextButton = HUDFactory.createFireButton(skin)
-
     private val modeToggle: TextButton = HUDFactory.createModeToggle(skin)
+    private val localizeButton: TextButton = HUDFactory.createDebugButton("LOC: CAM", skin).apply { setSize(120f, 60f) }
+
+    // 2. Equipped Icons
+    private val equippedWidget = EquippedSlotsWidget(drawer, skin, world)
 
     private val testEvolveButton: TextButton = HUDFactory.createDebugButton("DEV: EVOLVE", skin)
 
@@ -57,7 +60,7 @@ class PlayScreen(
             it += WeaponComponent()
             it += WeaponModuleComponent(
                 name = "Stock T1",
-                description = "Standard kinetic stream. Reliable but primitive.",
+                description = "Standard kinetic stream.",
                 projectileTier = 1,
                 projectileSpeed = 1000f,
                 fireRate = 0.6f,
@@ -76,24 +79,16 @@ class PlayScreen(
             it += FleetCommandComponent()
             it += HealthComponent(current = 100f, max = 100f)
             it += ShieldComponent(current = 50f, max = 50f)
-
-            // Fix: Drone slots should only be added by the EvolutionManager when earned at Tier 5
-            it += ModuleSlotComponent(mutableListOf(
-                ModuleSlot(SlotType.WEAPON, 1, "Stock Kinetic", 1)
-            ))
+            it += ModuleSlotComponent(mutableListOf(ModuleSlot(SlotType.WEAPON, 1, "Stock Kinetic", 1)))
         }
 
-        // INITIAL TEST STATION (Alpha Outpost)
+        // INITIAL TEST STATION
         world.entity {
             it += PositionComponent().apply { pos.set(500f, 500f) }
             it += StationComponent(name = "Alpha Outpost", radius = 200f)
             it += MarketComponent().apply {
-                for (i in 0 until 15) {
-                    weaponOffers.add(ModuleGenerator.generateWeapon(1))
-                }
-                for (i in 0 until 5) {
-                    droneOffers.add(ModuleGenerator.generateDroneModule(1))
-                }
+                for (i in 0 until 15) weaponOffers.add(ModuleGenerator.generateWeapon(1))
+                for (i in 0 until 5) droneOffers.add(ModuleGenerator.generateDroneModule(1))
             }
             it += VisibleComponent()
         }
@@ -103,10 +98,34 @@ class PlayScreen(
                 world.family { all(PlayerComponent, FleetCommandComponent) }.firstOrNull()?.let { p ->
                     with(world) {
                         val fleet = p[FleetCommandComponent]
-                        fleet.controlMode = if (fleet.controlMode == FleetCommandComponent.ControlMode.ATTACK_DIRECTION)
-                            FleetCommandComponent.ControlMode.DRONE_FOCUS else FleetCommandComponent.ControlMode.ATTACK_DIRECTION
+                        if (fleet.controlMode == FleetCommandComponent.ControlMode.ATTACK_DIRECTION) {
+                            fleet.lastWeaponAim.set(aimJoystick.knobPercentX, aimJoystick.knobPercentY)
+                            fleet.controlMode = FleetCommandComponent.ControlMode.DRONE_FOCUS
+                            aimJoystick.isPersistent = true
+                            aimJoystick.updateStyle("drone-mode", skin)
+                            aimJoystick.setKnobPosition(fleet.lastDroneAim.x, fleet.lastDroneAim.y)
+                            modeToggle.setText("DRN")
+                        } else {
+                            fleet.lastDroneAim.set(aimJoystick.knobPercentX, aimJoystick.knobPercentY)
+                            fleet.controlMode = FleetCommandComponent.ControlMode.ATTACK_DIRECTION
+                            aimJoystick.isPersistent = false
+                            aimJoystick.updateStyle("aim", skin)
+                            aimJoystick.setKnobPosition(fleet.lastWeaponAim.x, fleet.lastWeaponAim.y)
+                            modeToggle.setText("WPN")
+                        }
+                    }
+                }
+            }
+        })
 
-                        modeToggle.setText(if (fleet.controlMode == FleetCommandComponent.ControlMode.ATTACK_DIRECTION) "WPN" else "DRN")
+        localizeButton.addListener(object : com.badlogic.gdx.scenes.scene2d.utils.ChangeListener() {
+            override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
+                world.family { all(PlayerComponent, FleetCommandComponent) }.firstOrNull()?.let { p ->
+                    with(world) {
+                        val fleet = p[FleetCommandComponent]
+                        fleet.localization = if (fleet.localization == FleetCommandComponent.LocalizationMode.CAMERA)
+                            FleetCommandComponent.LocalizationMode.SHIP else FleetCommandComponent.LocalizationMode.CAMERA
+                        localizeButton.setText(if (fleet.localization == FleetCommandComponent.LocalizationMode.CAMERA) "LOC: CAM" else "LOC: SHIP")
                     }
                 }
             }
@@ -122,6 +141,8 @@ class PlayScreen(
         uiStage.addActor(aimJoystick)
         uiStage.addActor(fireButton)
         uiStage.addActor(modeToggle)
+        uiStage.addActor(localizeButton)
+        uiStage.addActor(equippedWidget)
         uiStage.addActor(hangarUI)
         uiStage.addActor(testEvolveButton)
 
@@ -138,9 +159,12 @@ class PlayScreen(
                 val docking = player[DockingComponent]
                 val aperture = player[ApertureComponent]
                 val choice = player[ChoiceComponent]
+                val fleet = player[FleetCommandComponent]
+
+                // Update equipped icons
+                equippedWidget.update(player)
 
                 val isTwinStickTier = evo.currentTier >= 4
-                // Check for either the component or an active drone slot in topology
                 val hasDrones = player.has(DroneLauncherComponent) ||
                                (player.has(ModuleSlotComponent) && player[ModuleSlotComponent].slots.any { it.type == SlotType.DRONE })
 
@@ -151,8 +175,10 @@ class PlayScreen(
                 aimJoystick.isVisible = !isUiRequested && isTwinStickTier
                 fireButton.isVisible = !isUiRequested && !isTwinStickTier
                 testEvolveButton.isVisible = !isUiRequested
-
                 modeToggle.isVisible = !isUiRequested && isTwinStickTier && hasDrones
+                localizeButton.isVisible = modeToggle.isVisible && fleet.controlMode == FleetCommandComponent.ControlMode.DRONE_FOCUS
+
+                equippedWidget.isVisible = !isUiRequested
 
                 if (isUiRequested) {
                     if (!wasDocked) {
@@ -168,7 +194,8 @@ class PlayScreen(
                 inputSystem.joystickVector.set(moveJoystick.knobPercentX, moveJoystick.knobPercentY)
                 if (isTwinStickTier) {
                     inputSystem.aimVector.set(aimJoystick.knobPercentX, aimJoystick.knobPercentY)
-                    inputSystem.isFiringRequested = !inputSystem.aimVector.isZero
+                    inputSystem.isFiringRequested = !inputSystem.aimVector.isZero &&
+                        fleet.controlMode == FleetCommandComponent.ControlMode.ATTACK_DIRECTION
                 } else {
                     inputSystem.aimVector.set(0f, 0f)
                     inputSystem.isFiringRequested = fireButton.isPressed
@@ -188,14 +215,14 @@ class PlayScreen(
         moveJoystick.setPosition(50f, 50f)
         aimJoystick.setPosition(uiStage.width - aimJoystick.width - 50f, 50f)
         fireButton.setPosition(uiStage.width - fireButton.width - 50f, 50f)
-
         modeToggle.setPosition(uiStage.width - modeToggle.width - 50f, aimJoystick.y + aimJoystick.height + 20f)
+        localizeButton.setPosition(aimJoystick.x - localizeButton.width - 20f, aimJoystick.y + (aimJoystick.height / 2f) - (localizeButton.height / 2f))
 
-        val hangarW = uiStage.width * 0.95f
-        val hangarH = uiStage.height * 0.9f
-        hangarUI.setSize(hangarW, hangarH)
+        // Position Equipped Icons on left side, below where HUDSystem renders bars (startX=30, currentY starts at worldHeight-40)
+        equippedWidget.setPosition(30f, uiViewport.worldHeight - 140f)
+
+        hangarUI.setSize(uiStage.width * 0.95f, uiStage.height * 0.9f)
         hangarUI.setPosition(uiStage.width / 2f - hangarUI.width / 2f, uiStage.height / 2f - hangarUI.height / 2f)
-
         testEvolveButton.setPosition(uiStage.width / 2f - testEvolveButton.width / 2f, uiStage.height - 100f)
     }
 

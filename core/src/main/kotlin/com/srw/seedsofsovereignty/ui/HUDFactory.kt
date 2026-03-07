@@ -8,6 +8,7 @@ import com.badlogic.gdx.graphics.g2d.NinePatch
 import com.badlogic.gdx.scenes.scene2d.ui.*
 import com.badlogic.gdx.scenes.scene2d.utils.Drawable
 import com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable
+import space.earlygrey.shapedrawer.ShapeDrawer
 
 object HUDFactory {
     fun createSkin(): Skin {
@@ -47,7 +48,7 @@ object HUDFactory {
         skin.add("panel", NinePatchDrawable(NinePatch(Texture(panelPixmap), 20, 20, 20, 20)), Drawable::class.java)
         panelPixmap.dispose()
 
-        // 5. Labels & Styles (Fix Task: Restore missing styles)
+        // 5. Labels & Styles
         skin.add("default", Label.LabelStyle(mainFont, Color.WHITE))
         skin.add("title", Label.LabelStyle(titleFont, Color.CYAN))
         skin.add("medium", Label.LabelStyle(mediumFont, Color.LIGHT_GRAY))
@@ -73,7 +74,7 @@ object HUDFactory {
         skin.add("button-down", NinePatchDrawable(NinePatch(Texture(bDownPix), 4, 4, 4, 4)), Drawable::class.java)
         bDownPix.dispose()
 
-        // 6. Registration Helper for Polymorphic Button Styles
+        // 6. Registration Helper
         fun registerStyle(name: String, textStyle: TextButton.TextButtonStyle) {
             skin.add(name, textStyle, TextButton.TextButtonStyle::class.java)
             val base = Button.ButtonStyle().apply {
@@ -150,4 +151,5 @@ object HUDFactory {
     fun createDebugButton(text: String, skin: Skin): TextButton = TextButton(text, skin, "scifi").apply { setSize(200f, 60f) }
     fun createModeToggle(skin: Skin): TextButton = TextButton("WPN", skin, "mode-toggle").apply { setSize(120f, 120f) }
     fun createLabel(text: String, skin: Skin, style: String = "default"): Label = Label(text, skin, style)
+    fun createStatBar(drawer: ShapeDrawer, skin: Skin, color: Color, rtl: Boolean = false): StatBar = StatBar(drawer, skin, barColor = color, rightToLeft = rtl)
 }
