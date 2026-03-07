@@ -73,7 +73,7 @@ class SovereigntyGame : KtxGame<KtxScreen>() {
 
                 // High-fidelity rendering systems
                 add(EntityRenderSystem(batch, drawer, viewport, skin))
-                add(RenderSystem(batch, camera, drawer))
+                add(RenderSystem(batch, camera, drawer, skin))
 
                 add(RadarRenderSystem(batch, drawer, uiViewport))
                 add(HUDSystem(batch, drawer, uiViewport))

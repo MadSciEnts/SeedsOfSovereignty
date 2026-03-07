@@ -1,6 +1,6 @@
 # DEVELOPMENT PROGRESS LOG
 
-## Current Milestone: Tier 9 - Vanguard Evolution (In Progress)
+## Current Milestone: Tier 10 - Evolutionary Bridge (Planned)
 - [x] GDX-Liftoff Setup
 - [x] Knowledge Base Created (25 files)
 - [x] Tier 1 Pilot Movement System (WASD + Joystick)
@@ -23,8 +23,12 @@
 - [x] Professional Station Market UI (Weapon detail scaling & Data-link visual fix)
 - [x] Strategic Weapon System (v0.1.2): Data-driven effects, Rarity, and Specimen Chambers.
 - [x] Evolution Choice Mechanic: Keep vs. Swap logic with 3-subtier smoothing.
+- [x] Dual-Mode Persistent Drone Joystick (v0.1.4)
+- [x] Drone Localization Toggle (CAMERA vs SHIP) (v0.1.5)
+- [x] HUD Loadout Visualization (Equipped Icons) (v0.1.6)
+- [x] Seamless Evolution Celebration (No-modal flow) (v0.1.7)
 
 ## Current Global Stats
 - **Active Tier:** 9/48
 - **Active Epoch:** 1/4
-- **Build Version:** 0.1.2 (Pre-Alpha)
+- **Build Version:** 0.1.7 (Stable Alpha)

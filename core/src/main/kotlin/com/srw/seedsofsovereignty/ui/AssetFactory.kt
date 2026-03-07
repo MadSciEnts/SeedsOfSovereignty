@@ -55,6 +55,7 @@ object AssetFactory {
     }
 
     fun addProceduralAssets(skin: Skin) {
+        // 1. Specimen Frame (Station Core)
         val s = 64
         val pix = Pixmap(s, s, Pixmap.Format.RGBA8888)
         val c = 12
@@ -63,18 +64,53 @@ object AssetFactory {
         drawChamferedRect(pix, 0, 0, s, s, c, 2)
         pix.setColor(1f, 1f, 1f, 0.5f)
         drawChamferedRect(pix, 2, 2, s - 4, s - 4, c - 2, 1)
-        pix.setColor(0f, 0f, 0f, 0.3f)
-        drawChamferedRect(pix, 3, 3, s - 6, s - 6, c - 3, 1)
 
         val tex = Texture(pix)
         skin.add("specimen-frame", NinePatchDrawable(NinePatch(tex, 20, 20, 20, 20)), Drawable::class.java)
         pix.dispose()
 
+        // 2. Data Node
         val pix2 = Pixmap(12, 12, Pixmap.Format.RGBA8888)
         pix2.setColor(Color.WHITE); pix2.fillRectangle(0, 0, 12, 12)
         pix2.setColor(Color.CYAN); pix2.drawRectangle(0, 0, 12, 12)
         skin.add("data-node", TextureRegion(Texture(pix2)))
         pix2.dispose()
+
+        // 3. Spark Texture (Cross-hair style high-bit spark)
+        val spSize = 16
+        val sparkPix = Pixmap(spSize, spSize, Pixmap.Format.RGBA8888)
+        sparkPix.setColor(0f,0f,0f,0f); sparkPix.fill()
+        sparkPix.setColor(Color.WHITE)
+        sparkPix.fillRectangle(spSize/2 - 1, 2, 2, spSize - 4)
+        sparkPix.fillRectangle(2, spSize/2 - 1, spSize - 4, 2)
+        skin.add("vfx-spark", TextureRegion(Texture(sparkPix)))
+        sparkPix.dispose()
+
+        // 4. Glow Texture (Soft radial)
+        val glSize = 32
+        val glowPix = Pixmap(glSize, glSize, Pixmap.Format.RGBA8888)
+        glowPix.setColor(0f,0f,0f,0f); glowPix.fill()
+        for(i in 0 until glSize/2) {
+            val alpha = 1f - (i.toFloat() / (glSize/2f))
+            glowPix.setColor(1f, 1f, 1f, alpha * alpha)
+            glowPix.drawCircle(glSize/2, glSize/2, i)
+        }
+        skin.add("vfx-glow", TextureRegion(Texture(glowPix)))
+        glowPix.dispose()
+
+        // 5. Station Blueprint Texture
+        val bSize = 128
+        val bPix = Pixmap(bSize, bSize, Pixmap.Format.RGBA8888)
+        bPix.setColor(0f,0f,0f,0f); bPix.fill()
+        bPix.setColor(0.2f, 0.6f, 1f, 0.3f)
+        for (i in 0 until bSize step 16) {
+            bPix.drawLine(i, 0, i, bSize)
+            bPix.drawLine(0, i, bSize, i)
+        }
+        bPix.setColor(0.2f, 0.6f, 1f, 0.8f)
+        bPix.drawRectangle(0, 0, bSize, bSize)
+        skin.add("station-blueprint", TextureRegion(Texture(bPix)))
+        bPix.dispose()
     }
 
     private fun drawChamferedRect(pix: Pixmap, x: Int, y: Int, w: Int, h: Int, c: Int, thickness: Int) {

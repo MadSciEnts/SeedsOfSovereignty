@@ -13,7 +13,6 @@ import space.earlygrey.shapedrawer.ShapeDrawer
 
 /**
  * Handles the high-fidelity rendering of primary game entities.
- * Constructor injection used for Skin to prevent Fleks injection errors.
  */
 class EntityRenderSystem(
     private val batch: SpriteBatch,
@@ -43,14 +42,8 @@ class EntityRenderSystem(
             }
             entity.has(EnemyComponent) -> {
                 val enemy = entity[EnemyComponent]
-                val tier = when(enemy.type) {
-                    "Swarm" -> 1
-                    "Reaper" -> 2
-                    "Phantom" -> 7
-                    "Apex" -> 8
-                    else -> 1
-                }
-                ProceduralShipDrawer.drawPlayerShip(drawer, pos.x, pos.y, orient, orient, tier, 1, Color.RED)
+                // FIX: Use unique enemy drawing logic instead of mirroring player ships
+                ProceduralShipDrawer.drawEnemyShip(drawer, pos.x, pos.y, orient, enemy.type, Color.RED)
             }
             entity.has(DroneComponent) -> {
                 val health = if (entity.has(HealthComponent)) entity[HealthComponent] else null
@@ -59,7 +52,6 @@ class EntityRenderSystem(
             }
             entity.has(StationComponent) -> {
                 val station = entity[StationComponent]
-                // Uses the textured technical blueprint with improved radius scaling
                 ProceduralShipDrawer.drawStation(drawer, pos.x, pos.y, station.radius, skin, batch)
             }
         }
@@ -72,7 +64,8 @@ class EntityRenderSystem(
 class RenderSystem(
     private val batch: SpriteBatch,
     private val camera: com.badlogic.gdx.graphics.OrthographicCamera,
-    private val drawer: ShapeDrawer
+    private val drawer: ShapeDrawer,
+    private val skin: Skin
 ) : IteratingSystem(family { all(PositionComponent).any(ProjectileComponent, ParticleComponent, EssenceComponent) }) {
 
     override fun onTick() {
@@ -92,13 +85,28 @@ class RenderSystem(
             }
             entity.has(ParticleComponent) -> {
                 val part = entity[ParticleComponent]
-                // APPLY ALPHA FOR TRANSPARENCY
-                drawer.setColor(part.color.r, part.color.g, part.color.b, part.alpha)
 
-                if (part.type == ParticleComponent.Type.SHIELD_RIPPLE) {
-                    drawer.circle(pos.x, pos.y, part.size, 2f)
-                } else {
-                    drawer.filledCircle(pos.x, pos.y, part.size)
+                when (part.type) {
+                    ParticleComponent.Type.SPARK -> {
+                        val region = skin.getRegion("vfx-spark")
+                        batch.setColor(part.color.r, part.color.g, part.color.b, part.alpha)
+                        batch.draw(region, pos.x - part.size/2f, pos.y - part.size/2f, part.size, part.size)
+                        batch.setColor(Color.WHITE)
+                    }
+                    ParticleComponent.Type.GLOW -> {
+                        val region = skin.getRegion("vfx-glow")
+                        batch.setColor(part.color.r, part.color.g, part.color.b, part.alpha)
+                        batch.draw(region, pos.x - part.size/2f, pos.y - part.size/2f, part.size, part.size)
+                        batch.setColor(Color.WHITE)
+                    }
+                    ParticleComponent.Type.SHIELD_RIPPLE -> {
+                        drawer.setColor(part.color.r, part.color.g, part.color.b, part.alpha)
+                        drawer.circle(pos.x, pos.y, part.size, 2f)
+                    }
+                    else -> {
+                        drawer.setColor(part.color.r, part.color.g, part.color.b, part.alpha)
+                        drawer.filledCircle(pos.x, pos.y, part.size)
+                    }
                 }
             }
             entity.has(EssenceComponent) -> {

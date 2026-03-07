@@ -1,27 +1,27 @@
 # ARCHITECTURAL SYNCHRONIZATION LOG
 
 ## Drone Control Refinement (v0.1.4 Complete)
-... (previous entries)
+- [x] SovereigntyTouchpad Upgrade: Implemented custom input tracking and draw overrides for persistent state.
+- [x] Dual-Mode Joystick UI: Yellow drone mode style and persistence restoration.
+- [x] Fleet Logic Separation: Ship firing disabled in drone mode, Orbit-on-Origin implemented.
+
+## Drone Localization Toggle (v0.1.5 Complete)
+- [x] Component Update: Added LocalizationMode to FleetCommandComponent.
+- [x] UI Extension: Added "LOC" toggle button to HUD.
+- [x] Input Logic: Implemented Ship-relative rotation math in PlayerInputSystem.
 
 ## HUD Loadout Visualization (v0.1.6 Complete)
-... (previous entries)
+- [x] Widget Creation: Implemented EquippedSlotsWidget to display ModuleSlotComponent contents.
+- [x] Visual Refinement: icons scaled to 60x60 with tight framing and high-prominence DNA rendering.
+- [x] Integration: Placed loadout icons below status bars in PlayScreen HUD.
 
-## Seamless Evolution Celebration (v0.1.7 Plan)
-- [ ] **Logic Refactor:**
-    - [ ] Update `EvolutionSystem` to stop triggering `ChoiceComponent.isAwaitingChoice`.
-    - [ ] Introduce `EvolutionCelebrationComponent` to track the state of the flying icon and effects.
-- [ ] **Visual Presentation:**
-    - [ ] Create `EvolutionCelebrationSystem` to handle:
-        - [ ] Global screen flash/particle burst on Tier change.
-        - [ ] Spawning a "Flying" `ProjectileIcon` at screen center.
-        - [ ] Interpolating (sliding) the icon from center to the `EquippedSlotsWidget` position.
-- [ ] **HUD Integration:**
-    - [ ] Coordinate mapping: Translate `EquippedSlotsWidget` slot positions to stage coordinates for the flying icon's target.
-    - [ ] "Seating" effect: Trigger a small visual pop/glitch when the icon reaches the HUD.
-- [ ] **Clean up:** Deprecate or remove `EvolutionReportPopup` and related `ChoiceComponent` triggers for standard level-ups.
+## Seamless Evolution Celebration (v0.1.7 Complete)
+- [x] Logic Refactor: Updated EvolutionSystem to trigger celebration instead of modal.
+- [x] Visual Presentation: EvolutionCelebrationSystem handles full-screen flashes.
+- [x] Animation: Flying icon sequence implemented in PlayScreen using KTX Actions.
+- [x] Stability: Fixed EntityRenderSystem dependency injection crash and restored technical station designs.
 
-## Verification Protocol
-1. **Seamlessness:** Player can still move/shoot during the entire evolution sequence.
-2. **Visual Flow:** Icon starts large at center, shrinks and slides to the correct HUD slot.
-3. **Accuracy:** The flying icon matches the new Tier's "Stock" weapon DNA.
-4. **Stability:** No crashes during high-action evolution events.
+## HANDOVER: Current State (v0.1.7 Stable)
+- All systems synchronized and build verified.
+- Visual foundation restored: Stations are textured blueprints, projectiles rotate, and impacts are translucent.
+- Gameplay flow is now continuous during evolution.
