@@ -21,6 +21,11 @@ class PlayerInputSystem : IteratingSystem(family { all(PlayerComponent, Velocity
         val weapon = if (entity.has(WeaponComponent)) entity[WeaponComponent] else null
         val docking = if (entity.has(DockingComponent)) entity[DockingComponent] else null
 
+        if (!entity.has(FleetCommandComponent)) {
+            entity.configure { it += FleetCommandComponent() }
+        }
+        val fleet = entity[FleetCommandComponent]
+
         if (docking?.isDocked == true) return
 
         moveForce.set(joystickVector)
@@ -38,9 +43,21 @@ class PlayerInputSystem : IteratingSystem(family { all(PlayerComponent, Velocity
 
         if (weapon != null) {
             if (!aimVector.isZero) {
-                weapon.aimAngleRad = aimVector.angleRad()
+                val angle = aimVector.angleRad()
+
+                if (fleet.controlMode == FleetCommandComponent.ControlMode.ATTACK_DIRECTION) {
+                    weapon.aimAngleRad = angle
+                } else {
+                    // Update persistent focus for the currently selected drone slot
+                    val idx = fleet.selectedSlotIndex.coerceIn(0, 3)
+                    fleet.slotFocusAngles[idx] = angle
+                    // Update visual offset point for the reticle (stationed at 150u distance)
+                    fleet.slotFocusPoints[idx].set(com.badlogic.gdx.math.MathUtils.cos(angle) * 150f, com.badlogic.gdx.math.MathUtils.sin(angle) * 150f)
+                }
             } else if (!vel.v.isZero(0.1f)) {
-                weapon.aimAngleRad = vel.v.angleRad()
+                if (fleet.controlMode == FleetCommandComponent.ControlMode.ATTACK_DIRECTION) {
+                    weapon.aimAngleRad = vel.v.angleRad()
+                }
             }
             weapon.isFiring = isFiringRequested || Gdx.input.isKeyPressed(Keys.SPACE)
         }
@@ -55,7 +72,6 @@ class MoveSystem : IteratingSystem(family { all(PositionComponent, VelocityCompo
         pos.pos.x += vel.v.x * deltaTime
         pos.pos.y += vel.v.y * deltaTime
 
-        // Domain-Specific Friction Logic
         var frictionFactor = vel.friction
 
         if (entity.has(EssenceComponent)) {
@@ -64,9 +80,8 @@ class MoveSystem : IteratingSystem(family { all(PositionComponent, VelocityCompo
             val evo = entity[EvolutionComponent]
             val input = world.system<PlayerInputSystem>()
 
-            // SMART-BRAKE: Active deceleration for T9+ Advanced Pilots
             if (evo.currentTier >= 9 && input.joystickVector.isZero && !Gdx.input.isKeyPressed(Keys.W) && !Gdx.input.isKeyPressed(Keys.S) && !Gdx.input.isKeyPressed(Keys.A) && !Gdx.input.isKeyPressed(Keys.D)) {
-                frictionFactor *= 5.0f // Heavy braking
+                frictionFactor *= 5.0f
                 if (vel.v.len2() > 100f) spawnBrakeFlare(pos.pos.x, pos.pos.y, vel.v.angleRad())
             }
         }
@@ -77,7 +92,6 @@ class MoveSystem : IteratingSystem(family { all(PositionComponent, VelocityCompo
     }
 
     private fun spawnBrakeFlare(x: Float, y: Float, angleRad: Float) {
-        // Forward-facing sparks to simulate thruster counter-fire
         world.entity {
             it += PositionComponent().apply { pos.set(x + com.badlogic.gdx.math.MathUtils.cos(angleRad)*20f, y + com.badlogic.gdx.math.MathUtils.sin(angleRad)*20f) }
             it += VelocityComponent().apply {

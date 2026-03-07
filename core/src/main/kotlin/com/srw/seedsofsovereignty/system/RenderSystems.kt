@@ -50,7 +50,6 @@ class RenderSystem(
             } else if (entity.has(ProjectileComponent)) {
                 val proj = entity[ProjectileComponent]
                 val vel = entity[VelocityComponent].v
-                // Fix Task #4: Use the entity's dynamic color instead of hardcoded tier colors
                 drawProjectile(pos.x, pos.y, vel.angleRad(), proj.tier, proj.color)
             } else if (entity.has(EnemyComponent)) {
                 drawEnemy(pos.x, pos.y, entity[EnemyComponent].type)
@@ -132,5 +131,65 @@ class RenderSystem(
 
     private fun drawDetectedObject(x: Float, y: Float) {
         drawer.setColor(Color.GRAY); drawer.rectangle(x - 8f, y - 8f, 16f, 16f, 1f); drawer.setColor(Color.DARK_GRAY); drawer.filledRectangle(x - 6f, y - 6f, 12f, 12f)
+    }
+}
+
+/**
+ * Technical visualization for Fleet Directives.
+ * Draws the persistent Command Reticle and Data-Link tether.
+ */
+class DroneFocusRenderSystem(
+    private val batch: SpriteBatch,
+    private val camera: OrthographicCamera,
+    private val drawer: ShapeDrawer
+) : IteratingSystem(family { all(PlayerComponent, FleetCommandComponent, PositionComponent) }) {
+
+    private val colorAmber = Color(1f, 0.7f, 0f, 1f) // Tactical Command Amber
+
+    override fun onTick() {
+        batch.use(camera.combined) {
+            super.onTick()
+        }
+    }
+
+    override fun onTickEntity(entity: Entity) {
+        val fleet = entity[FleetCommandComponent]
+        val shipPos = entity[PositionComponent].pos
+        val time = System.currentTimeMillis() / 1000f
+
+        // Only draw if we are in focus mode OR we want a persistent background directive hint
+        fleet.slotFocusPoints.forEachIndexed { index, focusOffset ->
+            val isSelected = index == fleet.selectedSlotIndex
+            val alphaMult = if (isSelected) 1.0f else 0.25f
+
+            val worldFocusX = shipPos.x + focusOffset.x
+            val worldFocusY = shipPos.y + focusOffset.y
+
+            // 1. The Data-Link Tether (Rule: Visual but not distracting)
+            drawer.setColor(colorAmber.r, colorAmber.g, colorAmber.b, 0.1f * alphaMult)
+            drawer.line(shipPos.x, shipPos.y, worldFocusX, worldFocusY, 1f)
+
+            // 2. The "Vanguard Directive" Reticle
+            drawDirectiveReticle(worldFocusX, worldFocusY, time, alphaMult)
+        }
+    }
+
+    private fun drawDirectiveReticle(x: Float, y: Float, time: Float, alpha: Float) {
+        // Outer Broken Ring (Rotating)
+        drawer.setColor(colorAmber.r, colorAmber.g, colorAmber.b, 0.4f * alpha)
+        val rot = time * 1.5f
+        for (i in 0 until 3) {
+            val angle = rot + (i * MathUtils.PI2 / 3f)
+            drawer.arc(x, y, 25f, angle, 1.2f, 2f)
+        }
+
+        // Inner Pulsing technical ring
+        val pulse = 0.3f + MathUtils.sin(time * 4f) * 0.2f
+        drawer.setColor(colorAmber.r, colorAmber.g, colorAmber.b, pulse * alpha)
+        drawer.circle(x, y, 12f, 1.5f)
+
+        // Center technical marker
+        drawer.setColor(colorAmber.r, colorAmber.g, colorAmber.b, 0.8f * alpha)
+        drawer.filledCircle(x, y, 3f)
     }
 }

@@ -62,18 +62,28 @@ class ShipAnalysisTable(
 
         if (player != null) {
             with(world) {
+                val playerEvo = player[EvolutionComponent]
                 if (player.has(ModuleSlotComponent)) {
                     player[ModuleSlotComponent].slots.forEach { slot ->
+                        // Task Fix: Do not show drone slots until player reaches Tier 5 (Rule #8)
+                        if (slot.type == SlotType.DRONE && playerEvo.currentTier < 5) return@forEach
+
                         val slotAction = when (slot.type) {
                             SlotType.WEAPON -> Action.GOTO_WEAPONS
                             SlotType.DRONE -> Action.GOTO_DRONES
                             else -> Action.GOTO_WEAPONS
                         }
 
-                        val icon = if (slot.type == SlotType.WEAPON && slot.equippedTier > 0) {
-                            // Find player module to get its specific projectile color
-                            val playerModule = player[WeaponModuleComponent]
-                            ProjectileIcon(drawer, slot.equippedTier, 1.5f, playerModule.projectileColor)
+                        // Determine Icon based on equipped module DNA
+                        val icon = if (slot.type == SlotType.WEAPON) {
+                            val module = player[WeaponModuleComponent]
+                            ProjectileIcon(drawer, skin, module.projectileTier, 1.5f, module.projectileColor)
+                        } else if (slot.type == SlotType.DRONE && slot.slotEntity != null) {
+                            val dEntity = slot.slotEntity!!
+                            if (dEntity.has(DroneModuleComponent)) {
+                                val dModule = dEntity[DroneModuleComponent]
+                                ProjectileIcon(drawer, skin, dModule.weaponDNA.projectileTier, 1.5f, dModule.weaponDNA.projectileColor)
+                            } else null
                         } else null
 
                         val slotButton = UIButtonFactory.createButton(skin, "T${slot.tier} ${slot.type} - ${slot.equippedName}", UIButtonFactory.ButtonType.MODULE, icon) {
@@ -94,9 +104,9 @@ class ShipAnalysisTable(
 
     private fun addStatRow(name: String, cur: Float, max: Float, color: Color) {
         val row = Table(skin)
-        row.add(Label(name, skin)).width(120f).left()
-        val bar = StatBar(drawer, cur, max, color)
-        row.add(bar).size(180f, 15f).padLeft(10f)
+        row.add(Label(name, skin, "medium")).width(120f).left()
+        val bar = StatBar(drawer, skin, cur, max, color)
+        row.add(bar).size(180f, 22f).padLeft(10f)
         statsTable.add(row).padBottom(15f).row()
     }
 

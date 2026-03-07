@@ -18,13 +18,14 @@ data class ModuleSlot(
     val type: SlotType,
     val tier: Int,
     var equippedName: String = "EMPTY",
-    var equippedTier: Int = 0
+    var equippedTier: Int = 0,
+    var slotEntity: Entity? = null // Reference to the entity holding the module stats
 )
 
 enum class SlotType { WEAPON, DRONE, UTILITY }
 
 /**
- * Manages a pending decision for the player (e.g., keeping old gear vs swapping to new default).
+ * Manages a pending decision for the player.
  */
 data class ChoiceComponent(
     var pendingModule: WeaponModuleComponent? = null,

@@ -30,6 +30,7 @@ data class StationComponent(
  */
 data class MarketComponent(
     val weaponOffers: MutableList<WeaponModuleComponent> = mutableListOf(),
+    val droneOffers: MutableList<DroneModuleComponent> = mutableListOf(),
     var essencePrice: Int = 0, // Base price multiplier or flat fee
     var refreshTimer: Float = 60f // Seconds until stock changes
 ) : Component<MarketComponent> {

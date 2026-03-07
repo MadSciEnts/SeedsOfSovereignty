@@ -5,6 +5,7 @@ import com.github.quillraven.fleks.*
 import com.srw.seedsofsovereignty.component.*
 import com.srw.seedsofsovereignty.manager.DockingManager
 import com.srw.seedsofsovereignty.manager.MarketManager
+import com.srw.seedsofsovereignty.util.ModuleGenerator
 import space.earlygrey.shapedrawer.ShapeDrawer
 
 class StationHangarUI(
@@ -23,7 +24,7 @@ class StationHangarUI(
     }
 
     private var marketTable: MarketTable? = null
-    private var choicePopup: ChoicePopup? = null
+    private var reportPopup: EvolutionReportPopup? = null
     private val titleLabel = Label("", skin, "title")
 
     init {
@@ -75,7 +76,6 @@ class StationHangarUI(
 
         val isChoiceActive = currentState == State.CHOICE_MODAL
 
-        // 1. Contextual Header: Only show Station Info if NOT in a critical choice modal
         if (!isChoiceActive) {
             world.family { all(PlayerComponent, DockingComponent) }.firstOrNull()?.let { player ->
                 with(world) {
@@ -90,28 +90,24 @@ class StationHangarUI(
             add(titleLabel).padBottom(15f).row()
         }
 
-        // 2. State Resolution
         when (currentState) {
             State.WELCOME -> {
                 shipAnalysisTable.refresh()
                 add(shipAnalysisTable).expand().fill()
             }
             State.WEAPON_MARKET -> {
-                marketTable = MarketTable(skin, drawer, world, marketManager) {
+                marketTable = MarketTable(skin, drawer, world, marketManager, SlotType.WEAPON) {
                     currentState = State.WELCOME
                     refreshState()
                 }
                 add(marketTable).expand().fill()
             }
             State.DRONE_MARKET -> {
-                val placeholder = Table(skin)
-                placeholder.add(Label("DRONE MARKET - COMING SOON", skin, "title")).row()
-                val backBtn = UIButtonFactory.createButton(skin, "BACK TO COMMAND") {
+                marketTable = MarketTable(skin, drawer, world, marketManager, SlotType.DRONE) {
                     currentState = State.WELCOME
                     refreshState()
                 }
-                placeholder.add(backBtn).size(400f, 80f).padTop(50f)
-                add(placeholder).expand().fill()
+                add(marketTable).expand().fill()
             }
             State.CHOICE_MODAL -> {
                 val player = world.family { all(PlayerComponent, ChoiceComponent, WeaponModuleComponent, EvolutionComponent) }.first()
@@ -119,48 +115,24 @@ class StationHangarUI(
                     val choice = player[ChoiceComponent]
                     val evo = player[EvolutionComponent]
 
-                    choicePopup = ChoicePopup(
+                    val droneModule = if (player.has(ModuleSlotComponent)) {
+                        val dSlot = player[ModuleSlotComponent].slots.find { it.type == SlotType.DRONE }
+                        dSlot?.slotEntity?.let { if (it.has(DroneModuleComponent)) it[DroneModuleComponent] else null }
+                    } else null
+
+                    reportPopup = EvolutionReportPopup(
                         skin, drawer,
-                        choice.choiceType,
-                        "TIER ${evo.currentTier} -> ${evo.currentTier + 1}",
+                        evo.currentTier,
                         player[WeaponModuleComponent],
-                        choice.pendingModule!!,
-                        onKeep = {
-                            evo.currentTier++
-                            evo.subTier = 1
-                            choice.isAwaitingChoice = false
-                            currentState = State.WELCOME
-                            refreshState()
-                        },
-                        onSwap = {
-                            val current = player[WeaponModuleComponent]
-                            val pending = choice.pendingModule!!
-                            current.name = pending.name
-                            current.description = pending.description
-                            current.projectileTier = pending.projectileTier
-                            current.rarity = pending.rarity
-                            current.fireRate = pending.fireRate
-                            current.projectileSpeed = pending.projectileSpeed
-                            current.projectileColor = pending.projectileColor
-                            current.effects.clear()
-                            current.effects.addAll(pending.effects)
-
-                            evo.currentTier++
-                            evo.subTier = 1
-                            if (player.has(ModuleSlotComponent)) {
-                                player[ModuleSlotComponent].slots.find { it.type == SlotType.WEAPON }?.let { weaponSlot ->
-                                    weaponSlot.equippedName = current.name
-                                    weaponSlot.equippedTier = current.projectileTier
-                                }
-                            }
-
+                        droneModule,
+                        onConfirm = {
                             choice.isAwaitingChoice = false
                             currentState = State.WELCOME
                             refreshState()
                         }
                     )
                 }
-                add(choicePopup).expand().center()
+                add(reportPopup).expand().center()
             }
         }
     }

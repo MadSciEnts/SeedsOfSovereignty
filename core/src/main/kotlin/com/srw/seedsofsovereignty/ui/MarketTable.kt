@@ -17,6 +17,7 @@ class MarketTable(
     private val drawer: ShapeDrawer,
     private val world: World,
     private val marketManager: MarketManager,
+    private val category: SlotType,
     private val onExit: () -> Unit
 ) : Table(skin) {
 
@@ -27,6 +28,10 @@ class MarketTable(
     private val catalogScrollPane = ScrollPane(catalogScrollTable, skin)
     private var selectedModuleIndex = 0
     private var selectedOfferButton: Actor? = null
+
+    // Track visible items to map indices correctly
+    private val visibleWeaponOffers = mutableListOf<WeaponModuleComponent>()
+    private val visibleDroneOffers = mutableListOf<DroneModuleComponent>()
 
     private val tempVec1 = Vector2()
     private val tempVec2 = Vector2()
@@ -39,28 +44,31 @@ class MarketTable(
 
     private fun setupLayout() {
         val centerColumn = Table(skin)
-        centerColumn.add(Label("STATION DATA LINK", skin)).padBottom(5f).row()
+        centerColumn.add(Label("STATION DATA LINK: ${category.name}", skin)).padBottom(5f).row()
         centerColumn.add(catalogScrollPane).width(450f).height(350f).row()
 
         val swapBtn = UIButtonFactory.createButton(skin, "CONFIRM SWAP", UIButtonFactory.ButtonType.MARKET) {
             val player = world.family { all(PlayerComponent, DockingComponent) }.first()
             val station = with(world) { player[DockingComponent].nearestStation!! }
-
-            // Map the relative UI selection index back to the absolute station inventory index
-            val playerTier = with(world) { player[EvolutionComponent].currentTier }
             val market = with(world) { station[MarketComponent] }
-            val visibleOffers = market.weaponOffers.filter { it.projectileTier == playerTier }
 
-            if (selectedModuleIndex in visibleOffers.indices) {
-                val targetModule = visibleOffers[selectedModuleIndex]
-                val absoluteIndex = market.weaponOffers.indexOf(targetModule)
-                marketManager.swapModule(player, station, absoluteIndex)
-                refreshCatalog()
+            if (category == SlotType.WEAPON) {
+                if (selectedModuleIndex in visibleWeaponOffers.indices) {
+                    val absIndex = market.weaponOffers.indexOf(visibleWeaponOffers[selectedModuleIndex])
+                    marketManager.swapModule(player, station, absIndex)
+                }
+            } else {
+                if (selectedModuleIndex in visibleDroneOffers.indices) {
+                    val absIndex = market.droneOffers.indexOf(visibleDroneOffers[selectedModuleIndex])
+                    // We target the first drone slot for this market view
+                    marketManager.swapDroneModule(player, station, absIndex, 0)
+                }
             }
+            refreshCatalog()
         }
         centerColumn.add(swapBtn).size(450f, 90f).padTop(20f).row()
 
-        val exitBtn = UIButtonFactory.createButton(skin, "EXIT CATEGORY", UIButtonFactory.ButtonType.GENERIC) {
+        val exitBtn = UIButtonFactory.createButton(skin, "BACK TO ANALYSIS", UIButtonFactory.ButtonType.GENERIC) {
             onExit()
         }
         centerColumn.add(exitBtn).size(450f, 70f).padTop(10f)
@@ -73,51 +81,70 @@ class MarketTable(
     fun refreshCatalog() {
         catalogScrollTable.clear()
         selectedOfferButton = null
+        visibleWeaponOffers.clear()
+        visibleDroneOffers.clear()
 
         val player = world.family { all(PlayerComponent, DockingComponent, EvolutionComponent) }.first()
         val playerTier = with(world) { player[EvolutionComponent].currentTier }
         val station = with(world) { player[DockingComponent].nearestStation ?: return }
         val market = with(world) { if (station.has(MarketComponent)) station[MarketComponent] else null } ?: return
 
-        // ENFORCE RULE #1: Filter for compatible modules
-        var visibleOffers = market.weaponOffers.filter { it.projectileTier == playerTier }
+        // Task Fix: Restock category if no compatible items exist
+        val compatibleWeapons = market.weaponOffers.filter { it.projectileTier == playerTier }
+        val compatibleDrones = market.droneOffers.filter { it.weaponDNA.projectileTier == playerTier }
 
-        // Dynamic Restocking: If no compatible items (like evolving at the Alpha Outpost)
-        if (visibleOffers.isEmpty()) {
-            market.weaponOffers.clear() // Clear old tier items
+        if ((category == SlotType.WEAPON && compatibleWeapons.isEmpty()) ||
+            (category == SlotType.DRONE && compatibleDrones.isEmpty())) {
+            // Partial restock based on category need
+            if (category == SlotType.WEAPON) market.weaponOffers.clear() else market.droneOffers.clear()
             for (i in 0 until 10) {
-                market.weaponOffers.add(ModuleGenerator.generateWeapon(playerTier))
+                if (category == SlotType.WEAPON) market.weaponOffers.add(ModuleGenerator.generateWeapon(playerTier))
+                else market.droneOffers.add(ModuleGenerator.generateDroneModule(playerTier))
             }
-            visibleOffers = market.weaponOffers
         }
 
-        visibleOffers.forEachIndexed { index, offer ->
-            val type = if (index == selectedModuleIndex) UIButtonFactory.ButtonType.SELECTED else UIButtonFactory.ButtonType.MODULE
-            val icon = ProjectileIcon(drawer, offer.projectileTier, 1.5f, offer.projectileColor)
-
-            val offerBtn = UIButtonFactory.createButton(skin, "${offer.name} [T${offer.projectileTier}]", type, icon) {
-                selectedModuleIndex = index
-                refreshCatalog()
+        // Build filtered list and populate UI
+        if (category == SlotType.WEAPON) {
+            visibleWeaponOffers.addAll(market.weaponOffers.filter { it.projectileTier == playerTier })
+            visibleWeaponOffers.forEachIndexed { index, offer ->
+                addModuleButton(offer.name, offer.projectileTier, offer.projectileColor, index)
             }
-
-            if (index == selectedModuleIndex) selectedOfferButton = offerBtn
-            catalogScrollTable.add(offerBtn).size(420f, 75f).padBottom(8f).row()
+        } else {
+            visibleDroneOffers.addAll(market.droneOffers.filter { it.weaponDNA.projectileTier == playerTier })
+            visibleDroneOffers.forEachIndexed { index, offer ->
+                addModuleButton(offer.name, offer.weaponDNA.projectileTier, offer.weaponDNA.projectileColor, index)
+            }
         }
 
-        // Ensure index stays in bounds after a refresh/filter
-        if (selectedModuleIndex >= visibleOffers.size) selectedModuleIndex = 0
-
-        updateSymmetry(player, station, visibleOffers)
+        if (selectedModuleIndex >= (if(category == SlotType.WEAPON) visibleWeaponOffers.size else visibleDroneOffers.size)) selectedModuleIndex = 0
+        updateSymmetry(player, station)
     }
 
-    private fun updateSymmetry(player: com.github.quillraven.fleks.Entity, station: com.github.quillraven.fleks.Entity, visibleOffers: List<WeaponModuleComponent>) {
-        val currentModule = with(world) { player[WeaponModuleComponent] }
-        equippedDetails.update(currentModule)
+    private fun addModuleButton(name: String, tier: Int, color: Color, index: Int) {
+        val type = if (index == selectedModuleIndex) UIButtonFactory.ButtonType.SELECTED else UIButtonFactory.ButtonType.MODULE
+        val icon = ProjectileIcon(drawer, skin, tier, 1.5f, color)
 
-        val selectedOffer = if (selectedModuleIndex >= 0 && selectedModuleIndex < visibleOffers.size) {
-            visibleOffers[selectedModuleIndex]
-        } else null
-        offeredDetails.update(selectedOffer)
+        val btn = UIButtonFactory.createButton(skin, "$name [T$tier]", type, icon) {
+            selectedModuleIndex = index
+            refreshCatalog()
+        }
+
+        if (index == selectedModuleIndex) selectedOfferButton = btn
+        catalogScrollTable.add(btn).size(420f, 75f).padBottom(8f).row()
+    }
+
+    private fun updateSymmetry(player: com.github.quillraven.fleks.Entity, station: com.github.quillraven.fleks.Entity) {
+        with(world) {
+            if (category == SlotType.WEAPON) {
+                equippedDetails.update(player[WeaponModuleComponent])
+                offeredDetails.update(visibleWeaponOffers.getOrNull(selectedModuleIndex))
+            } else {
+                val slotComp = player[ModuleSlotComponent]
+                val dSlot = slotComp.slots.filter { it.type == SlotType.DRONE }.getOrNull(0)
+                dSlot?.slotEntity?.let { if (it.has(DroneModuleComponent)) equippedDetails.update(it[DroneModuleComponent].weaponDNA) }
+                offeredDetails.update(visibleDroneOffers.getOrNull(selectedModuleIndex)?.weaponDNA)
+            }
+        }
     }
 
     override fun drawChildren(batch: Batch, parentAlpha: Float) {
@@ -141,7 +168,6 @@ class MarketTable(
                     stageToLocalCoordinates(tempVec2)
 
                     drawer.setColor(Color.CYAN.r, Color.CYAN.g, Color.CYAN.b, 0.7f * parentAlpha)
-
                     val startX = tempVec1.x + 5f
                     val endX = tempVec2.x - 5f
                     val midX = startX + (endX - startX) * 0.4f

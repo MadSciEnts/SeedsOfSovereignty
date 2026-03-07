@@ -3,51 +3,91 @@ package com.srw.seedsofsovereignty.ui
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
+import com.badlogic.gdx.graphics.g2d.NinePatch
 import com.badlogic.gdx.graphics.g2d.TextureRegion
+import com.badlogic.gdx.scenes.scene2d.ui.Skin
+import com.badlogic.gdx.scenes.scene2d.utils.Drawable
+import com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable
 
+/**
+ * Generates procedural assets at runtime to ensure high-bit pixel art consistency.
+ * Optimized for high-contrast "Chamber Layering" aesthetics.
+ */
 object AssetFactory {
+
     fun createWhitePixel(): TextureRegion {
-        val pixmap = Pixmap(1, 1, Pixmap.Format.RGBA8888).apply {
-            setColor(Color.WHITE)
-            fill()
-        }
-        val texture = Texture(pixmap)
-        pixmap.dispose()
-        return TextureRegion(texture)
+        val pix = Pixmap(1, 1, Pixmap.Format.RGBA8888)
+        pix.setColor(Color.WHITE); pix.fill()
+        val tex = Texture(pix)
+        pix.dispose()
+        return TextureRegion(tex)
     }
 
     fun createStarLayers(): List<Texture> {
         val layers = mutableListOf<Texture>()
-        val sizes = listOf(1024, 1024, 1024)
-        val starCounts = listOf(200, 150, 100)
+        val counts = listOf(150, 70, 35)
+        val sizes = listOf(1, 1, 2)
 
-        sizes.forEachIndexed { index, size ->
-            val pixmap = Pixmap(size, size, Pixmap.Format.RGBA8888).apply {
-                setColor(0f, 0f, 0f, 0f)
-                fill()
+        counts.forEachIndexed { index, count ->
+            val pix = Pixmap(512, 512, Pixmap.Format.RGBA8888)
+            pix.setColor(0f, 0f, 0f, 0f); pix.fill()
+
+            for (i in 0 until count) {
+                val x = (Math.random() * 512).toInt()
+                val y = (Math.random() * 512).toInt()
+
+                val v = 0.3f + (Math.random().toFloat() * 0.7f)
+                val roll = Math.random()
+                when {
+                    roll > 0.94 -> pix.setColor(0.6f * v, 0.9f * v, 1f * v, v)
+                    roll > 0.88 -> pix.setColor(1f * v, 0.95f * v, 0.6f * v, v)
+                    roll > 0.82 -> pix.setColor(1f * v, 0.4f * v, 0.4f * v, v * 0.7f)
+                    else -> pix.setColor(v, v, v, v * 0.8f)
+                }
+                pix.fillRectangle(x, y, sizes[index], sizes[index])
             }
-
-            for (i in 0 until starCounts[index]) {
-                val brightness = 0.5f + (Math.random() * 0.5f).toFloat()
-                val x = (Math.random() * size).toInt()
-                val y = (Math.random() * size).toInt()
-
-                pixmap.setColor(brightness, brightness, brightness, 1f)
-                pixmap.drawPixel(x, y)
-                pixmap.setColor(brightness, brightness, brightness, 0.4f)
-                pixmap.drawPixel(x + 1, y)
-                pixmap.drawPixel(x - 1, y)
-                pixmap.drawPixel(x, y + 1)
-                pixmap.drawPixel(x, y - 1)
-            }
-
-            val tex = Texture(pixmap, true).apply {
-                setWrap(Texture.TextureWrap.Repeat, Texture.TextureWrap.Repeat)
-                setFilter(Texture.TextureFilter.MipMapLinearLinear, Texture.TextureFilter.Linear)
-            }
+            val tex = Texture(pix)
+            tex.setWrap(Texture.TextureWrap.Repeat, Texture.TextureWrap.Repeat)
             layers.add(tex)
-            pixmap.dispose()
+            pix.dispose()
         }
         return layers
+    }
+
+    fun addProceduralAssets(skin: Skin) {
+        val s = 64
+        val pix = Pixmap(s, s, Pixmap.Format.RGBA8888)
+        val c = 12
+        pix.setColor(0f, 0f, 0f, 0f); pix.fill()
+        pix.setColor(0.4f, 0.9f, 1f, 1f)
+        drawChamferedRect(pix, 0, 0, s, s, c, 2)
+        pix.setColor(1f, 1f, 1f, 0.5f)
+        drawChamferedRect(pix, 2, 2, s - 4, s - 4, c - 2, 1)
+        pix.setColor(0f, 0f, 0f, 0.3f)
+        drawChamferedRect(pix, 3, 3, s - 6, s - 6, c - 3, 1)
+
+        val tex = Texture(pix)
+        skin.add("specimen-frame", NinePatchDrawable(NinePatch(tex, 20, 20, 20, 20)), Drawable::class.java)
+        pix.dispose()
+
+        val pix2 = Pixmap(12, 12, Pixmap.Format.RGBA8888)
+        pix2.setColor(Color.WHITE); pix2.fillRectangle(0, 0, 12, 12)
+        pix2.setColor(Color.CYAN); pix2.drawRectangle(0, 0, 12, 12)
+        skin.add("data-node", TextureRegion(Texture(pix2)))
+        pix2.dispose()
+    }
+
+    private fun drawChamferedRect(pix: Pixmap, x: Int, y: Int, w: Int, h: Int, c: Int, thickness: Int) {
+        for (t in 0 until thickness) {
+            val ox = x + t; val oy = y + t; val ow = w - t * 2; val oh = h - t * 2
+            pix.drawLine(ox + c, oy, ox + ow - c, oy)
+            pix.drawLine(ox + c, oy + oh - 1, ox + ow - c, oy + oh - 1)
+            pix.drawLine(ox, oy + c, ox, oy + oh - c)
+            pix.drawLine(ox + ow - 1, oy + c, ox + ow - 1, oy + oh - c)
+            pix.drawLine(ox, oy + c, ox + c, oy)
+            pix.drawLine(ox + ow - c, oy, ox + ow - 1, oy + c)
+            pix.drawLine(ox, oy + oh - c, ox + c, oy + oh - 1)
+            pix.drawLine(ox + ow - c, oy + oh - 1, ox + ow - 1, oy + oh - c)
+        }
     }
 }

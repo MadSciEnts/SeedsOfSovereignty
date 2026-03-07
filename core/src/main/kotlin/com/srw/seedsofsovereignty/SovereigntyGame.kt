@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.utils.viewport.ExtendViewport
 import com.github.quillraven.fleks.World
 import com.github.quillraven.fleks.configureWorld
+import com.srw.seedsofsovereignty.manager.EvolutionManager
 import com.srw.seedsofsovereignty.screen.PlayScreen
 import com.srw.seedsofsovereignty.system.*
 import com.srw.seedsofsovereignty.ui.AssetFactory
@@ -23,6 +24,8 @@ class SovereigntyGame : KtxGame<KtxScreen>() {
     private val starTextures by lazy { AssetFactory.createStarLayers() }
     private val drawer by lazy { ShapeDrawer(batch, whitePixel) }
 
+    private val evolutionManager = EvolutionManager()
+
     private val world: World by lazy {
         configureWorld {
             injectables {
@@ -31,6 +34,7 @@ class SovereigntyGame : KtxGame<KtxScreen>() {
                 add("gameViewport", viewport)
                 add("uiViewport", uiViewport)
                 add(drawer)
+                add(evolutionManager)
             }
             systems {
                 add(ClearScreenSystem())
@@ -51,11 +55,11 @@ class SovereigntyGame : KtxGame<KtxScreen>() {
                 add(CombatSystem())
                 add(CollisionDamageSystem())
                 add(VitalsSystem())
-                add(EffectSystem())
+                add(StatusEffectSystem())
                 add(LifeSpanSystem())
 
                 add(CollectionSystem())
-                add(EvolutionSystem())
+                add(EvolutionSystem(evolutionManager))
 
                 add(SensorSystem())
                 add(StationSystem())

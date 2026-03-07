@@ -53,7 +53,6 @@ class WeaponSystem : IteratingSystem(family { all(WeaponComponent, PositionCompo
                         val bulletSpeed = module?.projectileSpeed ?: (if (isEnemy) 600f else 1000f)
                         this.v.set(bulletSpeed, 0f).setAngleRad(aimAngle)
                     }
-                    // Fix Task #4: Ensure in-game projectiles match module DNA
                     e += ProjectileComponent(
                         tier = module?.projectileTier ?: tier,
                         color = module?.projectileColor ?: Color.YELLOW,
@@ -109,6 +108,9 @@ class CombatSystem : IteratingSystem(family { all(ProjectileComponent, PositionC
     }
 
     private fun applyEffects(target: Entity, effects: List<ProjectileEffect>, effectPos: Vector2) {
+        // Task Fix: Support Shield Piercing (Rule #6)
+        val isPiercing = effects.any { it.type == EffectType.SHIELD_PIERCE }
+
         effects.forEach { effect ->
             spawnVfx(effect.vfx, effectPos.x, effectPos.y)
 
@@ -122,10 +124,20 @@ class CombatSystem : IteratingSystem(family { all(ProjectileComponent, PositionC
                     }
                 }
                 EffectType.SHIELD_DAMAGE -> {
-                    if (target.has(ShieldComponent) && target[ShieldComponent].active) {
+                    // Piercing rounds ignore this effect type or don't carry it
+                    if (!isPiercing && target.has(ShieldComponent) && target[ShieldComponent].active) {
                         val shield = target[ShieldComponent]
                         shield.current = (shield.current - effect.potency).coerceAtLeast(0f)
                     }
+                }
+                EffectType.SPEED_MULTIPLIER, EffectType.COOLDOWN_MULTIPLIER -> {
+                    // Strategic Infection: Apply duration-based effect
+                    if (!target.has(StatusEffectComponent)) {
+                        target.configure { it += StatusEffectComponent() }
+                    }
+                    target[StatusEffectComponent].activeEffects.add(
+                        ActiveEffect(effect.type, effect.potency, effect.duration, effect.vfx)
+                    )
                 }
                 else -> {}
             }

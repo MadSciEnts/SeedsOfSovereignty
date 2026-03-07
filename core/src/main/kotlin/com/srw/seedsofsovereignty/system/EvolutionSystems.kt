@@ -3,8 +3,7 @@ package com.srw.seedsofsovereignty.system
 import com.github.quillraven.fleks.*
 import com.github.quillraven.fleks.World.Companion.family
 import com.srw.seedsofsovereignty.component.*
-import com.badlogic.gdx.math.MathUtils
-import com.srw.seedsofsovereignty.util.ModuleGenerator
+import com.srw.seedsofsovereignty.manager.EvolutionManager
 
 class CollectionSystem : IteratingSystem(family { all(PlayerComponent, PositionComponent, EvolutionComponent) }) {
     private val essenceFamily by lazy { world.family { all(EssenceComponent, PositionComponent, VelocityComponent) } }
@@ -37,46 +36,41 @@ class CollectionSystem : IteratingSystem(family { all(PlayerComponent, PositionC
     }
 }
 
-class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionComponent, WeaponComponent, VelocityComponent) }) {
-    private val droneFamily by lazy { world.family { all(DroneComponent) } }
+class EvolutionSystem(
+    private val evolutionManager: EvolutionManager
+) : IteratingSystem(family { all(PlayerComponent, EvolutionComponent, WeaponComponent, VelocityComponent) }) {
 
     override fun onTickEntity(entity: Entity) {
         val evo = entity[EvolutionComponent]
         val weapon = entity[WeaponComponent]
-        val vel = entity[VelocityComponent]
 
-        if (!entity.has(WeaponModuleComponent)) {
-            entity.configure { it += WeaponModuleComponent() }
-        }
-
-        if (!entity.has(ChoiceComponent)) {
-            entity.configure { it += ChoiceComponent() }
-        }
+        if (!entity.has(WeaponModuleComponent)) entity.configure { it += WeaponModuleComponent() }
+        if (!entity.has(ChoiceComponent)) entity.configure { it += ChoiceComponent() }
 
         val choice = entity[ChoiceComponent]
 
-        // Progress check: Only allow collection/subtier logic if NOT currently deciding on a major evolution
+        // Only process progress if NOT currently viewing a discovery report
         if (!choice.isAwaitingChoice && evo.essenceCollected >= evo.essenceRequired) {
             evo.subTier++
             evo.essenceCollected = 0
             evo.essenceRequired = (evo.essenceRequired * 1.5f).toInt()
 
             // Handle Major Tier Threshold
-            if (evo.subTier == 5) {
+            if (evo.subTier == 4) {
                 val nextTier = evo.currentTier + 1
-                if (nextTier <= 9) {
-                    choice.pendingModule = ModuleGenerator.generateWeapon(nextTier, Rarity.COMMON).apply {
-                        name = "STOCK T$nextTier"
-                        description = "Standard issue hardware for your new chassis."
-                    }
+                if (nextTier <= 48) {
+                    // Fix: Pass world as the first parameter to applyTierBaseline
+                    evolutionManager.applyTierBaseline(world, entity, nextTier)
+
+                    // Trigger the visual technical briefing
                     choice.isAwaitingChoice = true
                     choice.choiceType = ChoiceComponent.ChoiceType.EVOLUTION_UPGRADE
                 } else {
-                    evo.subTier = 4 // Max Tier Reached for this epoch
+                    evo.subTier = 3 // Max progression for this build
                 }
             } else {
-                // Regular sub-tier physical upgrade
-                weapon.barrels = evo.subTier.coerceIn(1, 4)
+                // Physical barrel increase (1 to 3) for sub-tier upgrades
+                weapon.barrels = evo.subTier.coerceIn(1, 3)
                 generateCenterOutSequence(weapon)
             }
         }
@@ -88,7 +82,6 @@ class EvolutionSystem : IteratingSystem(family { all(PlayerComponent, EvolutionC
             1 -> weapon.barrelSequence.add(0)
             2 -> weapon.barrelSequence.addAll(listOf(0, 1))
             3 -> weapon.barrelSequence.addAll(listOf(1, 0, 2))
-            4 -> weapon.barrelSequence.addAll(listOf(1, 2, 0, 3))
             else -> { for (i in 0 until weapon.barrels) weapon.barrelSequence.add(i) }
         }
         weapon.currentBarrel = 0

@@ -4,7 +4,7 @@
 - [x] GDX-Liftoff Setup
 - [x] Knowledge Base Created (25 files)
 - [x] Tier 1 Pilot Movement System (WASD + Joystick)
-- [x] Procedural Starfield System (Verified smooth parallax)
+- [x] Procedural Starfield System (High-depth value range verified)
 - [x] Tier 1 Sub-Tier Weapons (1a-1d visual indicators)
 - [x] Major Tier 2 Evolution (Violet Interceptor)
 - [x] Major Tier 3 Evolution (Drone Carrier + Autonomous AI)
@@ -21,8 +21,10 @@
 - [x] Tier 8 Evolution (Dreadnought) (8a-8d implemented & visual DNA verified)
 - [x] Tier 9 Evolution (Vanguard) (Base Chassis & Logic)
 - [x] Professional Station Market UI (Weapon detail scaling & Data-link visual fix)
+- [x] Strategic Weapon System (v0.1.2): Data-driven effects, Rarity, and Specimen Chambers.
+- [x] Evolution Choice Mechanic: Keep vs. Swap logic with 3-subtier smoothing.
 
 ## Current Global Stats
 - **Active Tier:** 9/48
 - **Active Epoch:** 1/4
-- **Build Version:** 0.1.1 (Pre-Alpha)
+- **Build Version:** 0.1.2 (Pre-Alpha)

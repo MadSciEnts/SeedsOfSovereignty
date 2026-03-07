@@ -148,6 +148,7 @@ class StationSpawnSystem : IntervalSystem(interval = Fixed(10f)) {
         val player = playerFamily.firstOrNull() ?: return
         val playerPos = player[PositionComponent].pos
         val sensorRadius = player[SensorComponent].radius
+        val tier = player[EvolutionComponent].currentTier
 
         if (world.family { all(StationComponent) }.numEntities < 3) {
             val spawnDist = sensorRadius * MathUtils.random(1.0f, 2.5f)
@@ -160,8 +161,14 @@ class StationSpawnSystem : IntervalSystem(interval = Fixed(10f)) {
                 it += StationComponent(name = "Outpost ${MathUtils.random(100, 999)}", radius = 200f)
 
                 it += MarketComponent().apply {
-                    for (i in 0 until 5) { // Generate 5 tier-appropriate items
-                        weaponOffers.add(ModuleGenerator.generateWeapon(player[EvolutionComponent].currentTier))
+                    for (i in 0 until 3) {
+                        weaponOffers.add(ModuleGenerator.generateWeapon(tier))
+                    }
+                    // Rule #8: Drone Slots only appear at T5+
+                    if (tier >= 5) {
+                        for (i in 0 until 2) {
+                            droneOffers.add(ModuleGenerator.generateDroneModule(tier))
+                        }
                     }
                 }
             }

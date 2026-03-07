@@ -2,13 +2,14 @@ package com.srw.seedsofsovereignty.ui
 
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.ui.*
+import com.badlogic.gdx.utils.Align
 import com.srw.seedsofsovereignty.component.ChoiceComponent
 import com.srw.seedsofsovereignty.component.WeaponModuleComponent
 import space.earlygrey.shapedrawer.ShapeDrawer
 
 /**
- * A professional modal popup for making strategic module choices.
- * Optimized for clarity, purpose, and vertical space.
+ * A highly efficient, minimalist comparison popup for strategic choices.
+ * Optimized for scifi HUD aesthetics and vertical space.
  */
 class ChoicePopup(
     private val skin: Skin,
@@ -22,62 +23,43 @@ class ChoicePopup(
 ) : Table(skin) {
 
     private val currentDetails = WeaponDetailsWidget(skin, drawer, "CURRENTLY EQUIPPED")
-    private val pendingDetails = WeaponDetailsWidget(skin, drawer, "NEW MODULE")
+    private val pendingDetails = WeaponDetailsWidget(skin, drawer, "EVOLUTION OFFER")
 
     init {
         background = skin.getDrawable("panel")
-        pad(25f)
+        pad(20f)
 
-        // 1. Dynamic Header Logic
-        val (headerText, subHeaderText, headerColor) = when (choiceType) {
-            ChoiceComponent.ChoiceType.EVOLUTION_UPGRADE -> Triple(
-                "ARCHITECTURAL EVOLUTION",
-                "Tier advancement protocol initiated. Choose your primary hardware baseline.",
-                Color.GOLD
-            )
-            ChoiceComponent.ChoiceType.LOOT_FOUND -> Triple(
-                "EXOTIC TECH DISCOVERED",
-                "Salvaged hardware signature identified. Analyze compatibility with current hull.",
-                Color.CYAN
-            )
-        }
+        // 1. Sleek Contextual Header
+        val headerText = if (choiceType == ChoiceComponent.ChoiceType.EVOLUTION_UPGRADE) "ARCHITECTURAL EVOLUTION" else "EXOTIC TECH DISCOVERED"
+        val headerColor = if (choiceType == ChoiceComponent.ChoiceType.EVOLUTION_UPGRADE) Color.GOLD else Color.CYAN
 
-        val headerLabel = Label(headerText, skin, "title").apply { color = headerColor }
-        val tierLabel = Label(tierInfo, skin).apply { color = Color.GRAY }
-        val subLabel = Label(subHeaderText, skin).apply {
-            wrap = true
-            setAlignment(com.badlogic.gdx.utils.Align.center)
-        }
+        val headerTable = Table(skin)
+        headerTable.add(Label(headerText, skin, "title").apply { color = headerColor }).row()
+        headerTable.add(Label(tierInfo, skin).apply { color = Color.GRAY })
+        add(headerTable).colspan(2).padBottom(25f).row()
 
-        add(headerLabel).colspan(2).row()
-        add(tierLabel).colspan(2).padBottom(5f).row()
-        add(subLabel).width(600f).colspan(2).padBottom(30f).row()
-
-        // 2. Side-by-Side Comparison
+        // 2. Direct Comparison (Using refined Widgets for parity)
         currentDetails.update(currentModule)
         pendingDetails.update(pendingModule)
 
-        val comparisonTable = Table(skin)
-        comparisonTable.add(currentDetails).pad(5f).fillY()
-        comparisonTable.add(pendingDetails).pad(5f).fillY()
+        val comparison = Table(skin)
+        comparison.add(currentDetails).width(340f).padRight(15f)
+        comparison.add(pendingDetails).width(340f).padLeft(15f)
 
-        val scroll = ScrollPane(comparisonTable, skin)
+        // Ensure comparison fits vertically on mobile
+        val scroll = ScrollPane(comparison, skin)
         scroll.setScrollingDisabled(true, false)
-        add(scroll).expand().fill().colspan(2).padBottom(25f).row()
+        add(scroll).expand().fill().colspan(2).padBottom(30f).row()
 
-        // 3. Action Buttons
-        val buttonTable = Table(skin)
-        val keepBtn = UIButtonFactory.createButton(skin, "KEEP EXISTING", UIButtonFactory.ButtonType.GENERIC) {
-            onKeep()
-        }
-        val swapBtn = UIButtonFactory.createButton(skin, "EQUIP UPGRADE", UIButtonFactory.ButtonType.MARKET) {
-            onSwap()
-        }
+        // 3. Integrated Action Footer
+        val footer = Table(skin)
+        val keepBtn = UIButtonFactory.createButton(skin, "KEEP EXISTING", UIButtonFactory.ButtonType.GENERIC) { onKeep() }
+        val swapBtn = UIButtonFactory.createButton(skin, "EQUIP UPGRADE", UIButtonFactory.ButtonType.MARKET) { onSwap() }
 
-        buttonTable.add(keepBtn).size(340f, 85f).padRight(30f)
-        buttonTable.add(swapBtn).size(340f, 85f)
+        footer.add(keepBtn).size(320f, 85f).padRight(30f)
+        footer.add(swapBtn).size(320f, 85f)
 
-        add(buttonTable).colspan(2).center()
+        add(footer).colspan(2).center()
 
         pack()
     }

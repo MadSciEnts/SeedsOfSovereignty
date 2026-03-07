@@ -35,10 +35,12 @@ class PlayScreen(
     private val aimJoystick: Touchpad = HUDFactory.createAimJoystick(skin)
     private val fireButton: TextButton = HUDFactory.createFireButton(skin)
 
+    private val modeToggle: TextButton = HUDFactory.createModeToggle(skin)
+
     private val testEvolveButton: TextButton = HUDFactory.createDebugButton("DEV: EVOLVE", skin)
 
     private val dockingManager = DockingManager(world)
-    private val evolutionManager = EvolutionManager(world)
+    private val evolutionManager = EvolutionManager()
     private val marketManager = MarketManager(world)
 
     private val hangarUI = StationHangarUI(skin, drawer, world, dockingManager, marketManager)
@@ -71,36 +73,55 @@ class PlayScreen(
             it += DockingComponent()
             it += ApertureComponent()
             it += ChoiceComponent()
+            it += FleetCommandComponent()
             it += HealthComponent(current = 100f, max = 100f)
             it += ShieldComponent(current = 50f, max = 50f)
 
+            // Fix: Drone slots should only be added by the EvolutionManager when earned at Tier 5
             it += ModuleSlotComponent(mutableListOf(
-                ModuleSlot(SlotType.WEAPON, 1, "Stock Kinetic", 1),
-                ModuleSlot(SlotType.DRONE, 1, "EMPTY", 0)
+                ModuleSlot(SlotType.WEAPON, 1, "Stock Kinetic", 1)
             ))
         }
 
-        // INITIAL TEST STATION
+        // INITIAL TEST STATION (Alpha Outpost)
         world.entity {
             it += PositionComponent().apply { pos.set(500f, 500f) }
             it += StationComponent(name = "Alpha Outpost", radius = 200f)
             it += MarketComponent().apply {
-                for (i in 0 until 30) {
+                for (i in 0 until 15) {
                     weaponOffers.add(ModuleGenerator.generateWeapon(1))
+                }
+                for (i in 0 until 5) {
+                    droneOffers.add(ModuleGenerator.generateDroneModule(1))
                 }
             }
             it += VisibleComponent()
         }
 
+        modeToggle.addListener(object : com.badlogic.gdx.scenes.scene2d.utils.ChangeListener() {
+            override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
+                world.family { all(PlayerComponent, FleetCommandComponent) }.firstOrNull()?.let { p ->
+                    with(world) {
+                        val fleet = p[FleetCommandComponent]
+                        fleet.controlMode = if (fleet.controlMode == FleetCommandComponent.ControlMode.ATTACK_DIRECTION)
+                            FleetCommandComponent.ControlMode.DRONE_FOCUS else FleetCommandComponent.ControlMode.ATTACK_DIRECTION
+
+                        modeToggle.setText(if (fleet.controlMode == FleetCommandComponent.ControlMode.ATTACK_DIRECTION) "WPN" else "DRN")
+                    }
+                }
+            }
+        })
+
         testEvolveButton.addListener(object : com.badlogic.gdx.scenes.scene2d.utils.ChangeListener() {
             override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
-                evolutionManager.cheatEvolve()
+                evolutionManager.cheatEvolve(world)
             }
         })
 
         uiStage.addActor(moveJoystick)
         uiStage.addActor(aimJoystick)
         uiStage.addActor(fireButton)
+        uiStage.addActor(modeToggle)
         uiStage.addActor(hangarUI)
         uiStage.addActor(testEvolveButton)
 
@@ -109,7 +130,7 @@ class PlayScreen(
 
     override fun render(delta: Float) {
         val inputSystem = world.system<PlayerInputSystem>()
-        val player = world.family { all(PlayerComponent, EvolutionComponent, DockingComponent, ApertureComponent, ChoiceComponent) }.firstOrNull()
+        val player = world.family { all(PlayerComponent, EvolutionComponent, DockingComponent, ApertureComponent, ChoiceComponent, FleetCommandComponent) }.firstOrNull()
 
         if (player != null) {
             with(world) {
@@ -119,6 +140,10 @@ class PlayScreen(
                 val choice = player[ChoiceComponent]
 
                 val isTwinStickTier = evo.currentTier >= 4
+                // Check for either the component or an active drone slot in topology
+                val hasDrones = player.has(DroneLauncherComponent) ||
+                               (player.has(ModuleSlotComponent) && player[ModuleSlotComponent].slots.any { it.type == SlotType.DRONE })
+
                 val isFullyDocked = docking.isDocked && aperture.state == ApertureComponent.State.OPEN
                 val isUiRequested = isFullyDocked || choice.isAwaitingChoice
 
@@ -126,6 +151,8 @@ class PlayScreen(
                 aimJoystick.isVisible = !isUiRequested && isTwinStickTier
                 fireButton.isVisible = !isUiRequested && !isTwinStickTier
                 testEvolveButton.isVisible = !isUiRequested
+
+                modeToggle.isVisible = !isUiRequested && isTwinStickTier && hasDrones
 
                 if (isUiRequested) {
                     if (!wasDocked) {
@@ -162,9 +189,10 @@ class PlayScreen(
         aimJoystick.setPosition(uiStage.width - aimJoystick.width - 50f, 50f)
         fireButton.setPosition(uiStage.width - fireButton.width - 50f, 50f)
 
-        // Fix: Explicitly bound Hangar UI to ensure it never overflows vertically
+        modeToggle.setPosition(uiStage.width - modeToggle.width - 50f, aimJoystick.y + aimJoystick.height + 20f)
+
         val hangarW = uiStage.width * 0.95f
-        val hangarH = uiStage.height * 0.9f // Increased to 90% but capped
+        val hangarH = uiStage.height * 0.9f
         hangarUI.setSize(hangarW, hangarH)
         hangarUI.setPosition(uiStage.width / 2f - hangarUI.width / 2f, uiStage.height / 2f - hangarUI.height / 2f)
 
