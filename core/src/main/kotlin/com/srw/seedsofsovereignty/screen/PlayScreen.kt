@@ -38,20 +38,26 @@ class PlayScreen(
     private val moveJoystick: SovereigntyTouchpad = HUDFactory.createMoveJoystick(skin)
     private val aimJoystick: SovereigntyTouchpad = HUDFactory.createAimJoystick(skin)
     private val droneJoystick: SovereigntyTouchpad = HUDFactory.createDroneJoystick(skin).apply {
-        isPersistent = true // Task Fix: Tactical joystick must hold position
+        isPersistent = true
     }
     private val fireButton: TextButton = HUDFactory.createFireButton(skin)
     private val modeToggle: TextButton = HUDFactory.createModeToggle(skin)
     private val localizeButton: TextButton = HUDFactory.createDebugButton("LOC: CAM", skin).apply { setSize(120f, 60f) }
 
-    // 2. Adaptive Tactical Overlay (ATO v0.2.0 - Single Source of Truth)
+    // 2. Adaptive Tactical Overlay (ATO v0.2.1 - Single Source of Truth)
     private var selectedModuleIndex = 0
     private var lastObservedControlType: ControlType? = null
 
     private val vitalsHUD = VitalsClusterWidget(drawer, skin, world)
-    private val commandMatrix = CommandMatrixWidget(drawer, skin, world) { newIndex ->
-        selectedModuleIndex = newIndex
-    }
+
+    // Task Fix: Pass both selection and localization callbacks to matrix
+    private val commandMatrix = CommandMatrixWidget(
+        drawer,
+        skin,
+        world,
+        { newIndex: Int -> selectedModuleIndex = newIndex },
+        { toggleDroneLocalization() }
+    )
 
     private val testEvolveButton: TextButton = HUDFactory.createDebugButton("DEV: EVOLVE", skin)
 
@@ -113,6 +119,16 @@ class PlayScreen(
         Gdx.input.inputProcessor = uiStage
     }
 
+    private fun toggleDroneLocalization() {
+        val player = world.family { all(PlayerComponent, FleetCommandComponent) }.firstOrNull() ?: return
+        with(world) {
+            val fleet = player[FleetCommandComponent]
+            fleet.localization = if (fleet.localization == FleetCommandComponent.LocalizationMode.CAMERA)
+                FleetCommandComponent.LocalizationMode.SHIP else FleetCommandComponent.LocalizationMode.CAMERA
+            commandMatrix.updateSpaceLabel(fleet.localization == FleetCommandComponent.LocalizationMode.CAMERA)
+        }
+    }
+
     override fun render(delta: Float) {
         val inputSystem = world.system<PlayerInputSystem>()
         val player = world.family { all(PlayerComponent, EvolutionComponent, DockingComponent, ApertureComponent, ChoiceComponent, FleetCommandComponent) }.firstOrNull()
@@ -125,7 +141,7 @@ class PlayScreen(
                 val slots = if (player.has(ModuleSlotComponent)) player[ModuleSlotComponent].slots else emptyList()
                 commandMatrix.syncLoadout(slots, selectedModuleIndex)
 
-                // 2. Fetch Control DNA of selected module
+                // 2. Fetch Control DNA of selected system
                 var currentControlType = ControlType.BUTTON
                 var targetDroneSlotIndex = -1
 
@@ -147,12 +163,12 @@ class PlayScreen(
                 if (currentControlType != lastObservedControlType) {
                     commandMatrix.updateInputDisplay(currentControlType, aimJoystick, droneJoystick, fireButton)
 
-                    // Task Fix: When switching TO drones, load their specific focus position
+                    // Restore position for tactical sticks
                     if (currentControlType == ControlType.TACTICAL_FOCUS_STICK && targetDroneSlotIndex != -1) {
                         val fleet = player[FleetCommandComponent]
                         val focus = fleet.slotFocusPoints[targetDroneSlotIndex]
-                        val range = 250f
-                        droneJoystick.setKnobPosition(focus.x / range, focus.y / range)
+                        droneJoystick.setKnobPosition(focus.x / 250f, focus.y / 250f)
+                        commandMatrix.updateSpaceLabel(fleet.localization == FleetCommandComponent.LocalizationMode.CAMERA)
                     }
 
                     lastObservedControlType = currentControlType
@@ -199,6 +215,7 @@ class PlayScreen(
                                 droneJoystick.knobPercentY * range
                             )
                         }
+                        fleet.lastDroneAim.set(droneJoystick.knobPercentX, droneJoystick.knobPercentY)
                         inputSystem.aimVector.set(0f, 0f)
                         inputSystem.isFiringRequested = false
                     }
@@ -281,7 +298,7 @@ class PlayScreen(
 
         moveJoystick.setPosition(50f, 50f)
 
-        // Final positioning for the Adaptive Tactical Overlay Root Anchors
+        // Adaptive Tactical Overlay Root Anchors
         vitalsHUD.setPosition(30f, uiViewport.worldHeight - 100f)
         commandMatrix.setPosition(uiViewport.worldWidth - 300f, 50f)
 

@@ -26,3 +26,17 @@ Refer to these files for every task:
     - Verify every write by reading back the file contents to ensure logic persistence.
 7. **The "One-File-One-Turn" Rule:**
     - Do NOT write multiple files in a single response. Complete one file, verify its state, and wait for feedback or the next turn.
+
+## Refinement Protocols (v0.2.0 Additions)
+8. **The Forward-Fix Protocol:**
+    - If a build error occurs during a refactor, prioritize fixing the new API/syntax over rolling back to legacy code. 
+    - *Circumvention:* Regression is only allowed if the User explicitly requests a rollback or the architectural path is logically unviable.
+9. **Identity-Aware Synchronization:**
+    - HUD/UI widgets must track unique identities (Entity IDs or specific names) to trigger rebuilds, not just collection counts.
+10. **Encapsulated Ownership:**
+    - Orchestrator widgets (e.g., CommandMatrix) must exclusively manage the lifecycle/visibility of their child actors. 
+    - Do not add sub-controls directly to the Stage root if an orchestrator is responsible for their display state.
+11. **Explicit Lambda Typing:**
+    - When passing lambdas into complex UI constructors or methods that utilize injectables (World, Stage), explicitly declare all parameter types to prevent compiler recursion errors.
+12. **The Reality-Anchor Rule:**
+    - After any session interruption or timeout, perform a `list_files` and `read_file` audit of the active work-set. Beliefs must be re-anchored to the physical disk state before proceeding.

@@ -64,6 +64,7 @@ class DroneFormationSystem(
     private val enemyFamily by lazy { world.family { all(EnemyComponent, PositionComponent) } }
     private val targetPos = Vector2()
     private val steerForce = Vector2()
+    private val rotatedOffset = Vector2()
     private var globalOrbitBase = 0f
 
     override fun onTick() {
@@ -84,30 +85,37 @@ class DroneFormationSystem(
             return
         }
 
-        // 1. Get Fleet Intent
+        // 1. Get Fleet Intent & Ship Orientation
         val fleet = if (owner.has(FleetCommandComponent)) owner[FleetCommandComponent] else null
         val focusOffset = fleet?.slotFocusPoints?.getOrNull(drone.slotIndex) ?: Vector2.Zero
+        val shipAngle = if (owner.has(OrientationComponent)) owner[OrientationComponent].angleRad else 0f
+
+        // 2. Localization: Task Fix - Transform offset based on toggle mode (v0.2.1)
+        rotatedOffset.set(focusOffset)
+        if (fleet?.localization == FleetCommandComponent.LocalizationMode.SHIP) {
+            // Subtracting PI/2 because joysticks are Y-up, but ship nose is often PI/2 rotated in screen-space
+            rotatedOffset.rotateRad(shipAngle - MathUtils.PI/2f)
+        }
+
         val pushMag = focusOffset.len() / 150f
 
-        // 2. Calculate Organic Target Position
+        // 3. Calculate Target Position (Owner + (Transformed Offset) + Orbit)
         val ownerPos = owner[PositionComponent].pos
         val droneIndex = entity.id % 8
         val orbitAngle = globalOrbitBase + (droneIndex * MathUtils.PI2 / 8f)
 
-        // Task: Compression Logic - Radius shrinks as focus moves away from center
-        val dynamicRadius = drone.orbitRadius * (1f - pushMag * 0.6f).coerceAtLeast(0.3f)
+        val dynamicRadius = drone.orbitRadius * (1f - pushMag * 0.6f).coerceIn(0.3f, 1.0f)
 
         targetPos.set(ownerPos)
-            .add(focusOffset)
+            .add(rotatedOffset)
             .add(MathUtils.cos(orbitAngle) * dynamicRadius, MathUtils.sin(orbitAngle) * dynamicRadius)
 
-        // 3. Flocking / Steering (Task: Drift towards target position organically)
+        // 4. Flocking / Steering
         steerForce.set(targetPos).sub(pos).scl(5f)
         vel.add(steerForce.x * deltaTime, steerForce.y * deltaTime)
-
         pos.add(vel.x * deltaTime, vel.y * deltaTime)
 
-        // 4. Combat Targeting
+        // 5. Combat Targeting
         var targetEntity: Entity? = null
         var minDistSq = 160000f
         enemyFamily.forEach { enemy ->

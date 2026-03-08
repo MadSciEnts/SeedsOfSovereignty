@@ -15,11 +15,13 @@ class CommandMatrixWidget(
     private val drawer: ShapeDrawer,
     private val skin: Skin,
     private val world: com.github.quillraven.fleks.World,
-    private val onSelectionChanged: (Int) -> Unit
+    private val onSelectionChanged: (Int) -> Unit,
+    private val onSpaceToggled: () -> Unit
 ) : Table(skin) {
 
     private val loadoutBar = Table(skin)
     private val inputArea = Table(skin)
+    private val spaceToggle = TextButton("WLD", skin, "mode-toggle")
 
     private var selectedIndex: Int = 0
     private var currentSlotIdentities = mutableListOf<String>()
@@ -31,7 +33,20 @@ class CommandMatrixWidget(
         add(loadoutBar).expandX().fillX().padBottom(20f).center().row()
 
         // 2. Morphing Input Area (Bottom)
-        add(inputArea).size(250f, 250f).center()
+        add(inputArea).size(350f, 250f).center()
+
+        spaceToggle.addListener(object : ClickListener() {
+            override fun clicked(event: InputEvent?, x: Float, y: Float) {
+                onSpaceToggled()
+            }
+        })
+    }
+
+    /**
+     * Updates the toggle button text to reflect the current fleet mode.
+     */
+    fun updateSpaceLabel(isWorld: Boolean) {
+        spaceToggle.setText(if (isWorld) "WLD" else "LOC")
     }
 
     /**
@@ -52,6 +67,7 @@ class CommandMatrixWidget(
             val btn = loadoutBar.getChild(i) as? HUDModuleSlotButton ?: continue
             btn.setFocused(i == selectedIndex)
 
+            // Sync Icon visuals
             val slot = slots[i]
             val slotEntity = slot.slotEntity
             with(world) {
@@ -97,10 +113,9 @@ class CommandMatrixWidget(
 
     /**
      * Morphs the input area based on the selected module's Control DNA.
-     * Ensures only the required control is visible and active.
+     * v0.2.1: Signature updated to accept and manage all tactical actors.
      */
     fun updateInputDisplay(controlType: ControlType, directionalStick: Actor, tacticalStick: Actor, fireButton: Actor) {
-        // Explicitly manage visibility to prevent overlapping input capture
         directionalStick.isVisible = false
         tacticalStick.isVisible = false
         fireButton.isVisible = false
@@ -118,6 +133,7 @@ class CommandMatrixWidget(
             }
             ControlType.TACTICAL_FOCUS_STICK -> {
                 tacticalStick.isVisible = true
+                inputArea.add(spaceToggle).size(80f, 80f).padRight(20f).bottom()
                 inputArea.add(tacticalStick).size(250f, 250f).center()
             }
         }

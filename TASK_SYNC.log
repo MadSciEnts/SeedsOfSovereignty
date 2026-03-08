@@ -1,18 +1,14 @@
 # ARCHITECTURAL SYNCHRONIZATION LOG
 
-## CURRENT STATUS: IDLE / BASELINE SYNC
-- ATO Implementation (v0.2.0): Modular and verified on disk.
-- All previous transient sub-tasks: PURGED.
-- Ready for new directives.
+## v0.3.0 ATO: Tactical Schema Migration (PLANNING)
+### Objective: Transition from hardcoded ControlTypes to a data-driven UI Schema where hardware dictates its own control layout.
 
-## DISK AUDIT (v0.2.0 STABLE)
-- CombatComponents.kt: Updated with ControlType DNA.
-- UISystems.kt: Manual bar drawing purged (HUDSystem is logic-only).
-- CommandMatrixWidget.kt: Identity-aware rebuilding active.
-- PlayScreen.kt: Integrated with Stage-based ATO widgets.
+- [ ] Phase 1: Define `TacticalSchema` and `TacticalInput` data models.
+- [ ] Phase 2: Implement `TacticalClusterWidget` (The Schema Interpreter).
+- [ ] Phase 3: Integrate Dynamic Action Mapping (UI -> ECS Events).
+- [ ] Phase 4: Art Pass: Procedural technical frames for all input types.
 
-## INTERNAL PROCESSES RESET
-- Reset logic layers to prioritize the current disk state as the only source of truth.
-- Enforcing Rule #5: Maintain full context ONLY for the current active task.
-- Enforcing Rule #7: Atomicity (One file per turn).
-- Enforcing Identity-Aware Synchronization for all UI changes.
+## STATUS: IDLE / READY
+- Baseline: v0.2.0 Stable.
+- Concept: Tactical Virtual Machine (Hardware dictates HUD layout).
+- Awaiting Phase 1 directive.
