@@ -10,13 +10,21 @@ import com.srw.seedsofsovereignty.util.ModuleGenerator
  */
 class EvolutionManager {
 
-    fun cheatEvolve(world: World) {
+    /**
+     * Dev Helper: Jumps the player to a specific tier for testing.
+     * Default behavior: Fills essence to trigger natural sub-tier evolution.
+     */
+    fun cheatEvolve(world: World, targetTier: Int = -1) {
         val family = world.family { all(PlayerComponent, EvolutionComponent) }
         if (family.numEntities > 0) {
             val player = family.first()
             with(world) {
-                val evo = player[EvolutionComponent]
-                evo.essenceCollected = evo.essenceRequired
+                if (targetTier > 0) {
+                    applyTierBaseline(world, player, targetTier)
+                } else {
+                    val evo = player[EvolutionComponent]
+                    evo.essenceCollected = evo.essenceRequired
+                }
             }
         }
     }
@@ -42,10 +50,13 @@ class EvolutionManager {
                 name = "STOCK T$tier"
                 description = "Standard issue hardware for your new chassis."
             }
+
+            // Task Fix: Sync Control DNA so the HUD knows when to switch to Joystick
             module.name = stockWeapon.name
             module.description = stockWeapon.description
             module.projectileTier = stockWeapon.projectileTier
             module.rarity = stockWeapon.rarity
+            module.controlType = stockWeapon.controlType // Rule #11 Sync
             module.fireRate = stockWeapon.fireRate
             module.projectileSpeed = stockWeapon.projectileSpeed
             module.projectileColor = stockWeapon.projectileColor
@@ -89,7 +100,6 @@ class EvolutionManager {
                 }
 
                 val dModule = sEntity[DroneModuleComponent]
-                // Fix: Ensure the slotEntity reference is stored in the topology
                 slotComp.slots.add(ModuleSlot(
                     type = SlotType.DRONE,
                     tier = tier,

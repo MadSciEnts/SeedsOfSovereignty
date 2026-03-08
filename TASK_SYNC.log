@@ -1,26 +1,20 @@
 # ARCHITECTURAL SYNCHRONIZATION LOG
 
-## Visual Identity Restoration (v0.1.8 Complete)
-- [x] Enemy Ship Restoration: Unique Red Technical Circles/Rings for Swarms and Reapers.
-- [x] Essence Visibility Foundation: Initial components and tags restored.
+## v0.2.0 Adaptive Tactical Overlay (ATO) Implementation - Phase 3 REFINING
+- [x] Phase 1: Data DNA (ControlType integrated into modules).
+- [x] Phase 2: Modular Primitives (HudBar, HUDModuleSlotButton).
+- [x] Phase 3: Command Matrix & Integration (Morphing logic stable).
+- [x] Bug Fix: Identity-Aware sync prevents module stacking.
+- [x] Bug Fix: Actor ownership unified in PlayScreen (no more ghost controls).
+- [x] Bug Fix: HUDFactory returns persistent joystick types.
 
-## Salvage & Tactical Recovery System (v0.1.9 Complete)
-- [x] Architecture Overhaul: Legacy Essence system purged and replaced with Unified Salvage Pipeline.
-- [x] High-Fidelity Renders: Implemented TacticalScannerSystem with procedural Amber brackets and dynamic zoom-scaling.
-- [x] Visual Logic: Implemented "Specimen Shimmer" (Sine-wave pulse + technical core rotation).
-- [x] Physical Interaction: Implemented SalvageSystem with Kinetic Ejection and collection grace periods.
-- [x] Radar Sync: Updated RadarRenderSystem to detect and display Salvage entities.
+## CURRENT TASK: Drone Steering Precision
+- [ ] Bug Fix: Drone focus vectors are using HUD index instead of Drone slot index.
+    - Cause: `PlayScreen.kt` routes input to `fleet.slotFocusPoints[selectedModuleIndex]`.
+    - Fix: Extract `slotIndex` from `DroneLauncherComponent` before updating focus points.
+- [ ] Feature: Finalize Drone Command Joystick visual feedback.
 
-## Technical Loadout HUD Evolution (v0.1.10 In Progress)
-### Objective: Replace EquippedSlotsWidget with a modular, interactive HUD architecture.
-- [ ] **Phase 1: Component Definition**
-    - [ ] Create `HUDModuleSlot.kt`: Stack-based modular primitive with technical framing and interaction layers.
-- [ ] **Phase 2: Orchestration Refactor**
-    - [ ] Create `TechnicalLoadoutWidget.kt`: Table-based, expandable HUD container.
-- [ ] **Phase 3: Celebration Sync**
-    - [ ] Update `PlayScreen.kt` to target the new persistent HUD components.
-    - [ ] Synchronize Flying Icon animation logic with the new hierarchy.
-
-## HANDOVER: Current State (v0.1.10 Initialization)
-- Salvage pipeline stable (v0.1.9).
-- Starting HUD architecture elevation.
+## STATUS: DEBUGGING ECS BRIDGE
+- ATO UI is functional and stable.
+- ECS bridge for drones requires coordinate and index alignment.
+- Proceeding with `PlayScreen.kt` refactor.

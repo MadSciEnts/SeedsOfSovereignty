@@ -22,8 +22,12 @@ object ModuleGenerator {
         val name = "${rarity.name} ${theme.name.replace("_", " ")} T$tier"
         val desc = generateDescription(theme, tier, rarity)
 
+        // Rule #11: Inject Control DNA based on Tier jump (T4+ unlocks independent turrets)
+        val controlType = if (tier >= 4) ControlType.DIRECTIONAL_STICK else ControlType.BUTTON
+
         val module = WeaponModuleComponent(
             name = name, description = desc, projectileTier = tier, rarity = rarity,
+            controlType = controlType,
             projectileSpeed = 950f + (tier * 60f), fireRate = fireRate, effects = mutableListOf()
         )
 

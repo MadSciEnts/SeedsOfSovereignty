@@ -1,6 +1,5 @@
 package com.srw.seedsofsovereignty.system
 
-import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
@@ -87,66 +86,14 @@ class RadarRenderSystem(
 }
 
 /**
- * Standard HUD: Shield, Health, and Evolution bars.
- * Legacy weapon indicators REMOVED in favor of v0.1.10 Technical Loadout HUD.
+ * Standard HUD Logic pass (v0.2.0).
+ * Manual bar drawing removed in favor of modular Stage widgets.
  */
-class HUDSystem(
-    private val batch: SpriteBatch,
-    private val drawer: ShapeDrawer,
-    private val uiViewport: Viewport
-) : IteratingSystem(family { all(PlayerComponent).any(EvolutionComponent, HealthComponent, ShieldComponent) }) {
-
-    private val font = BitmapFont()
-
-    override fun onTick() {
-        batch.use(uiViewport.camera.combined) {
-            super.onTick()
-        }
-    }
-
+class HUDSystem : IteratingSystem(family { all(PlayerComponent).any(EvolutionComponent, HealthComponent, ShieldComponent) }) {
     override fun onTickEntity(entity: Entity) {
-        if (entity.has(EvolutionComponent)) {
-            val evo = entity[EvolutionComponent]
-            val barWidth = 400f
-            val x = (uiViewport.worldWidth - barWidth) / 2f
-            val y = 30f
-
-            drawer.setColor(Color.DARK_GRAY); drawer.filledRectangle(x, y, barWidth, 10f)
-            val progress = (evo.essenceCollected.toFloat() / evo.essenceRequired.toFloat()).coerceIn(0f, 1f)
-            drawer.setColor(Color.CYAN); drawer.filledRectangle(x, y, barWidth * progress, 10f)
-            drawer.setColor(Color.WHITE); drawer.rectangle(x, y, barWidth, 10f, 1f)
-
-            val tierName = when(evo.currentTier) {
-                1 -> "PILOT"; 2 -> "INTERCEPTOR"; 3 -> "CARRIER"; 4 -> "SENTINEL"
-                5 -> "BULWARK"; 6 -> "SENTINEL+"; 7 -> "WRAITH"; 8 -> "DREADNOUGHT"
-                9 -> "VANGUARD"
-                else -> "CAPITAL"
-            }
-            font.color = Color.CYAN
-            font.draw(batch, "TIER ${evo.currentTier}: $tierName [Sub-${evo.subTier}]", x, y + 35f)
-        }
-
-        val barWidth = 250f
-        val startX = 30f
-        var currentY = uiViewport.worldHeight - 40f
-
-        if (entity.has(HealthComponent)) {
-            val health = entity[HealthComponent]
-            drawer.setColor(0.3f, 0.05f, 0.05f, 0.6f); drawer.filledRectangle(startX, currentY, barWidth, 14f)
-            drawer.setColor(Color.RED); drawer.filledRectangle(startX, currentY, barWidth * (health.current / health.max).coerceIn(0f, 1f), 14f)
-            drawer.setColor(Color.WHITE); drawer.rectangle(startX, currentY, barWidth, 14f, 1.5f)
-            currentY -= 24f
-        }
-
-        if (entity.has(ShieldComponent)) {
-            val shield = entity[ShieldComponent]
-            drawer.setColor(0f, 0.2f, 0.3f, 0.6f); drawer.filledRectangle(startX, currentY, barWidth, 14f)
-            drawer.setColor(Color.CYAN); drawer.filledRectangle(startX, currentY, barWidth * (shield.current / shield.max).coerceIn(0f, 1f), 14f)
-            drawer.setColor(Color.WHITE); drawer.rectangle(startX, currentY, barWidth, 14f, 1.5f)
-        }
+        // High-level HUD logic (alerts, distance warnings) remains here.
+        // Pixels are now handled by Stage widgets in PlayScreen.
     }
-
-    override fun onDispose() { font.dispose() }
 }
 
 class ApertureSystem(

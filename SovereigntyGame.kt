@@ -60,22 +60,22 @@ class SovereigntyGame : KtxGame<KtxScreen>() {
                 add(CollisionDamageSystem())
                 add(VitalsSystem())
                 add(StatusEffectSystem())
-                add(EffectSystem())
                 add(LifeSpanSystem())
 
-                add(CollectionSystem())
                 add(EvolutionSystem(evolutionManager))
                 add(EvolutionCelebrationSystem(batch, drawer, uiViewport))
 
                 add(SensorSystem())
                 add(StationSystem())
+                add(SalvageSystem())
                 add(ApertureSystem(batch, drawer, uiViewport))
 
-                // FIXED: Explicitly pass dependencies to avoid Fleks NoSuchInjectableException
                 add(EntityRenderSystem(batch, drawer, viewport, skin))
-                add(RenderSystem(batch, camera, drawer))
+                add(RenderSystem(batch, camera, drawer, skin))
 
                 add(RadarRenderSystem(batch, drawer, uiViewport))
+
+                // RESTORED: HUDSystem is the source of truth for Health/Shield bars
                 add(HUDSystem(batch, drawer, uiViewport))
 
                 add(OriginSystem())

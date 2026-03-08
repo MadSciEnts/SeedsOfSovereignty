@@ -18,8 +18,11 @@ Refer to these files for every task:
 5. **Log-Based Continuity:** 
     - You MUST utilize `TASK_SYNC.log` to document your specific intentions, planned steps, and verification results. 
     - This log is the primary handover mechanism between sessions and agents to ensure architectural continuity.
+    - **Persistence:** Do NOT purge task context from logic layers at every step. ONLY purge after the current TASK or GOAL is declared COMPLETE.
 6. **The Mantra of Modularization:**
     - Strictly enforce the **300-line limit** per file.
     - Organize by **Feature-Domain** (Movement, Combat, UI).
     - Perform a **Refactoring Sprint** every 4 Tiers.
     - Verify every write by reading back the file contents to ensure logic persistence.
+7. **The "One-File-One-Turn" Rule:**
+    - Do NOT write multiple files in a single response. Complete one file, verify its state, and wait for feedback or the next turn.

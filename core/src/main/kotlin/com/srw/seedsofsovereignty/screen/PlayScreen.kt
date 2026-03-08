@@ -34,15 +34,22 @@ class PlayScreen(
     private val uiStage = Stage(uiViewport, batch)
     private val skin: Skin = HUDFactory.createSkin()
 
-    // 1. Core Controls
-    private val moveJoystick: Touchpad = HUDFactory.createMoveJoystick(skin)
-    private val aimJoystick: SovereigntyTouchpad = HUDFactory.createAimJoystick(skin) as SovereigntyTouchpad
+    // 1. Core Controls (Using fixed SovereigntyTouchpad types)
+    private val moveJoystick: SovereigntyTouchpad = HUDFactory.createMoveJoystick(skin)
+    private val aimJoystick: SovereigntyTouchpad = HUDFactory.createAimJoystick(skin)
+    private val droneJoystick: SovereigntyTouchpad = HUDFactory.createDroneJoystick(skin)
     private val fireButton: TextButton = HUDFactory.createFireButton(skin)
     private val modeToggle: TextButton = HUDFactory.createModeToggle(skin)
     private val localizeButton: TextButton = HUDFactory.createDebugButton("LOC: CAM", skin).apply { setSize(120f, 60f) }
 
-    // 2. Technical Loadout HUD (v0.1.10)
-    private val loadoutHUD = TechnicalLoadoutWidget(drawer, skin, world)
+    // 2. Adaptive Tactical Overlay (ATO v0.2.0 - Single Source of Truth)
+    private var selectedModuleIndex = 0
+    private var lastObservedControlType: ControlType? = null
+
+    private val vitalsHUD = VitalsClusterWidget(drawer, skin, world)
+    private val commandMatrix = CommandMatrixWidget(drawer, skin, world) { newIndex: Int ->
+        selectedModuleIndex = newIndex
+    }
 
     private val testEvolveButton: TextButton = HUDFactory.createDebugButton("DEV: EVOLVE", skin)
 
@@ -67,9 +74,10 @@ class PlayScreen(
                 name = "Stock T1",
                 description = "Standard kinetic stream.",
                 projectileTier = 1,
+                rarity = Rarity.COMMON,
+                controlType = ControlType.BUTTON,
                 projectileSpeed = 1000f,
                 fireRate = 0.6f,
-                rarity = Rarity.COMMON,
                 projectileColor = Color.YELLOW,
                 effects = mutableListOf(
                     ProjectileEffect(EffectType.HULL_DAMAGE, 10f, vfx = ImpactVfxType.SPARK_YELLOW),
@@ -87,69 +95,18 @@ class PlayScreen(
             it += ModuleSlotComponent(mutableListOf(ModuleSlot(SlotType.WEAPON, 1, "Stock Kinetic", 1)))
         }
 
-        // INITIAL TEST STATION
-        world.entity {
-            it += PositionComponent().apply { pos.set(500f, 500f) }
-            it += StationComponent(name = "Alpha Outpost", radius = 200f)
-            it += MarketComponent().apply {
-                for (i in 0 until 15) weaponOffers.add(ModuleGenerator.generateWeapon(1))
-                for (i in 0 until 5) droneOffers.add(ModuleGenerator.generateDroneModule(1))
-            }
-            it += VisibleComponent()
-        }
-
-        modeToggle.addListener(object : com.badlogic.gdx.scenes.scene2d.utils.ChangeListener() {
-            override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
-                world.family { all(PlayerComponent, FleetCommandComponent) }.firstOrNull()?.let { p ->
-                    with(world) {
-                        val fleet = p[FleetCommandComponent]
-                        if (fleet.controlMode == FleetCommandComponent.ControlMode.ATTACK_DIRECTION) {
-                            fleet.lastWeaponAim.set(aimJoystick.knobPercentX, aimJoystick.knobPercentY)
-                            fleet.controlMode = FleetCommandComponent.ControlMode.DRONE_FOCUS
-                            aimJoystick.isPersistent = true
-                            aimJoystick.updateStyle("drone-mode", skin)
-                            aimJoystick.setKnobPosition(fleet.lastDroneAim.x, fleet.lastDroneAim.y)
-                            modeToggle.setText("DRN")
-                        } else {
-                            fleet.lastDroneAim.set(aimJoystick.knobPercentX, aimJoystick.knobPercentY)
-                            fleet.controlMode = FleetCommandComponent.ControlMode.ATTACK_DIRECTION
-                            aimJoystick.isPersistent = false
-                            aimJoystick.updateStyle("aim", skin)
-                            aimJoystick.setKnobPosition(fleet.lastWeaponAim.x, fleet.lastWeaponAim.y)
-                            modeToggle.setText("WPN")
-                        }
-                    }
-                }
-            }
-        })
-
-        localizeButton.addListener(object : com.badlogic.gdx.scenes.scene2d.utils.ChangeListener() {
-            override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
-                world.family { all(PlayerComponent, FleetCommandComponent) }.firstOrNull()?.let { p ->
-                    with(world) {
-                        val fleet = p[FleetCommandComponent]
-                        fleet.localization = if (fleet.localization == FleetCommandComponent.LocalizationMode.CAMERA)
-                            FleetCommandComponent.LocalizationMode.SHIP else FleetCommandComponent.LocalizationMode.CAMERA
-                        localizeButton.setText(if (fleet.localization == FleetCommandComponent.LocalizationMode.CAMERA) "LOC: CAM" else "LOC: SHIP")
-                    }
-                }
-            }
-        })
+        // ATO Root Integration
+        uiStage.addActor(moveJoystick)
+        uiStage.addActor(vitalsHUD)
+        uiStage.addActor(commandMatrix)
+        uiStage.addActor(hangarUI)
+        uiStage.addActor(testEvolveButton)
 
         testEvolveButton.addListener(object : com.badlogic.gdx.scenes.scene2d.utils.ChangeListener() {
             override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
                 evolutionManager.cheatEvolve(world)
             }
         })
-
-        uiStage.addActor(moveJoystick)
-        uiStage.addActor(aimJoystick)
-        uiStage.addActor(fireButton)
-        uiStage.addActor(modeToggle)
-        uiStage.addActor(localizeButton)
-        uiStage.addActor(loadoutHUD)
-        uiStage.addActor(hangarUI)
-        uiStage.addActor(testEvolveButton)
 
         Gdx.input.inputProcessor = uiStage
     }
@@ -160,13 +117,36 @@ class PlayScreen(
 
         if (player != null) {
             with(world) {
-                val evo = player[EvolutionComponent]
-                val docking = player[DockingComponent]
-                val aperture = player[ApertureComponent]
-                val choice = player[ChoiceComponent]
-                val fleet = player[FleetCommandComponent]
+                // 1. Update ATO Hubs
+                vitalsHUD.update(player)
 
-                loadoutHUD.update(player)
+                val slots = if (player.has(ModuleSlotComponent)) player[ModuleSlotComponent].slots else emptyList()
+                commandMatrix.syncLoadout(slots, selectedModuleIndex)
+
+                // 2. Fetch DNA of selected module
+                var currentControlType = ControlType.BUTTON
+                var targetDroneSlotIndex = -1
+
+                if (selectedModuleIndex < slots.size) {
+                    val slot = slots[selectedModuleIndex]
+                    val slotEntity = slot.slotEntity
+                    if (slotEntity != null && world.contains(slotEntity)) {
+                        if (slotEntity.has(WeaponModuleComponent)) currentControlType = slotEntity[WeaponModuleComponent].controlType
+                        if (slotEntity.has(DroneModuleComponent)) {
+                            currentControlType = ControlType.TACTICAL_FOCUS_STICK
+                            // Link to actual ECS Drone slot index
+                            if (slotEntity.has(DroneLauncherComponent)) targetDroneSlotIndex = slotEntity[DroneLauncherComponent].slotIndex
+                        }
+                    } else if (slot.type == SlotType.WEAPON && player.has(WeaponModuleComponent)) {
+                        currentControlType = player[WeaponModuleComponent].controlType
+                    }
+                }
+
+                // 3. Morph Input Proxy
+                if (currentControlType != lastObservedControlType) {
+                    commandMatrix.updateInputDisplay(currentControlType, aimJoystick, droneJoystick, fireButton)
+                    lastObservedControlType = currentControlType
+                }
 
                 if (player.has(EvolutionCelebrationComponent)) {
                     val celeb = player[EvolutionCelebrationComponent]
@@ -176,20 +156,19 @@ class PlayScreen(
                     }
                 }
 
-                val isTwinStickTier = evo.currentTier >= 4
-                val hasDrones = player.has(DroneLauncherComponent) ||
-                               (player.has(ModuleSlotComponent) && player[ModuleSlotComponent].slots.any { it.type == SlotType.DRONE })
+                val evo = player[EvolutionComponent]
+                val docking = player[DockingComponent]
+                val aperture = player[ApertureComponent]
+                val choice = player[ChoiceComponent]
+                val fleet = player[FleetCommandComponent]
 
                 val isFullyDocked = docking.isDocked && aperture.state == ApertureComponent.State.OPEN
                 val isUiRequested = isFullyDocked || choice.isAwaitingChoice
 
                 moveJoystick.isVisible = !isUiRequested
-                aimJoystick.isVisible = !isUiRequested && isTwinStickTier
-                fireButton.isVisible = !isUiRequested && !isTwinStickTier
+                vitalsHUD.isVisible = !isUiRequested
+                commandMatrix.isVisible = !isUiRequested
                 testEvolveButton.isVisible = !isUiRequested
-                modeToggle.isVisible = !isUiRequested && isTwinStickTier && hasDrones
-                localizeButton.isVisible = modeToggle.isVisible && fleet.controlMode == FleetCommandComponent.ControlMode.DRONE_FOCUS
-                loadoutHUD.isVisible = !isUiRequested
 
                 if (isUiRequested) {
                     if (!wasDocked) {
@@ -202,13 +181,31 @@ class PlayScreen(
                     wasDocked = false
                 }
 
+                // 4. Tactical Input Routing
                 inputSystem.joystickVector.set(moveJoystick.knobPercentX, moveJoystick.knobPercentY)
-                if (isTwinStickTier) {
-                    inputSystem.aimVector.set(aimJoystick.knobPercentX, aimJoystick.knobPercentY)
-                    inputSystem.isFiringRequested = !inputSystem.aimVector.isZero && fleet.controlMode == FleetCommandComponent.ControlMode.ATTACK_DIRECTION
-                } else {
-                    inputSystem.aimVector.set(0f, 0f)
-                    inputSystem.isFiringRequested = fireButton.isPressed
+
+                when (currentControlType) {
+                    ControlType.DIRECTIONAL_STICK -> {
+                        inputSystem.aimVector.set(aimJoystick.knobPercentX, aimJoystick.knobPercentY)
+                        inputSystem.isFiringRequested = !inputSystem.aimVector.isZero
+                    }
+                    ControlType.TACTICAL_FOCUS_STICK -> {
+                        // Task Fix: Ensure focus update targets the correct DRONE slot, not the HUD index
+                        if (targetDroneSlotIndex != -1) {
+                            val range = 250f
+                            fleet.slotFocusPoints[targetDroneSlotIndex].set(
+                                droneJoystick.knobPercentX * range,
+                                droneJoystick.knobPercentY * range
+                            )
+                        }
+                        fleet.lastDroneAim.set(droneJoystick.knobPercentX, droneJoystick.knobPercentY)
+                        inputSystem.aimVector.set(0f, 0f)
+                        inputSystem.isFiringRequested = false
+                    }
+                    else -> {
+                        inputSystem.aimVector.set(0f, 0f)
+                        inputSystem.isFiringRequested = fireButton.isPressed
+                    }
                 }
             }
         }
@@ -221,7 +218,6 @@ class PlayScreen(
     private fun triggerFlyingIcon(player: Entity, celeb: EvolutionCelebrationComponent) {
         val dna = celeb.newWeaponDNA ?: return
 
-        // 1. Create the Celebratory Icon
         val flyingIcon = ProjectileIcon(drawer, skin).apply {
             tier = dna.projectileTier
             projectileColor = dna.projectileColor
@@ -231,49 +227,47 @@ class PlayScreen(
             setPosition(uiViewport.worldWidth / 2f, uiViewport.worldHeight / 2f, Align.center)
         }
 
-        // 2. Add Congratulations Label
         val congratsLabel = HUDFactory.createLabel("EVOLUTION COMPLETE: TIER ${celeb.newTier}", skin, "title").apply {
             setAlignment(Align.center)
             setPosition(uiViewport.worldWidth / 2f, uiViewport.worldHeight - 150f, Align.center)
             color.a = 0f
         }
 
-        // 3. Coordinate Mapping (Target the new HUD primitive)
-        loadoutHUD.validate()
-        val targetSlot = loadoutHUD.getSlot(0) ?: return
-        val targetIcon = targetSlot.getIconCenter()
+        commandMatrix.validate()
+        val targetSlot = commandMatrix.getSlotButton(0)
 
-        tempCoords.set(targetIcon.width / 2f, targetIcon.height / 2f)
-        targetIcon.localToStageCoordinates(tempCoords)
-        val targetX = tempCoords.x
-        val targetY = tempCoords.y
+        if (targetSlot != null) {
+            tempCoords.set(targetSlot.width / 2f, targetSlot.height / 2f)
+            targetSlot.localToStageCoordinates(tempCoords)
+            val targetX = tempCoords.x
+            val targetY = tempCoords.y
 
-        // 4. Tween Logic
+            flyingIcon.addAction(Actions.sequence(
+                Actions.delay(0.5f),
+                Actions.parallel(
+                    Actions.moveToAligned(targetX, targetY, Align.center, 1.2f, com.badlogic.gdx.math.Interpolation.pow3Out),
+                    Actions.sizeTo(targetSlot.width, targetSlot.height, 1.2f, com.badlogic.gdx.math.Interpolation.pow3Out),
+                    object : Action() {
+                        override fun act(delta: Float): Boolean {
+                            val icon = actor as ProjectileIcon
+                            val progress = (actor.width - 250f) / (targetSlot.width - 250f)
+                            icon.iconScale = 4.0f + (1.5f - 4.0f) * progress.coerceIn(0f, 1f)
+                            return true
+                        }
+                    },
+                    Actions.rotateBy(720f, 1.2f)
+                ),
+                Actions.run {
+                    celeb.phase = EvolutionCelebrationComponent.Phase.COMPLETED
+                },
+                Actions.removeActor()
+            ))
+        }
+
         congratsLabel.addAction(Actions.sequence(
             Actions.fadeIn(0.3f),
             Actions.delay(1.5f),
             Actions.fadeOut(0.5f),
-            Actions.removeActor()
-        ))
-
-        flyingIcon.addAction(Actions.sequence(
-            Actions.delay(0.5f),
-            Actions.parallel(
-                Actions.moveToAligned(targetX, targetY, Align.center, 1.2f, com.badlogic.gdx.math.Interpolation.pow3Out),
-                Actions.sizeTo(targetIcon.width, targetIcon.height, 1.2f, com.badlogic.gdx.math.Interpolation.pow3Out),
-                object : Action() {
-                    override fun act(delta: Float): Boolean {
-                        val icon = actor as ProjectileIcon
-                        val progress = (actor.width - 250f) / (targetIcon.width - 250f)
-                        icon.iconScale = 4.0f + (1.8f - 4.0f) * progress.coerceIn(0f, 1f)
-                        return true
-                    }
-                },
-                Actions.rotateBy(720f, 1.2f)
-            ),
-            Actions.run {
-                celeb.phase = EvolutionCelebrationComponent.Phase.COMPLETED
-            },
             Actions.removeActor()
         ))
 
@@ -286,13 +280,10 @@ class PlayScreen(
         uiViewport.update(width, height, true)
 
         moveJoystick.setPosition(50f, 50f)
-        aimJoystick.setPosition(uiStage.width - aimJoystick.width - 50f, 50f)
-        fireButton.setPosition(uiStage.width - fireButton.width - 50f, 50f)
-        modeToggle.setPosition(uiStage.width - modeToggle.width - 50f, aimJoystick.y + aimJoystick.height + 20f)
-        localizeButton.setPosition(aimJoystick.x - localizeButton.width - 20f, aimJoystick.y + (aimJoystick.height / 2f) - (localizeButton.height / 2f))
 
-        // Final positioning for the new Loadout HUD
-        loadoutHUD.setPosition(30f, uiViewport.worldHeight - 140f)
+        // Final positioning for the Adaptive Tactical Overlay Root Anchors
+        vitalsHUD.setPosition(30f, uiViewport.worldHeight - 100f)
+        commandMatrix.setPosition(uiViewport.worldWidth - 300f, 50f)
 
         hangarUI.setSize(uiStage.width * 0.95f, uiStage.height * 0.9f)
         hangarUI.setPosition(uiStage.width / 2f - hangarUI.width / 2f, uiStage.height / 2f - hangarUI.height / 2f)

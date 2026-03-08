@@ -6,7 +6,7 @@ import com.srw.seedsofsovereignty.component.SlotType
 import space.earlygrey.shapedrawer.ShapeDrawer
 
 /**
- * A modular HUD slot primitive (v0.1.10).
+ * A modular HUD slot primitive (v0.2.0).
  * Layers a technical frame, a projectile specimen, and an interaction layer.
  */
 class HUDModuleSlot(
@@ -16,7 +16,7 @@ class HUDModuleSlot(
 ) : Stack() {
 
     private val icon: ProjectileIcon = ProjectileIcon(drawer, skin)
-    private val interactionButton: Button = Button(skin, "scifi") // Using base style for invisible interaction
+    private val interactionButton: Button = Button(skin, "scifi") // Invisible interaction layer
 
     init {
         // 1. Technical Background Frame
@@ -33,7 +33,7 @@ class HUDModuleSlot(
         add(icon)
 
         // 3. Interaction Overlay
-        interactionButton.color.a = 0f // Invisible until needed
+        interactionButton.color.a = 0f
         add(interactionButton)
     }
 

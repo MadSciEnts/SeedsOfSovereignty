@@ -8,7 +8,7 @@ import com.srw.seedsofsovereignty.component.*
 import space.earlygrey.shapedrawer.ShapeDrawer
 
 /**
- * Technical HUD Orchestrator (v0.1.10).
+ * Technical HUD Orchestrator (v0.2.0).
  * Manages the persistent lifecycle of HUDModuleSlots.
  */
 class TechnicalLoadoutWidget(
@@ -53,7 +53,7 @@ class TechnicalLoadoutWidget(
             add(hudSlot)
         }
 
-        // Task Fix: Force immediate layout validation to ensure correct positioning
+        // Force immediate validation so coordinates are available for animations
         invalidateHierarchy()
         validate()
         pack()

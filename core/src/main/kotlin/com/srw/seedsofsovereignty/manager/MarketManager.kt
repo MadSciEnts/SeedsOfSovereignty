@@ -23,6 +23,7 @@ class MarketManager(private val world: World) {
             currentModule.description = newModule.description
             currentModule.projectileTier = newModule.projectileTier
             currentModule.rarity = newModule.rarity
+            currentModule.controlType = newModule.controlType // Rule #11 Sync
             currentModule.projectileSpeed = newModule.projectileSpeed
             currentModule.fireRate = newModule.fireRate
             currentModule.projectileColor = newModule.projectileColor

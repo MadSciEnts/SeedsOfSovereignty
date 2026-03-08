@@ -7,6 +7,12 @@ import com.badlogic.gdx.graphics.Color
 
 enum class Rarity { COMMON, UNCOMMON, RARE, EPIC, LEGENDARY }
 
+/**
+ * Defines the input method for a module (v0.2.0).
+ * Rule #11: Control DNA dictates HUD Command Matrix morphing.
+ */
+enum class ControlType { BUTTON, DIRECTIONAL_STICK, TACTICAL_FOCUS_STICK }
+
 enum class EffectType {
     HULL_DAMAGE, SHIELD_DAMAGE, SPEED_MULTIPLIER,
     COOLDOWN_MULTIPLIER, SHIELD_PIERCE, REPAIR_HULL
@@ -40,6 +46,7 @@ data class WeaponModuleComponent(
     var description: String = "Standard kinetic stream.",
     var projectileTier: Int = 1,
     var rarity: Rarity = Rarity.COMMON,
+    var controlType: ControlType = ControlType.BUTTON, // Rule #11: Control DNA
     var projectileSpeed: Float = 1000f,
     var fireRate: Float = 0.5f,
     var projectileColor: Color = Color.YELLOW,
@@ -54,7 +61,7 @@ data class WeaponModuleComponent(
 
 data class ProjectileComponent(
     var tier: Int = 1,
-    var damage: Float = 10f, // Legacy field for system migration
+    var damage: Float = 10f,
     var color: Color = Color.YELLOW,
     val effects: MutableList<ProjectileEffect> = mutableListOf(),
     var ownerIsEnemy: Boolean = false

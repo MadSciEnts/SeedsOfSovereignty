@@ -22,7 +22,7 @@ object HUDFactory {
         whitePixmap.dispose()
         skin.add("white", whiteTex)
 
-        // 2. High-Bit Procedural Assets (MUST be first)
+        // 2. High-Bit Procedural Assets
         AssetFactory.addProceduralAssets(skin)
 
         // 3. Fonts
@@ -96,22 +96,6 @@ object HUDFactory {
             downFontColor = Color.BLACK
         })
 
-        registerStyle("scifi-selected", TextButton.TextButtonStyle().apply {
-            up = skin.getDrawable("button-selected")
-            down = skin.getDrawable("button-down")
-            font = mainFont
-            fontColor = Color.CYAN
-            downFontColor = Color.BLACK
-        })
-
-        registerStyle("market-swap", TextButton.TextButtonStyle().apply {
-            up = skin.newDrawable("white", Color(0.1f, 0.6f, 0.2f, 0.8f))
-            down = skin.newDrawable("white", Color.WHITE)
-            font = mainFont
-            fontColor = Color.WHITE
-            downFontColor = Color.BLACK
-        })
-
         registerStyle("mode-toggle", TextButton.TextButtonStyle().apply {
             up = skin.newDrawable("button-up", Color(1f, 0.7f, 0f, 0.8f))
             down = skin.newDrawable("white", Color.WHITE)
@@ -143,13 +127,15 @@ object HUDFactory {
         return skin
     }
 
-    fun createMoveJoystick(skin: Skin): Touchpad = Touchpad(15f, skin, "default").apply { setSize(250f, 250f) }
-    fun createAimJoystick(skin: Skin): Touchpad = SovereigntyTouchpad(15f, skin, "aim").apply { setSize(250f, 250f) }
+    // Task Fix: Return explicit SovereigntyTouchpad for persistent tracking support
+    fun createMoveJoystick(skin: Skin): SovereigntyTouchpad = SovereigntyTouchpad(15f, skin, "default").apply { setSize(250f, 250f) }
+    fun createAimJoystick(skin: Skin): SovereigntyTouchpad = SovereigntyTouchpad(15f, skin, "aim").apply { setSize(250f, 250f) }
+    fun createDroneJoystick(skin: Skin): SovereigntyTouchpad = SovereigntyTouchpad(15f, skin, "drone-mode").apply { setSize(250f, 250f) }
+
     fun createFireButton(skin: Skin): TextButton = TextButton("FIRE", skin, "scifi").apply { setSize(250f, 250f) }
     fun createStationButton(text: String, skin: Skin): TextButton = TextButton(text, skin, "scifi").apply { setSize(400f, 90f) }
     fun createMarketButton(text: String, style: String, skin: Skin): TextButton = TextButton(text, skin, style).apply { setSize(250f, 80f) }
     fun createDebugButton(text: String, skin: Skin): TextButton = TextButton(text, skin, "scifi").apply { setSize(200f, 60f) }
     fun createModeToggle(skin: Skin): TextButton = TextButton("WPN", skin, "mode-toggle").apply { setSize(120f, 120f) }
     fun createLabel(text: String, skin: Skin, style: String = "default"): Label = Label(text, skin, style)
-    fun createStatBar(drawer: ShapeDrawer, skin: Skin, color: Color, rtl: Boolean = false): StatBar = StatBar(drawer, skin, barColor = color, rightToLeft = rtl)
 }

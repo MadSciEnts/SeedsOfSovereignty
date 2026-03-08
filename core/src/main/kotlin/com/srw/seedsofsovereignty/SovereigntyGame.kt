@@ -67,14 +67,16 @@ class SovereigntyGame : KtxGame<KtxScreen>() {
 
                 add(SensorSystem())
                 add(StationSystem())
-                add(SalvageSystem()) // New: Unified recovery logic (v0.1.9)
+                add(SalvageSystem())
                 add(ApertureSystem(batch, drawer, uiViewport))
 
                 add(EntityRenderSystem(batch, drawer, viewport, skin))
                 add(RenderSystem(batch, camera, drawer, skin))
 
                 add(RadarRenderSystem(batch, drawer, uiViewport))
-                add(HUDSystem(batch, drawer, uiViewport))
+
+                // RESTORED: HUDSystem is now a logic-only system (v0.2.0 ATO)
+                add(HUDSystem())
 
                 add(OriginSystem())
             }
