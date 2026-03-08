@@ -34,10 +34,12 @@ class PlayScreen(
     private val uiStage = Stage(uiViewport, batch)
     private val skin: Skin = HUDFactory.createSkin()
 
-    // 1. Core Controls (Using fixed SovereigntyTouchpad types)
+    // 1. Core Controls
     private val moveJoystick: SovereigntyTouchpad = HUDFactory.createMoveJoystick(skin)
     private val aimJoystick: SovereigntyTouchpad = HUDFactory.createAimJoystick(skin)
-    private val droneJoystick: SovereigntyTouchpad = HUDFactory.createDroneJoystick(skin)
+    private val droneJoystick: SovereigntyTouchpad = HUDFactory.createDroneJoystick(skin).apply {
+        isPersistent = true // Task Fix: Tactical joystick must hold position
+    }
     private val fireButton: TextButton = HUDFactory.createFireButton(skin)
     private val modeToggle: TextButton = HUDFactory.createModeToggle(skin)
     private val localizeButton: TextButton = HUDFactory.createDebugButton("LOC: CAM", skin).apply { setSize(120f, 60f) }
@@ -47,7 +49,7 @@ class PlayScreen(
     private var lastObservedControlType: ControlType? = null
 
     private val vitalsHUD = VitalsClusterWidget(drawer, skin, world)
-    private val commandMatrix = CommandMatrixWidget(drawer, skin, world) { newIndex: Int ->
+    private val commandMatrix = CommandMatrixWidget(drawer, skin, world) { newIndex ->
         selectedModuleIndex = newIndex
     }
 
@@ -123,7 +125,7 @@ class PlayScreen(
                 val slots = if (player.has(ModuleSlotComponent)) player[ModuleSlotComponent].slots else emptyList()
                 commandMatrix.syncLoadout(slots, selectedModuleIndex)
 
-                // 2. Fetch DNA of selected module
+                // 2. Fetch Control DNA of selected module
                 var currentControlType = ControlType.BUTTON
                 var targetDroneSlotIndex = -1
 
@@ -134,7 +136,6 @@ class PlayScreen(
                         if (slotEntity.has(WeaponModuleComponent)) currentControlType = slotEntity[WeaponModuleComponent].controlType
                         if (slotEntity.has(DroneModuleComponent)) {
                             currentControlType = ControlType.TACTICAL_FOCUS_STICK
-                            // Link to actual ECS Drone slot index
                             if (slotEntity.has(DroneLauncherComponent)) targetDroneSlotIndex = slotEntity[DroneLauncherComponent].slotIndex
                         }
                     } else if (slot.type == SlotType.WEAPON && player.has(WeaponModuleComponent)) {
@@ -145,15 +146,16 @@ class PlayScreen(
                 // 3. Morph Input Proxy
                 if (currentControlType != lastObservedControlType) {
                     commandMatrix.updateInputDisplay(currentControlType, aimJoystick, droneJoystick, fireButton)
-                    lastObservedControlType = currentControlType
-                }
 
-                if (player.has(EvolutionCelebrationComponent)) {
-                    val celeb = player[EvolutionCelebrationComponent]
-                    if (celeb.phase == EvolutionCelebrationComponent.Phase.FLASH && celeb.timer > 0.1f) {
-                        triggerFlyingIcon(player, celeb)
-                        celeb.phase = EvolutionCelebrationComponent.Phase.FLYING_ICON
+                    // Task Fix: When switching TO drones, load their specific focus position
+                    if (currentControlType == ControlType.TACTICAL_FOCUS_STICK && targetDroneSlotIndex != -1) {
+                        val fleet = player[FleetCommandComponent]
+                        val focus = fleet.slotFocusPoints[targetDroneSlotIndex]
+                        val range = 250f
+                        droneJoystick.setKnobPosition(focus.x / range, focus.y / range)
                     }
+
+                    lastObservedControlType = currentControlType
                 }
 
                 val evo = player[EvolutionComponent]
@@ -190,7 +192,6 @@ class PlayScreen(
                         inputSystem.isFiringRequested = !inputSystem.aimVector.isZero
                     }
                     ControlType.TACTICAL_FOCUS_STICK -> {
-                        // Task Fix: Ensure focus update targets the correct DRONE slot, not the HUD index
                         if (targetDroneSlotIndex != -1) {
                             val range = 250f
                             fleet.slotFocusPoints[targetDroneSlotIndex].set(
@@ -198,7 +199,6 @@ class PlayScreen(
                                 droneJoystick.knobPercentY * range
                             )
                         }
-                        fleet.lastDroneAim.set(droneJoystick.knobPercentX, droneJoystick.knobPercentY)
                         inputSystem.aimVector.set(0f, 0f)
                         inputSystem.isFiringRequested = false
                     }

@@ -111,6 +111,8 @@ class CombatSystem : IteratingSystem(family { all(ProjectileComponent, PositionC
     private fun applyEffects(target: Entity, effects: List<ProjectileEffect>, effectPos: Vector2) {
         effects.forEach { effect ->
             spawnVfx(effect.vfx, effectPos.x, effectPos.y)
+
+            // 1. Direct Stat Modification (Immediate)
             when (effect.type) {
                 EffectType.HULL_DAMAGE -> {
                     if (target.has(HealthComponent)) {
@@ -126,7 +128,18 @@ class CombatSystem : IteratingSystem(family { all(ProjectileComponent, PositionC
                         if (shield.active) shield.current = (shield.current - effect.potency).coerceAtLeast(0f)
                     }
                 }
-                else -> {}
+                // 2. Status Effect Infliction (Temporal Modification)
+                else -> {
+                    if (target.has(StatusEffectComponent)) {
+                        val status = target[StatusEffectComponent]
+                        status.activeEffects.add(ActiveEffect(
+                            type = effect.type,
+                            potency = effect.potency,
+                            remainingDuration = effect.duration,
+                            vfx = effect.vfx
+                        ))
+                    }
+                }
             }
         }
     }
@@ -137,7 +150,6 @@ class CombatSystem : IteratingSystem(family { all(ProjectileComponent, PositionC
             world.entity {
                 it += PositionComponent().apply { pos.set(ePos) }
                 it += VelocityComponent().apply { friction = 0.5f }
-                // Task Fix: Replace legacy EssenceComponent with Salvage Pipeline (v0.1.9)
                 it += SalvageComponent(type = SalvageType.ESSENCE, amount = 1)
                 it += VisibleComponent()
                 it += LifeSpanComponent(remaining = 15f)

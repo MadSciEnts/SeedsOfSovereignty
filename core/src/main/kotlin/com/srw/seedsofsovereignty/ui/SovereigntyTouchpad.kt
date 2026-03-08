@@ -8,13 +8,16 @@ import com.badlogic.gdx.scenes.scene2d.ui.Touchpad
  * A customized Touchpad that supports persistent "Locking" and custom visual states.
  * When [isPersistent] is true, the knob stays at its last position when released.
  */
-class SovereigntyTouchpad(deadzone: Float, skin: Skin, styleName: String) : Touchpad(deadzone, skin, styleName) {
-
-    var persistentX: Float = 0f
-    var persistentY: Float = 0f
-
-    // Toggle persistence. If true, the stick stays put on release.
+class SovereigntyTouchpad(
+    deadzone: Float,
+    skin: Skin,
+    styleName: String,
+    // Task Fix: Allow constructor to define initial persistence state
     var isPersistent: Boolean = false
+) : Touchpad(deadzone, skin, styleName) {
+
+    private var persistentX: Float = 0f
+    private var persistentY: Float = 0f
 
     override fun getKnobPercentX(): Float = if (isTouched) super.getKnobPercentX() else {
         if (isPersistent) persistentX else 0f
@@ -25,7 +28,7 @@ class SovereigntyTouchpad(deadzone: Float, skin: Skin, styleName: String) : Touc
     }
 
     override fun act(delta: Float) {
-        // Capture live percentage BEFORE calling super.act()
+        // Capture live percentage while touched to lock it in
         if (isTouched) {
             persistentX = super.getKnobPercentX()
             persistentY = super.getKnobPercentY()
@@ -35,7 +38,6 @@ class SovereigntyTouchpad(deadzone: Float, skin: Skin, styleName: String) : Touc
 
     /**
      * Programmatically sets the persistent knob position.
-     * Fixes: Unresolved reference 'setKnobPosition' in PlayScreen.
      */
     fun setKnobPosition(px: Float, py: Float) {
         persistentX = px
@@ -57,6 +59,7 @@ class SovereigntyTouchpad(deadzone: Float, skin: Skin, styleName: String) : Touc
 
         val knob = style.knob
         if (knob != null) {
+            // Visual override: Draw the knob at the persistent position if released
             val kpx = if (isTouched) super.getKnobPercentX() else (if (isPersistent) persistentX else 0f)
             val kpy = if (isTouched) super.getKnobPercentY() else (if (isPersistent) persistentY else 0f)
 
