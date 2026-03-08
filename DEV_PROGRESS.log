@@ -1,36 +1,32 @@
 # DEVELOPMENT PROGRESS LOG
 
-## Current Milestone: Tier 10 - Evolutionary Bridge (Planned)
-- [x] GDX-Liftoff Setup
-- [x] Knowledge Base Created (25 files)
-- [x] Tier 1 Pilot Movement System (WASD + Joystick)
-- [x] Procedural Starfield System (High-depth value range verified)
-- [x] Tier 1 Sub-Tier Weapons (1a-1d visual indicators)
-- [x] Major Tier 2 Evolution (Violet Interceptor)
-- [x] Major Tier 3 Evolution (Drone Carrier + Autonomous AI)
-- [x] Tier 4 Twin-Stick Transition (Strafing + Auto-Fire)
-- [x] Station Docking & Aperture HUD (Functional Buttons)
-- [x] Full Architectural Modularization (Domain-driven Files)
-- [x] Improved Enemy Accuracy (Predictive Aiming verified)
-- [x] Enemy Impact VFX (White Spark Bursts verified)
-- [x] Player Damage Distinction (Shield vs. Hull VFX verified)
-- [x] Tier 5 Evolution (Shielded Bulwark) (Complete)
-- [x] Contact Damage VFX (Enhanced Particle Pools) (Integrated)
-- [x] Tier 6 Evolution (Sentinel+) (Complete & Labeled)
-- [x] Tier 7 Evolution (Wraith) (Complete & Labeled)
-- [x] Tier 8 Evolution (Dreadnought) (8a-8d implemented & visual DNA verified)
-- [x] Tier 9 Evolution (Vanguard) (Base Chassis & Logic)
-- [x] Professional Station Market UI (Weapon detail scaling & Data-link visual fix)
-- [x] Strategic Weapon System (v0.1.2): Data-driven effects, Rarity, and Specimen Chambers.
-- [x] Evolution Choice Mechanic: Keep vs. Swap logic with 3-subtier smoothing.
-- [x] Dual-Mode Persistent Drone Joystick (v0.1.4)
-- [x] Drone Localization Toggle (CAMERA vs SHIP) (v0.1.5)
-- [x] HUD Loadout Visualization (Equipped Icons) (v0.1.6)
-- [x] Seamless Evolution Celebration (No-modal flow) (v0.1.7)
-- [x] Visual Identity Restoration (Enemy Hulls & Essence Drops) (v0.1.8)
-- [x] Unified Salvage Pipeline (v0.1.9): Replaced brittle Essence with scalable Loot Architecture.
+## Current Milestone: TVM v0.3.0 - Tactical Virtual Machine (Initiated)
+
+### Epoch I: The Pilot (Foundation)
+- [x] GDX-Liftoff & Project Architecture Setup
+- [x] Tier 1–3 Foundation: Pilot Movement, Sub-Tier scaling, and AI Support.
+- [x] Major Tier 4 Transition: Twin-Stick debut and Turret tracking.
+- [x] Station Docking & Aperture HUD logic.
+- [x] Tier 5–8 Refinement: Shielded Bulwark, Wraith Stealth, and Dreadnought Chassis.
+- [x] Professional Station Market UI & procédural weapon offers.
+- [x] Unified Salvage Pipeline (v0.1.9): Replaced Essence with scalable Loot Architecture.
+
+### The "Lost Generation" - Technical Elevation (v0.2.x)
+- [x] ATO v0.2.0: Adaptive Tactical Overlay. Transitioned to hierarchical Scene2D widgets.
+    - [x] Identity-Aware Synchronization: HUD rebuilds on module swap.
+    - [x] Encapsulated Actor Ownership: Matrix-driven UI management.
+- [x] ATO v0.2.1: Advanced Drone Command.
+    - [x] Persistent Tactical Sticks: Sticks hold position for drone focus.
+    - [x] Tactical Localization: Mode toggle (LOC/WLD) for drone formations.
+
+### Epoch II: The Admiral (Active Development)
+- [ ] TVM v0.3.0: Tactical Virtual Machine.
+    - [ ] Define `TacticalSchema` and `InputRequirement` data models.
+    - [ ] Integrate Schemas into hardware modules (Replace ControlType).
+    - [ ] Implement `TacticalClusterWidget` (Layout Interpreter).
+    - [ ] Art Pass: Procedural technical frames for all input types.
 
 ## Current Global Stats
-- **Active Tier:** 9/48
-- **Active Epoch:** 1/4
-- **Build Version:** 0.1.9 (Stable Alpha)
+- **Active Tier:** 9/48 (Current Apex: Vanguard)
+- **Active Epoch:** Transitioning I -> II
+- **Build Version:** 0.3.0-alpha (TVM Core)
