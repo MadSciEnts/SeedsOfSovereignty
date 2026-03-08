@@ -10,7 +10,7 @@ import space.earlygrey.shapedrawer.ShapeDrawer
 
 /**
  * HUD Widget that displays the player's currently equipped modules (Weapons, Drones).
- * Optimized for high visibility with tight framing at a compact size.
+ * Optimized for layout stability and screen-resolution accuracy (v0.1.8).
  */
 class EquippedSlotsWidget(
     private val drawer: ShapeDrawer,
@@ -19,12 +19,13 @@ class EquippedSlotsWidget(
 ) : HorizontalGroup() {
 
     init {
-        space(12f) // Tighter spacing for smaller icons
+        space(12f)
         pad(5f)
+        fill() // Fill parent width
     }
 
     /**
-     * Rebuilds the icons based on the player's current ModuleSlotComponent.
+     * Rebuilds or updates the technical icons based on ship topology.
      */
     fun update(player: Entity) {
         with(world) {
@@ -42,13 +43,18 @@ class EquippedSlotsWidget(
             clearChildren()
             for (slot in slots) {
                 val icon = ProjectileIcon(drawer, skin).apply {
-                    iconScale = 1.8f // Reduced scale slightly to fit better in smaller frame
+                    iconScale = 1.8f
+                    // Task Fix: Explicitly set HUD resting size before adding to stage
+                    setSize(60f, 60f)
                 }
                 updateIconData(icon, slot)
                 addActor(icon)
-                // Reduced to 60x60 (half of 120x120)
-                icon.setSize(60f, 60f)
             }
+
+            // Task Fix: Force immediate layout so coordinates are available for animations
+            invalidateHierarchy()
+            validate()
+            pack()
         }
     }
 

@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.Stage
+import com.badlogic.gdx.scenes.scene2d.Action
 import com.badlogic.gdx.scenes.scene2d.actions.Actions
 import com.badlogic.gdx.scenes.scene2d.ui.Skin
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton
@@ -40,8 +41,8 @@ class PlayScreen(
     private val modeToggle: TextButton = HUDFactory.createModeToggle(skin)
     private val localizeButton: TextButton = HUDFactory.createDebugButton("LOC: CAM", skin).apply { setSize(120f, 60f) }
 
-    // 2. Equipped Icons
-    private val equippedWidget = EquippedSlotsWidget(drawer, skin, world)
+    // 2. Technical Loadout HUD (v0.1.10)
+    private val loadoutHUD = TechnicalLoadoutWidget(drawer, skin, world)
 
     private val testEvolveButton: TextButton = HUDFactory.createDebugButton("DEV: EVOLVE", skin)
 
@@ -146,7 +147,7 @@ class PlayScreen(
         uiStage.addActor(fireButton)
         uiStage.addActor(modeToggle)
         uiStage.addActor(localizeButton)
-        uiStage.addActor(equippedWidget)
+        uiStage.addActor(loadoutHUD)
         uiStage.addActor(hangarUI)
         uiStage.addActor(testEvolveButton)
 
@@ -165,10 +166,8 @@ class PlayScreen(
                 val choice = player[ChoiceComponent]
                 val fleet = player[FleetCommandComponent]
 
-                // Update equipped icons
-                equippedWidget.update(player)
+                loadoutHUD.update(player)
 
-                // Handle Evolution Celebration Sequence (v0.1.7)
                 if (player.has(EvolutionCelebrationComponent)) {
                     val celeb = player[EvolutionCelebrationComponent]
                     if (celeb.phase == EvolutionCelebrationComponent.Phase.FLASH && celeb.timer > 0.1f) {
@@ -190,8 +189,7 @@ class PlayScreen(
                 testEvolveButton.isVisible = !isUiRequested
                 modeToggle.isVisible = !isUiRequested && isTwinStickTier && hasDrones
                 localizeButton.isVisible = modeToggle.isVisible && fleet.controlMode == FleetCommandComponent.ControlMode.DRONE_FOCUS
-
-                equippedWidget.isVisible = !isUiRequested
+                loadoutHUD.isVisible = !isUiRequested
 
                 if (isUiRequested) {
                     if (!wasDocked) {
@@ -207,8 +205,7 @@ class PlayScreen(
                 inputSystem.joystickVector.set(moveJoystick.knobPercentX, moveJoystick.knobPercentY)
                 if (isTwinStickTier) {
                     inputSystem.aimVector.set(aimJoystick.knobPercentX, aimJoystick.knobPercentY)
-                    inputSystem.isFiringRequested = !inputSystem.aimVector.isZero &&
-                        fleet.controlMode == FleetCommandComponent.ControlMode.ATTACK_DIRECTION
+                    inputSystem.isFiringRequested = !inputSystem.aimVector.isZero && fleet.controlMode == FleetCommandComponent.ControlMode.ATTACK_DIRECTION
                 } else {
                     inputSystem.aimVector.set(0f, 0f)
                     inputSystem.isFiringRequested = fireButton.isPressed
@@ -228,23 +225,26 @@ class PlayScreen(
         val flyingIcon = ProjectileIcon(drawer, skin).apply {
             tier = dna.projectileTier
             projectileColor = dna.projectileColor
-            iconScale = 4.0f // Start very large
-            setSize(300f, 300f)
+            iconScale = 4.0f
+            setSize(250f, 250f)
             setOrigin(Align.center)
             setPosition(uiViewport.worldWidth / 2f, uiViewport.worldHeight / 2f, Align.center)
         }
 
-        // 2. Add Celebration Label
+        // 2. Add Congratulations Label
         val congratsLabel = HUDFactory.createLabel("EVOLUTION COMPLETE: TIER ${celeb.newTier}", skin, "title").apply {
             setAlignment(Align.center)
-            setPosition(uiViewport.worldWidth / 2f, uiViewport.worldHeight / 2f + 250f, Align.center)
+            setPosition(uiViewport.worldWidth / 2f, uiViewport.worldHeight - 150f, Align.center)
             color.a = 0f
         }
 
-        // 3. Coordinate Mapping
-        // Target the center of the first slot in the equipped widget
-        tempCoords.set(30f, 30f) // Local center of a 60x60 icon
-        equippedWidget.localToStageCoordinates(tempCoords)
+        // 3. Coordinate Mapping (Target the new HUD primitive)
+        loadoutHUD.validate()
+        val targetSlot = loadoutHUD.getSlot(0) ?: return
+        val targetIcon = targetSlot.getIconCenter()
+
+        tempCoords.set(targetIcon.width / 2f, targetIcon.height / 2f)
+        targetIcon.localToStageCoordinates(tempCoords)
         val targetX = tempCoords.x
         val targetY = tempCoords.y
 
@@ -257,10 +257,18 @@ class PlayScreen(
         ))
 
         flyingIcon.addAction(Actions.sequence(
-            Actions.delay(0.5f), // Pause at center
+            Actions.delay(0.5f),
             Actions.parallel(
                 Actions.moveToAligned(targetX, targetY, Align.center, 1.2f, com.badlogic.gdx.math.Interpolation.pow3Out),
-                Actions.scaleTo(0.2f, 0.2f, 1.2f, com.badlogic.gdx.math.Interpolation.pow3Out),
+                Actions.sizeTo(targetIcon.width, targetIcon.height, 1.2f, com.badlogic.gdx.math.Interpolation.pow3Out),
+                object : Action() {
+                    override fun act(delta: Float): Boolean {
+                        val icon = actor as ProjectileIcon
+                        val progress = (actor.width - 250f) / (targetIcon.width - 250f)
+                        icon.iconScale = 4.0f + (1.8f - 4.0f) * progress.coerceIn(0f, 1f)
+                        return true
+                    }
+                },
                 Actions.rotateBy(720f, 1.2f)
             ),
             Actions.run {
@@ -283,7 +291,8 @@ class PlayScreen(
         modeToggle.setPosition(uiStage.width - modeToggle.width - 50f, aimJoystick.y + aimJoystick.height + 20f)
         localizeButton.setPosition(aimJoystick.x - localizeButton.width - 20f, aimJoystick.y + (aimJoystick.height / 2f) - (localizeButton.height / 2f))
 
-        equippedWidget.setPosition(30f, uiViewport.worldHeight - 140f)
+        // Final positioning for the new Loadout HUD
+        loadoutHUD.setPosition(30f, uiViewport.worldHeight - 140f)
 
         hangarUI.setSize(uiStage.width * 0.95f, uiStage.height * 0.9f)
         hangarUI.setPosition(uiStage.width / 2f - hangarUI.width / 2f, uiStage.height / 2f - hangarUI.height / 2f)

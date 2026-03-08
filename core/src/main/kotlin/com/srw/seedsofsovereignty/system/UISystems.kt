@@ -68,7 +68,7 @@ class RadarRenderSystem(
                         val flicker = 0.5f + 0.5f * MathUtils.sin(timeCount * 15f)
                         drawer.setColor(1f, 0f, 0f, flicker); drawer.filledCircle(rx, ry, 3f)
                     }
-                    target.has(SalvageComponent) -> { // Fix: Support v0.1.9 Unified Salvage
+                    target.has(SalvageComponent) -> {
                         drawer.setColor(Color.GOLD); drawer.filledCircle(rx, ry, 2f)
                     }
                     else -> {
@@ -86,6 +86,10 @@ class RadarRenderSystem(
     }
 }
 
+/**
+ * Standard HUD: Shield, Health, and Evolution bars.
+ * Legacy weapon indicators REMOVED in favor of v0.1.10 Technical Loadout HUD.
+ */
 class HUDSystem(
     private val batch: SpriteBatch,
     private val drawer: ShapeDrawer,
@@ -120,12 +124,6 @@ class HUDSystem(
             }
             font.color = Color.CYAN
             font.draw(batch, "TIER ${evo.currentTier}: $tierName [Sub-${evo.subTier}]", x, y + 35f)
-
-            if (entity.has(WeaponModuleComponent)) {
-                val module = entity[WeaponModuleComponent]
-                font.color = Color.WHITE
-                font.draw(batch, "EQP: ${module.name} [T${module.projectileTier}]", x, y + 55f)
-            }
         }
 
         val barWidth = 250f

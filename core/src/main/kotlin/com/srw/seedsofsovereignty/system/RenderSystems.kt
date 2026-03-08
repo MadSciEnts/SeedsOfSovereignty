@@ -67,31 +67,25 @@ class EntityRenderSystem(
 
     private fun drawSalvageItem(x: Float, y: Float, salvage: SalvageComponent) {
         val camera = viewport.camera as OrthographicCamera
-
         val jitterX = x + MathUtils.sin(renderTime * 4f) * 2.0f
         val jitterY = y + MathUtils.cos(renderTime * 5f) * 2.0f
-
         val baseSize = 24f * salvage.visualScale
         val pulse = 0.9f + MathUtils.sin(renderTime * 8f) * 0.1f
         val visualSize = (baseSize * camera.zoom * pulse).coerceIn(16f, 160f)
 
-        val oldSrc = batch.blendSrcFunc
-        val oldDst = batch.blendDstFunc
+        val oldSrc = batch.blendSrcFunc; val oldDst = batch.blendDstFunc
         batch.setBlendFunction(GL20.GL_SRC_ALPHA, GL20.GL_ONE)
 
-        // 1. Technical Beacon (Task: Cyan sawtooth expanding rings)
         val sawPeriod = 1.5f
         for (i in 0 until 3) {
             val offset = i * 0.5f
             val progress = ((renderTime + offset) % sawPeriod) / sawPeriod
             val sawScale = 0.4f + progress * 1.8f
             val sawAlpha = (1f - progress) * 0.5f
-
             drawer.setColor(0f, 0.9f, 1f, sawAlpha)
             drawer.circle(jitterX, jitterY, (visualSize / 2f) * sawScale, 2f)
         }
 
-        // 2. Core Specimen (Amber/White Core)
         if (skin.has("essence-core", com.badlogic.gdx.graphics.g2d.TextureRegion::class.java)) {
             val region = skin.getRegion("essence-core")
             batch.setColor(1f, 1f, 1f, 0.9f)
@@ -104,7 +98,7 @@ class EntityRenderSystem(
 }
 
 /**
- * Handles rendering for technical assets (Bullets, Particles).
+ * Technical pass for bullets and particles.
  */
 class RenderSystem(
     private val batch: SpriteBatch,
@@ -121,7 +115,6 @@ class RenderSystem(
 
     override fun onTickEntity(entity: Entity) {
         val pos = entity[PositionComponent].pos
-
         when {
             entity.has(ProjectileComponent) -> {
                 val proj = entity[ProjectileComponent]
@@ -156,6 +149,9 @@ class RenderSystem(
     }
 }
 
+/**
+ * Orchestrates the full-screen visual celebration of a Tier Evolution.
+ */
 class EvolutionCelebrationSystem(
     private val batch: SpriteBatch,
     private val drawer: ShapeDrawer,
@@ -176,6 +172,9 @@ class EvolutionCelebrationSystem(
 
     override fun onTickEntity(entity: Entity) {
         val celeb = entity[EvolutionCelebrationComponent]
+        // Task Fix: Increment the internal timer so the UI layer can time its flying icon phase.
+        celeb.timer += deltaTime
+
         if (celeb.phase == EvolutionCelebrationComponent.Phase.TRIGGERED) {
             flashAlpha = 0.8f
             celeb.phase = EvolutionCelebrationComponent.Phase.FLASH

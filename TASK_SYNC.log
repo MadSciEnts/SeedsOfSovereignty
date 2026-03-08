@@ -11,7 +11,16 @@
 - [x] Physical Interaction: Implemented SalvageSystem with Kinetic Ejection and collection grace periods.
 - [x] Radar Sync: Updated RadarRenderSystem to detect and display Salvage entities.
 
-## HANDOVER: Current State (v0.1.9 Stable)
-- Build 0.1.9 verified stable.
-- All enemy deaths produce highly visible, technical reward drops.
-- Gameplay flow is smooth and rewarding.
+## Technical Loadout HUD Evolution (v0.1.10 In Progress)
+### Objective: Replace EquippedSlotsWidget with a modular, interactive HUD architecture.
+- [ ] **Phase 1: Component Definition**
+    - [ ] Create `HUDModuleSlot.kt`: Stack-based modular primitive with technical framing and interaction layers.
+- [ ] **Phase 2: Orchestration Refactor**
+    - [ ] Create `TechnicalLoadoutWidget.kt`: Table-based, expandable HUD container.
+- [ ] **Phase 3: Celebration Sync**
+    - [ ] Update `PlayScreen.kt` to target the new persistent HUD components.
+    - [ ] Synchronize Flying Icon animation logic with the new hierarchy.
+
+## HANDOVER: Current State (v0.1.10 Initialization)
+- Salvage pipeline stable (v0.1.9).
+- Starting HUD architecture elevation.
