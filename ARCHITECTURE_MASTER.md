@@ -29,4 +29,7 @@ The game is divided into 4 Epochs. Every 12 Tiers, the perspective and primary g
 ## 4. Technical Milestones
 - **Status:** Professional Market UI implemented with procedural data-links.
 - **Status:** Multi-offer module logic integrated into Station Markets.
-- **Status:** Tier 9 "Vanguard" chassis active.
+- **Status:** TVM v0.4.4 "Chained Instrument" architecture is stable.
+    - **DNA:** Descriptive `InputChannel` with relative positioning.
+    - **Visuals:** `HUDTextureGenerator` provides procedural skins.
+    - **Hub:** `TacticalHubComponent` provides a bidirectional data bridge.

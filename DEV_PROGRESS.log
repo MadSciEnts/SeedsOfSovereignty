@@ -1,6 +1,6 @@
 # DEVELOPMENT PROGRESS LOG
 
-## Current Milestone: TVM v0.3.0 - Tactical Virtual Machine (Completed)
+## Current Milestone: TVM v0.4.0 - Strategic Payloads (Completed)
 
 ### Epoch I: The Pilot (Foundation)
 - [x] GDX-Liftoff & Project Architecture Setup
@@ -11,22 +11,16 @@
 - [x] Professional Station Market UI & procédural weapon offers.
 - [x] Unified Salvage Pipeline (v0.1.9): Replaced Essence with scalable Loot Architecture.
 
-### The "Lost Generation" - Technical Elevation (v0.2.x)
-- [x] ATO v0.2.0: Adaptive Tactical Overlay. Transitioned to hierarchical Scene2D widgets.
-- [x] ATO v0.2.1: Advanced Drone Command (Persistent sticks and mode toggles).
-
 ### Epoch II: The Admiral (Active Development)
-- [x] TVM v0.3.0: Tactical Virtual Machine.
-    - [x] Define `TacticalSchema` and `InputRequirement` data models.
-    - [x] Integrate Schemas into hardware modules.
-    - [x] Implement `TacticalClusterWidget` (Layout Interpreter Core).
-    - [x] Integrate Interpreter into Command Matrix.
-    - [x] Art Pass: High-fidelity procedural technical frames.
-    - [x] Geometric Clusters: Support for Radial Slices and Satellite controls.
-    - [x] Functional Bridge: Link UI ActionKeys to ECS logic (v0.3.4 Complete).
-- [ ] Phase 6: Performance Hardening & Art Pass (v0.4.0).
+- [x] TVM v0.3.0: Tactical Virtual Machine (Legacy Grid Layouts).
+- [x] TVM v0.4.0: The Chained Instrument Refactor (v0.4.4 Stable).
+    - [x] **DNA:** Transitioned to descriptive `InputChannel` model with relative physical offsets.
+    - [x] **Visuals:** Implemented `HUDTextureGenerator` for procedural "INDUSTRIAL" skinning.
+    - [x] **Art-Awareness:** Unified NinePatch slicing with procedural drawing logic (Art-Aware geometry).
+    - [x] **Bidirectional Hub:** Established `TacticalHubComponent` for real-time feedback loops.
+    - [x] **Stability:** Successfully achieved 1:1 input parity and robust bottom-right stage anchoring.
 
 ## Current Global Stats
 - **Active Tier:** 9/48 (Current Apex: Vanguard)
 - **Active Epoch:** Transitioning I -> II
-- **Build Version:** 0.3.4-stable (TVM Unified)
+- **Build Version:** 0.4.4-stable (Bidirectional Instrument)

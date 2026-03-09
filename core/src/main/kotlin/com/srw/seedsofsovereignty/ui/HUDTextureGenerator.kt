@@ -63,6 +63,9 @@ object HUDTextureGenerator {
     }
 
     private fun generateIndustrial(skin: Skin): TextureCollection {
+        // Art-Aware Split Constants (v0.4.0 Phase 6.5)
+        val cornerArtSize = 16
+
         // 1. Joystick Background (250x250 circular)
         val jBgPix = Pixmap(250, 250, Pixmap.Format.RGBA8888).apply {
             setColor(DARK_GREY.r, DARK_GREY.g, DARK_GREY.b, 0.85f)
@@ -108,12 +111,12 @@ object HUDTextureGenerator {
                 setColor(STEEL_BLUE.r, STEEL_BLUE.g, STEEL_BLUE.b, 1f - (i * 0.2f))
                 drawRectangle(i, i, 64 - 2 * i, 64 - 2 * i)
             }
-            // Rivets in corners
+            // Art-Aware Rivets in corners
             setColor(Color.GRAY)
-            fillCircle(8, 8, 3)
-            fillCircle(56, 8, 3)
-            fillCircle(8, 56, 3)
-            fillCircle(56, 56, 3)
+            fillCircle(cornerArtSize / 2, cornerArtSize / 2, 3)
+            fillCircle(64 - cornerArtSize / 2, cornerArtSize / 2, 3)
+            fillCircle(cornerArtSize / 2, 64 - cornerArtSize / 2, 3)
+            fillCircle(64 - cornerArtSize / 2, 64 - cornerArtSize / 2, 3)
         }
         val bUpTex = Texture(bUpPix).also { skin.add("ind_b_up", it) }
         bUpPix.dispose()
@@ -193,8 +196,8 @@ object HUDTextureGenerator {
         return TextureCollection(
             joystickBg = TextureRegionDrawable(jBgTex),
             joystickKnob = TextureRegionDrawable(jKnobTex),
-            buttonUp = NinePatchDrawable(NinePatch(bUpTex, 8, 8, 8, 8)),
-            buttonDown = NinePatchDrawable(NinePatch(bDownTex, 8, 8, 8, 8)),
+            buttonUp = NinePatchDrawable(NinePatch(bUpTex, cornerArtSize, cornerArtSize, cornerArtSize, cornerArtSize)),
+            buttonDown = NinePatchDrawable(NinePatch(bDownTex, cornerArtSize, cornerArtSize, cornerArtSize, cornerArtSize)),
             toggleOff = NinePatchDrawable(NinePatch(tOffTex, 10, 10, 10, 10)),
             toggleOn = NinePatchDrawable(NinePatch(tOnTex, 10, 10, 10, 10)),
             sliderBg = NinePatchDrawable(NinePatch(sBgTex, 5, 5, 5, 5)),

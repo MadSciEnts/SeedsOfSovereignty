@@ -61,7 +61,7 @@ object HUDFactory {
         skin.add("small", Label.LabelStyle(smallFont, Color.LIGHT_GRAY))
 
         // TVM v0.4.0: Integrate procedural textures
-        HUDTextureGenerator.generate("INDUSTRIAL", skin)
+        val industrialCollection = HUDTextureGenerator.generate("INDUSTRIAL", skin)
 
         // 6. Registration Helper
         fun registerStyle(name: String, textStyle: TextButton.TextButtonStyle) {
@@ -76,9 +76,9 @@ object HUDFactory {
         }
 
         registerStyle("scifi", TextButton.TextButtonStyle().apply {
-            up = skin.getDrawable("ind_b_up")
-            down = skin.getDrawable("ind_b_down")
-            over = skin.getDrawable("ind_b_up") // v0.4.2 Fix: Replaced missing button-selected
+            up = industrialCollection.buttonUp
+            down = industrialCollection.buttonDown
+            over = industrialCollection.buttonUp
             font = mainFont
             fontColor = Color.WHITE
             overFontColor = Color.CYAN
@@ -86,28 +86,28 @@ object HUDFactory {
         })
 
         registerStyle("mode-toggle", TextButton.TextButtonStyle().apply {
-            up = skin.getDrawable("ind_t_off")
-            checked = skin.getDrawable("ind_t_on")
-            over = skin.getDrawable("ind_t_off") // v0.4.2 Fix: Use industrial drawables
-            down = skin.getDrawable("ind_t_on")
+            up = industrialCollection.toggleOff
+            checked = industrialCollection.toggleOn
+            over = industrialCollection.toggleOff
+            down = industrialCollection.toggleOn
             font = mainFont
             fontColor = Color.BLACK
         })
 
         // 7. Joysticks
         skin.add("default", Touchpad.TouchpadStyle().apply {
-            background = skin.getDrawable("ind_j_bg")
-            knob = skin.getDrawable("ind_j_knob")
+            background = industrialCollection.joystickBg
+            knob = industrialCollection.joystickKnob
         })
 
         skin.add("aim", Touchpad.TouchpadStyle().apply {
-            background = skin.getDrawable("ind_j_bg")
-            knob = skin.getDrawable("ind_j_knob")
+            background = industrialCollection.joystickBg
+            knob = industrialCollection.joystickKnob
         })
 
         skin.add("drone-mode", Touchpad.TouchpadStyle().apply {
-            background = skin.getDrawable("ind_j_bg")
-            knob = skin.getDrawable("ind_j_knob")
+            background = industrialCollection.joystickBg
+            knob = industrialCollection.joystickKnob
         })
 
         skin.add("default", ScrollPane.ScrollPaneStyle().apply {
