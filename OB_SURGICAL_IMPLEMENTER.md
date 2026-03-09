@@ -1,31 +1,26 @@
-# MISSION: Phase 7.3 - Step 3: Router Refactor
+# MISSION: Phase 8.2 - Pop-up & Table Unification (Surgical Implementer)
 
-## TASK
-Refactor `HUDTextureGenerator.kt` to act as a factory router, delegating work to the new style classes.
+## STEP 2: Evolution Report Refactor
+- **File:** `core/src/main/kotlin/com/srw/seedsofsovereignty/ui/EvolutionReportPopup.kt`
 
-## ACTIONS
-
-### 1. Update HUDTextureGenerator.kt
-- **Path:** `core/src/main/kotlin/com/srw/seedsofsovereignty/ui/HUDTextureGenerator.kt`
-- **Content:**
-    - Keep the `TextureCollection` data class.
-    - Delete all color constants (`DARK_GREY`, `HAZARD_ORANGE`, etc.).
-    - Delete the `applyNoise` function.
-    - Delete `generateIndustrial` and `generateImperial` methods.
-    - Refactor the `generate` method to use the new style classes:
+### ACTIONS
+1.  **Set Background**: Ensure `background = skin.getDrawable("panel")` is present in the `init` block (it is already there, but confirm).
+2.  **Refactor `confirmBtn`**:
+    - Replace `UIButtonFactory.createButton` with a `TextButton` using the `"market-swap"` style:
       ```kotlin
-      fun generate(styleId: String, skin: Skin): TextureCollection {
-          val generator: TacticalStyleGenerator = when (styleId.uppercase()) {
-              "INDUSTRIAL" -> IndustrialStyle()
-              "IMPERIAL" -> ImperialStyle()
-              else -> IndustrialStyle()
-          }
-          return generator.generate(skin)
+      val confirmBtn = TextButton("COMMENCE OPERATIONS", skin, "market-swap").apply {
+          addListener(object : ClickListener() {
+              override fun clicked(event: InputEvent?, x: Float, y: Float) {
+                  onConfirm()
+              }
+          })
       }
       ```
-    - Ensure all necessary imports are maintained or added.
+3.  **Cleanup**:
+    - Remove `import com.srw.seedsofsovereignty.ui.UIButtonFactory`.
+    - Add required imports: `com.badlogic.gdx.scenes.scene2d.InputEvent` and `com.badlogic.gdx.scenes.scene2d.utils.ClickListener`.
 
 ## VERIFICATION
-- `HUDTextureGenerator.kt` is simplified.
-- No duplicate logic remains in `HUDTextureGenerator.kt`.
-- The `generate` method correctly delegates to `IndustrialStyle` and `ImperialStyle`.
+- `EvolutionReportPopup` uses `"panel"` background.
+- The `confirmBtn` is a `TextButton` using the `"market-swap"` style.
+- `UIButtonFactory` is no longer used in this file.

@@ -5,7 +5,9 @@ import com.badlogic.gdx.graphics.g2d.Batch
 import com.badlogic.gdx.math.Rectangle
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.Actor
+import com.badlogic.gdx.scenes.scene2d.InputEvent
 import com.badlogic.gdx.scenes.scene2d.ui.*
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
 import com.github.quillraven.fleks.World
 import com.srw.seedsofsovereignty.component.*
 import com.srw.seedsofsovereignty.manager.MarketManager
@@ -38,6 +40,7 @@ class MarketTable(
 
     init {
         setTransform(true)
+        background = skin.getDrawable("panel")
         setupLayout()
         refreshCatalog()
     }
@@ -47,29 +50,37 @@ class MarketTable(
         centerColumn.add(Label("STATION DATA LINK: ${category.name}", skin)).padBottom(5f).row()
         centerColumn.add(catalogScrollPane).width(450f).height(350f).row()
 
-        val swapBtn = UIButtonFactory.createButton(skin, "CONFIRM SWAP", UIButtonFactory.ButtonType.MARKET) {
-            val player = world.family { all(PlayerComponent, DockingComponent) }.first()
-            val station = with(world) { player[DockingComponent].nearestStation!! }
-            val market = with(world) { station[MarketComponent] }
+        val swapBtn = TextButton("CONFIRM SWAP", skin, "market-swap").apply {
+            addListener(object : ClickListener() {
+                override fun clicked(event: InputEvent?, x: Float, y: Float) {
+                    val player = world.family { all(PlayerComponent, DockingComponent) }.first()
+                    val station = with(world) { player[DockingComponent].nearestStation!! }
+                    val market = with(world) { station[MarketComponent] }
 
-            if (category == SlotType.WEAPON) {
-                if (selectedModuleIndex in visibleWeaponOffers.indices) {
-                    val absIndex = market.weaponOffers.indexOf(visibleWeaponOffers[selectedModuleIndex])
-                    marketManager.swapModule(player, station, absIndex)
+                    if (category == SlotType.WEAPON) {
+                        if (selectedModuleIndex in visibleWeaponOffers.indices) {
+                            val absIndex = market.weaponOffers.indexOf(visibleWeaponOffers[selectedModuleIndex])
+                            marketManager.swapModule(player, station, absIndex)
+                        }
+                    } else {
+                        if (selectedModuleIndex in visibleDroneOffers.indices) {
+                            val absIndex = market.droneOffers.indexOf(visibleDroneOffers[selectedModuleIndex])
+                            // We target the first drone slot for this market view
+                            marketManager.swapDroneModule(player, station, absIndex, 0)
+                        }
+                    }
+                    refreshCatalog()
                 }
-            } else {
-                if (selectedModuleIndex in visibleDroneOffers.indices) {
-                    val absIndex = market.droneOffers.indexOf(visibleDroneOffers[selectedModuleIndex])
-                    // We target the first drone slot for this market view
-                    marketManager.swapDroneModule(player, station, absIndex, 0)
-                }
-            }
-            refreshCatalog()
+            })
         }
         centerColumn.add(swapBtn).size(450f, 90f).padTop(20f).row()
 
-        val exitBtn = UIButtonFactory.createButton(skin, "BACK TO ANALYSIS", UIButtonFactory.ButtonType.GENERIC) {
-            onExit()
+        val exitBtn = TextButton("BACK TO ANALYSIS", skin, "scifi").apply {
+            addListener(object : ClickListener() {
+                override fun clicked(event: InputEvent?, x: Float, y: Float) {
+                    onExit()
+                }
+            })
         }
         centerColumn.add(exitBtn).size(450f, 70f).padTop(10f)
 
@@ -121,12 +132,25 @@ class MarketTable(
     }
 
     private fun addModuleButton(name: String, tier: Int, color: Color, index: Int) {
-        val type = if (index == selectedModuleIndex) UIButtonFactory.ButtonType.SELECTED else UIButtonFactory.ButtonType.MODULE
+        val style = if (index == selectedModuleIndex) "scifi-selected" else "scifi"
         val icon = ProjectileIcon(drawer, skin, tier, 1.5f, color)
 
-        val btn = UIButtonFactory.createButton(skin, "$name [T$tier]", type, icon) {
-            selectedModuleIndex = index
-            refreshCatalog()
+        val btn = TextButton("", skin, style).apply {
+            // Manual icon/label layout to match UIButtonFactory's previous behavior
+            val iconTable = Table(skin)
+            iconTable.add(icon).size(40f).center()
+            add(iconTable).width(60f).padLeft(5f)
+
+            val label = Label("$name [T$tier]", skin)
+            label.setEllipsis(true)
+            add(label).expandX().fillX().padLeft(10f).padRight(15f)
+
+            addListener(object : ClickListener() {
+                override fun clicked(event: InputEvent?, x: Float, y: Float) {
+                    selectedModuleIndex = index
+                    refreshCatalog()
+                }
+            })
         }
 
         if (index == selectedModuleIndex) selectedOfferButton = btn

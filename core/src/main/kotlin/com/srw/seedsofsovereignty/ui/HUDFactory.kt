@@ -97,6 +97,23 @@ object HUDFactory {
             fontColor = Color.BLACK
         })
 
+        // Phase 8.1: Hangar Styles
+        registerStyle("scifi-selected", TextButton.TextButtonStyle().apply {
+            up = collection.buttonDown
+            down = collection.buttonDown
+            over = collection.buttonDown
+            font = mainFont
+            fontColor = Color.CYAN
+        })
+
+        registerStyle("market-swap", TextButton.TextButtonStyle().apply {
+            up = collection.buttonUp
+            down = collection.buttonDown
+            over = collection.buttonUp
+            font = mainFont
+            fontColor = if (styleId == "IMPERIAL") Color.GOLD else Color.ORANGE
+        })
+
         // 7. Joysticks
         skin.add("default", Touchpad.TouchpadStyle().apply {
             background = collection.joystickBg
@@ -134,7 +151,12 @@ object HUDFactory {
         when (actor) {
             is TextButton -> {
                 // Determine style name. Most use "scifi", but some might use "mode-toggle"
-                val styleName = if (actor.style == skin.get("mode-toggle", TextButton.TextButtonStyle::class.java)) "mode-toggle" else "scifi"
+                val styleName = when (actor.style) {
+                    skin.get("mode-toggle", TextButton.TextButtonStyle::class.java) -> "mode-toggle"
+                    skin.get("scifi-selected", TextButton.TextButtonStyle::class.java) -> "scifi-selected"
+                    skin.get("market-swap", TextButton.TextButtonStyle::class.java) -> "market-swap"
+                    else -> "scifi"
+                }
                 actor.style = skin.get(styleName, TextButton.TextButtonStyle::class.java)
             }
             is Touchpad -> {
@@ -146,6 +168,9 @@ object HUDFactory {
                 actor.actor?.let { refreshActor(it, skin) }
             }
             is Table -> {
+                if (actor is StationHangarUI || actor is MarketTable || actor is EvolutionReportPopup) {
+                    actor.background = skin.getDrawable("panel")
+                }
                 actor.children.forEach { refreshActor(it, skin) }
             }
             is Group -> {

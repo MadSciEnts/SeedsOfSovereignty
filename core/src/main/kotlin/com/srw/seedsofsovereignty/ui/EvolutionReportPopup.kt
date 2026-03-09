@@ -1,7 +1,9 @@
 package com.srw.seedsofsovereignty.ui
 
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.scenes.scene2d.InputEvent
 import com.badlogic.gdx.scenes.scene2d.ui.*
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
 import com.badlogic.gdx.utils.Align
 import com.srw.seedsofsovereignty.component.WeaponModuleComponent
 import com.srw.seedsofsovereignty.component.DroneModuleComponent
@@ -72,8 +74,12 @@ class EvolutionReportPopup(
         add(scroll).expand().fill().padBottom(20f).row()
 
         // 3. Action Footer
-        val confirmBtn = UIButtonFactory.createButton(skin, "COMMENCE OPERATIONS", UIButtonFactory.ButtonType.MARKET) {
-            onConfirm()
+        val confirmBtn = TextButton("COMMENCE OPERATIONS", skin, "market-swap").apply {
+            addListener(object : ClickListener() {
+                override fun clicked(event: InputEvent?, x: Float, y: Float) {
+                    onConfirm()
+                }
+            })
         }
         add(confirmBtn).size(400f, 80f).center()
 

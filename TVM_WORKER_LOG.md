@@ -1,27 +1,25 @@
-# TVM WORKER LOG - Phase 7.3 Scalable Visual Engine
+# TVM WORKER LOG - Phase 8.2 Pop-up & Table Unification
 
-## Status: COMPLETE (Phase 7.3 / v0.5.1)
+## Status: COMPLETE (Phase 8.2 / v0.5.1)
 **Agent:** Forensic Coordinator
-**Mission:** Phase 7.3 - Scalable Visual Engine
+**Mission:** Phase 8.2 - Pop-up & Table Unification
 
 ---
 
-### Phase 7.3 Progress Tracker
+### Phase 8.2 Progress Tracker
 
-- [x] **Step 1: The Style Interface**
-    - Created `TacticalStyleGenerator.kt` interface.
-- [x] **Step 2: Style Decomposition**
-    - Created `IndustrialStyle.kt` and moved "INDUSTRIAL" logic.
-    - Created `ImperialStyle.kt` and moved "IMPERIAL" logic.
-- [x] **Step 3: Router Refactor**
-    - Refactored `HUDTextureGenerator.kt` into a factory router.
+- [x] **Step 1: Market Table Refactor**
+    - `MarketTable.kt` updated to use `"panel"` background.
+    - Legacy `UIButtonFactory` dependencies replaced with `TextButton` and `"scifi"`/`"market-swap"` styles.
+- [x] **Step 2: Evolution Report Refactor**
+    - `EvolutionReportPopup.kt` updated to use `"panel"` background and `"market-swap"` `TextButton`.
+    - Removed `UIButtonFactory` dependency.
 
 ---
 
 ## ARCHITECTURAL VERIFICATION (v0.5.1 Stable)
 
-- [x] **Modularity:** UI Styles are now individual classes implementing `TacticalStyleGenerator`.
-- [x] **Scalability:** The system is ready to support 48 tiers of evolution by adding new `TacticalStyleGenerator` implementations.
-- [x] **Integrity:** `HUDTextureGenerator` maintains the same API for external callers while delegating internal logic.
+- [x] **Consistency:** Market and Evolution UI now share the same procedural styling engine.
+- [x] **Cleanup:** Decoupled specialized UI tables from `UIButtonFactory`, moving towards a pure Skin-based approach.
 
-**STOP: Phase 7.3 Scalable Visual Engine Complete.**
+**STOP: Phase 8.2 Pop-up & Table Unification Complete.**
