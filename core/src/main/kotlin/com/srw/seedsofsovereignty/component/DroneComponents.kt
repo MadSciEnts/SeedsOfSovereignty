@@ -9,6 +9,7 @@ enum class DroneCategory { ATTACK, DEFEND, REPAIR }
 
 /**
  * The swappable hardware module for drones.
+ * v0.4.0: Updated to use InputChannel for bidirectional instrumentation.
  */
 data class DroneModuleComponent(
     var name: String = "Guardian D1",
@@ -16,6 +17,7 @@ data class DroneModuleComponent(
     var maxHealth: Float = 50f,
     var maxDrones: Int = 1,
     var rarity: Rarity = Rarity.COMMON,
+    var tacticalSchema: TacticalSchema = TacticalSchema(listOf(InputChannel(ControlClassification.TACTICAL_STICK, "DRONE_FOCUS"))),
     val weaponDNA: WeaponModuleComponent = WeaponModuleComponent()
 ) : Component<DroneModuleComponent> {
     override fun type() = DroneModuleComponent

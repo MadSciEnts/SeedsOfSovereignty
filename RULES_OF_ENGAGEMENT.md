@@ -2,30 +2,24 @@
 
 ## 1. Kotlin & LibKTX
 - **Idiomatic Code:** Use `apply`, `let`, `with`, and extension functions.
-- **UI Builders:** Use the `scene2d { ... }` DSL for all HUD and Menu construction.
-- **Type Safety:** Use KTX `AssetStorage` or `AssetManager` with Kotlin-friendly wrappers.
+- **UI Builders:** Use the `scene2d { ... }` DSL for HUD and Menu construction.
 
-## 2. Fleks ECS (Entity Component System)
-- **Logic Separation:** All logic must live in `IteratingSystem` or `IntervalSystem`.
-- **Components:** Components must be pure Data Classes (POJOs). No logic in components.
-- **Injectables:** Use Fleks' native dependency injection to pass `SpriteBatch`, `ShapeDrawer`, and `Camera`.
+## 2. Performance (Android Focused)
+- **Zero Allocations:** No `new` objects inside `onTick` or `render`. Use `Pools` for bullets/particles.
+- **Batching:** Keep `SpriteBatch` calls grouped. All textures are procedural.
 
-## 3. Performance (Android Focused)
-- **Zero Allocations:** No `new` objects or collection resizing inside `onTick` or `render`. Use `Pools` for bullets/particles.
-- **Batching:** Keep `SpriteBatch` calls grouped. Use `ShapeDrawer` to draw shapes inside the same batch as sprites.
-- **Drawables:** All textures are procedural. Generate `Pixmap` at runtime, convert to `TextureRegion`, and cache.
+## 3. The Mantra of Modularization
+- **No "God Scripts":** No file should exceed 300 lines of logic.
+- **Refactoring Sprints:** Every 4 Tiers, perform a refactoring pass to maintain health.
 
-## 4. The Mantra of Modularization
-- **No "God Scripts":** No file should exceed 300 lines of logic. If a system or component set grows too large, it must be split into a specific domain (e.g., `CombatComponents.kt`, `MovementSystems.kt`).
-- **Refactoring Sprints:** Every 4 Tiers (once per major evolution), we perform a "Refactoring Sprint" to evaluate file size and reorganize logic.
-- **Feature-First Structure:** Organize files by their game function rather than just their technical type.
+## 4. Agent-in-Charge Review Protocol (v0.3.13)
+To ensure architectural integrity, the Lead Architect must verify all work using this 4-step forensic process:
+1. **Forensic Reading:** Read the `TVM_WORKER_LOG.md`. Ensure the agent explicitly lists files changed and provides a justification for why.
+2. **Physical Evidence Audit:** Read ALL files the worker claims to have edited. Confirm the code matches the report and mission instructions.
+3. **Synthesis & Diagnosis:** Formulate a planned next step based on findings. If implementation differs from expectations, prioritize a "Forward-Fix."
+4. **Review Report:** Present a formal findings report to the User listing files touched, designer opinion on the alterations, and a binary Success/Failure verdict.
 
-## 5. Log-Based Verification & Synchronization
-- **Verification Protocol:** Before claiming a task is complete, execute a `gradle core:assemble` check to ensure the project compiles.
-- **Status Sync:** In every multi-file update, explicitly list the "Disk Status" to confirm which files were successfully written.
-- **Log-First Workflow:** Update `TASK_SYNC.log` *before* modifying logic files to maintain a clear "source of truth" for complex refactors.
-- **Write Verification Rule:** Always read the file you have just written to. Ensure that the expected 'write' command was received and executed by the remote IDE.
-
-## 6. Design Ethics
-- **The "No-Inventory" Rule:** All weapon/ship changes are immediate "Swap or Scrap."
-- **Visual Response:** Every UI tap must trigger a visual tween (Glitch, Flare, or Aperture shift).
+## 5. Verification & Log Protocol
+- **assemble check:** Execute `gradle core:assemble` before signing off a phase.
+- **One-File-One-Turn:** Do not modify multiple files in a single turn. Wait for feedback between writes.
+- **Reality-Anchor:** Beliefs must be re-anchored to the physical disk state after every session timeout or interruption.

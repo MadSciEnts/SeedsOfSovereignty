@@ -1,40 +1,34 @@
 package com.srw.seedsofsovereignty.component
 
 /**
- * Defines the supported tactile controls for the Command Matrix (v0.3.0).
+ * Descriptive hardware classification for bidirectional instruments.
  */
-enum class TacticalInputType {
-    MOMENTARY_BUTTON,   // Active while pressed (Fire)
-    TOGGLE_BUTTON,      // Flips state on tap (Localization)
-    VECTOR_STICK,       // 360-degree direction (Aim)
-    FOCUS_STICK,        // Persistent position stick (Drones)
-    LINEAR_SLIDER       // Range input (Power distribution)
+enum class ControlClassification {
+    ACTION_BUTTON, MOVEMENT_STICK, TACTICAL_STICK, TOGGLE_SWITCH, DIAMOND_GRID, MODIFIER_SLIDER, STATUS_LIGHT
 }
 
 /**
- * Logical anchoring within the 3x3 Tactical Grid.
+ * A bidirectional input/output channel defined by a hardware module.
+ * v0.4.0: Transitioned to chained relative positioning and signal feedback.
  */
-enum class MatrixAnchor {
-    CENTER,
-    TOP, BOTTOM, LEFT, RIGHT,
-    TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT,
-    DIAMOND_NORTH, DIAMOND_SOUTH, DIAMOND_WEST, DIAMOND_EAST
-}
-
-/**
- * A specific input requirement defined by hardware.
- */
-data class InputRequirement(
-    val type: TacticalInputType,
-    val anchor: MatrixAnchor,
-    val actionKey: String, // e.g., "FIRE", "SHIELD_FRONT", "DRONE_FOCUS"
-    val label: String = ""
+data class InputChannel(
+    val classification: ControlClassification,
+    val actionKey: String, // Key for pushing control data to the module
+    val signalKey: String? = null, // Optional key for pulling feedback data from the module
+    val relX: Float = 0f, // X offset relative to the previous channel in the list
+    val relY: Float = 0f, // Y offset relative to the previous channel in the list
+    val width: Float = 250f, // Physical footprint width
+    val height: Float = 250f, // Physical footprint height
+    val label: String? = null,
+    val color: String? = null, // Skin color identifier
+    val icon: String? = null, // Asset identifier
+    val styleId: String? = null // Texture collection reference, e.g., "INDUSTRIAL"
 )
 
 /**
  * The HUD Manifest provided by a module.
- * Replaces hardcoded ControlType logic.
+ * v0.4.0: Now holds a list of InputChannels for bidirectional instrumentation.
  */
 data class TacticalSchema(
-    val inputs: List<InputRequirement> = emptyList()
+    val inputs: List<InputChannel> = emptyList()
 )

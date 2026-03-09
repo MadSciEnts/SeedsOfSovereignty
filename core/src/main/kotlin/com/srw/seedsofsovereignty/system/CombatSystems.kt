@@ -9,25 +9,52 @@ import com.github.quillraven.fleks.World.Companion.family
 import com.srw.seedsofsovereignty.component.*
 import com.srw.seedsofsovereignty.util.ProceduralShipDrawer
 
-class WeaponSystem : IteratingSystem(family { all(WeaponComponent, PositionComponent, VelocityComponent, OrientationComponent) }) {
+/**
+ * High-fidelity combat kernel (v0.3.21).
+ * WeaponSystem now consumes firing directives and AIM vectors from the TVM TacticalHubComponent.
+ * v0.4.0: Updated to use TacticalHubComponent.
+ */
+class WeaponSystem : IteratingSystem(family {
+    all(WeaponComponent, PositionComponent, VelocityComponent, OrientationComponent)
+}) {
     private val mountOffsetsBuffer = mutableListOf<Vector2>()
 
     override fun onTickEntity(entity: Entity) {
         val weapon = entity[WeaponComponent]
         val pos = entity[PositionComponent].pos
         val hullAngle = entity[OrientationComponent].angleRad
-        val aimAngle = weapon.aimAngleRad
 
         val isEnemy = entity.has(EnemyComponent)
         val evo = if (entity.has(EvolutionComponent)) entity[EvolutionComponent] else null
         val tier = if (isEnemy) 1 else (evo?.currentTier ?: 1)
         val subTier = evo?.subTier ?: 1
 
+        // TVM Integration: Check for firing bit and AIM vector in TacticalHubComponent if player-controlled
+        var isFiring = weapon.isFiring
+        if (entity.has(PlayerComponent) && entity.has(TacticalHubComponent)) {
+            val hub = entity[TacticalHubComponent]
+
+            val aimVector = hub.vectors["AIM"]
+            val bit0Set = (hub.activeBitmask and (1L shl 0)) != 0L
+            val isJoystickActive = aimVector != null && aimVector.len() > 0.1f
+
+            isFiring = bit0Set || isJoystickActive
+
+            // v0.3.21: Final Absolute Stabilization - Simplified non-mutating aim logic.
+            aimVector?.let { vector ->
+                if (vector.len2() > 0.01f) {
+                    weapon.aimAngleRad = vector.angleRad()
+                }
+            }
+        }
+
+        val aimAngle = weapon.aimAngleRad
+
         if (weapon.cooldown > 0f) {
             weapon.cooldown -= deltaTime
         }
 
-        if (weapon.isFiring && weapon.cooldown <= 0f) {
+        if (isFiring && weapon.cooldown <= 0f) {
             val module = if (entity.has(WeaponModuleComponent)) entity[WeaponModuleComponent] else null
             weapon.cooldown = (module?.fireRate ?: 0.5f) / weapon.barrels.coerceAtLeast(1)
 

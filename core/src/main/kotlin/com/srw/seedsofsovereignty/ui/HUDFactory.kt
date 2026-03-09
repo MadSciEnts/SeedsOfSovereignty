@@ -5,9 +5,15 @@ import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.NinePatch
+import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.ui.*
 import com.badlogic.gdx.scenes.scene2d.utils.Drawable
 import com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable
+import com.srw.seedsofsovereignty.component.InputChannel
+import com.srw.seedsofsovereignty.component.ControlClassification
+import com.srw.seedsofsovereignty.component.TacticalHubComponent
+import com.github.quillraven.fleks.World
+import com.srw.seedsofsovereignty.component.PlayerComponent
 import space.earlygrey.shapedrawer.ShapeDrawer
 
 object HUDFactory {
@@ -54,25 +60,8 @@ object HUDFactory {
         skin.add("medium", Label.LabelStyle(mediumFont, Color.LIGHT_GRAY))
         skin.add("small", Label.LabelStyle(smallFont, Color.LIGHT_GRAY))
 
-        val bUpPix = Pixmap(32, 32, Pixmap.Format.RGBA8888).apply {
-            setColor(0.1f, 0.15f, 0.25f, 0.95f); fill()
-            setColor(0.4f, 0.7f, 1f, 1f); drawRectangle(0, 0, 32, 32)
-        }
-        skin.add("button-up", NinePatchDrawable(NinePatch(Texture(bUpPix), 4, 4, 4, 4)), Drawable::class.java)
-        bUpPix.dispose()
-
-        val bSelPix = Pixmap(32, 32, Pixmap.Format.RGBA8888).apply {
-            setColor(0.1f, 0.3f, 0.5f, 1.0f); fill()
-            setColor(Color.CYAN); drawRectangle(0, 0, 32, 32)
-        }
-        skin.add("button-selected", NinePatchDrawable(NinePatch(Texture(bSelPix), 4, 4, 4, 4)), Drawable::class.java)
-        bSelPix.dispose()
-
-        val bDownPix = Pixmap(32, 32, Pixmap.Format.RGBA8888).apply {
-            setColor(Color.WHITE); fill()
-        }
-        skin.add("button-down", NinePatchDrawable(NinePatch(Texture(bDownPix), 4, 4, 4, 4)), Drawable::class.java)
-        bDownPix.dispose()
+        // TVM v0.4.0: Integrate procedural textures
+        HUDTextureGenerator.generate("INDUSTRIAL", skin)
 
         // 6. Registration Helper
         fun registerStyle(name: String, textStyle: TextButton.TextButtonStyle) {
@@ -87,9 +76,9 @@ object HUDFactory {
         }
 
         registerStyle("scifi", TextButton.TextButtonStyle().apply {
-            up = skin.getDrawable("button-up")
-            down = skin.getDrawable("button-down")
-            over = skin.getDrawable("button-selected")
+            up = skin.getDrawable("ind_b_up")
+            down = skin.getDrawable("ind_b_down")
+            over = skin.getDrawable("ind_b_up") // v0.4.2 Fix: Replaced missing button-selected
             font = mainFont
             fontColor = Color.WHITE
             overFontColor = Color.CYAN
@@ -97,26 +86,28 @@ object HUDFactory {
         })
 
         registerStyle("mode-toggle", TextButton.TextButtonStyle().apply {
-            up = skin.newDrawable("button-up", Color(1f, 0.7f, 0f, 0.8f))
-            down = skin.newDrawable("white", Color.WHITE)
+            up = skin.getDrawable("ind_t_off")
+            checked = skin.getDrawable("ind_t_on")
+            over = skin.getDrawable("ind_t_off") // v0.4.2 Fix: Use industrial drawables
+            down = skin.getDrawable("ind_t_on")
             font = mainFont
             fontColor = Color.BLACK
         })
 
         // 7. Joysticks
         skin.add("default", Touchpad.TouchpadStyle().apply {
-            background = skin.newDrawable("white", Color(0.2f, 0.2f, 0.2f, 0.5f))
-            knob = skin.newDrawable("white", Color(0.8f, 0.8f, 0.8f, 0.8f)).apply { minWidth = 60f; minHeight = 60f }
+            background = skin.getDrawable("ind_j_bg")
+            knob = skin.getDrawable("ind_j_knob")
         })
 
         skin.add("aim", Touchpad.TouchpadStyle().apply {
-            background = skin.newDrawable("white", Color(0.4f, 0.2f, 0.3f, 0.3f))
-            knob = skin.newDrawable("white", Color(1f, 0.2f, 0.2f, 0.6f)).apply { minWidth = 45f; minHeight = 45f }
+            background = skin.getDrawable("ind_j_bg")
+            knob = skin.getDrawable("ind_j_knob")
         })
 
         skin.add("drone-mode", Touchpad.TouchpadStyle().apply {
-            background = skin.newDrawable("white", Color(0.4f, 0.35f, 0.1f, 0.4f))
-            knob = skin.newDrawable("white", Color(1f, 0.8f, 0.1f, 0.8f)).apply { minWidth = 50f; minHeight = 50f }
+            background = skin.getDrawable("ind_j_bg")
+            knob = skin.getDrawable("ind_j_knob")
         })
 
         skin.add("default", ScrollPane.ScrollPaneStyle().apply {
@@ -127,10 +118,117 @@ object HUDFactory {
         return skin
     }
 
-    // Task Fix: Return explicit SovereigntyTouchpad for persistent tracking support
+    /**
+     * TVM Phase 6.3: Factory Visual Refactor.
+     * v0.4.0: Updated to use procedural skins and signal hooks.
+     * v0.4.1: Signal-Aware Actors and Footprint Calibration.
+     */
+    fun createTacticalInput(skin: Skin, channel: InputChannel, world: World): Actor {
+        val baseActor: Actor = when (channel.classification) {
+            ControlClassification.ACTION_BUTTON -> {
+                object : TextButton(channel.label ?: channel.actionKey, skin, "scifi") {
+                    override fun act(delta: Float) {
+                        super.act(delta)
+                        if (channel.signalKey != null) {
+                            world.family { all(PlayerComponent, TacticalHubComponent) }.firstOrNull()?.let { player ->
+                                val signal = with(world) { player[TacticalHubComponent].signals[channel.signalKey] }
+                                if (signal != null) {
+                                    setText("${channel.label ?: channel.actionKey}: ${signal.value.toInt()}")
+                                }
+                            }
+                        }
+                    }
+                }.apply {
+                    name = channel.actionKey
+                }
+            }
+            ControlClassification.TOGGLE_SWITCH -> {
+                object : TextButton(channel.label ?: channel.actionKey, skin, "mode-toggle") {
+                    override fun act(delta: Float) {
+                        super.act(delta)
+                        if (channel.signalKey != null) {
+                            world.family { all(PlayerComponent, TacticalHubComponent) }.firstOrNull()?.let { player ->
+                                val signal = with(world) { player[TacticalHubComponent].signals[channel.signalKey] }
+                                if (signal != null) {
+                                    setText("${channel.label ?: channel.actionKey}: ${signal.value.toInt()}")
+                                }
+                            }
+                        }
+                    }
+                }.apply {
+                    name = channel.actionKey
+                }
+            }
+            ControlClassification.MOVEMENT_STICK -> {
+                createAttackJoystick(skin).apply {
+                    name = channel.actionKey
+                }
+            }
+            ControlClassification.TACTICAL_STICK -> {
+                SovereigntyTouchpad(15f, skin, "default").apply {
+                    name = channel.actionKey
+                    isPersistent = true
+                }
+            }
+            ControlClassification.DIAMOND_GRID -> {
+                Table(skin).apply {
+                    val btnSize = 80f
+                    add().size(btnSize); add(Button(skin, "scifi")).size(btnSize); add().size(btnSize).row()
+                    add(Button(skin, "scifi")).size(btnSize); add().size(btnSize); add(Button(skin, "scifi")).size(btnSize).row()
+                    add().size(btnSize); add(Button(skin, "scifi")).size(btnSize); add().size(btnSize)
+                    name = channel.actionKey
+                }
+            }
+            ControlClassification.MODIFIER_SLIDER -> {
+                Table(skin).apply {
+                    val slider = Slider(0f, 1f, 0.1f, false, skin).apply {
+                        name = channel.actionKey
+                        style = Slider.SliderStyle(style).apply { background = skin.getDrawable("ind_s_bg"); knob = skin.getDrawable("ind_s_knob") }
+                    }
+                    add(slider).fillX().expandX()
+                    name = channel.actionKey
+                }
+            }
+            ControlClassification.STATUS_LIGHT -> {
+                Image(skin.getDrawable("ind_light_yellow")).apply {
+                    name = channel.actionKey
+                }
+            }
+        }
+
+        // Wrap in technical frame "The Cradle"
+        return Container(baseActor).apply {
+            background = skin.getDrawable("panel")
+            pad(5f)
+            fill()
+            // Step 2 calibration
+            when (channel.classification) {
+                ControlClassification.ACTION_BUTTON, ControlClassification.TOGGLE_SWITCH -> {
+                    size(100f, 100f)
+                    prefSize(100f, 100f)
+                }
+                ControlClassification.TACTICAL_STICK -> {
+                    size(250f, 250f)
+                    prefSize(250f, 250f)
+                }
+                else -> prefSize(channel.width, channel.height)
+            }
+        }
+    }
+
+    // Task Fix: Return explicit SovereigntyTouchpad for persistent tracking support. v0.3.25: 250px standard.
     fun createMoveJoystick(skin: Skin): SovereigntyTouchpad = SovereigntyTouchpad(15f, skin, "default").apply { setSize(250f, 250f) }
     fun createAimJoystick(skin: Skin): SovereigntyTouchpad = SovereigntyTouchpad(15f, skin, "aim").apply { setSize(250f, 250f) }
     fun createDroneJoystick(skin: Skin): SovereigntyTouchpad = SovereigntyTouchpad(15f, skin, "drone-mode").apply { setSize(250f, 250f) }
+
+    /**
+     * Specialized Attack Joystick for tactical schemas.
+     * v0.3.25: Zero deadzone and 250f size.
+     */
+    fun createAttackJoystick(skin: Skin): SovereigntyTouchpad = SovereigntyTouchpad(0f, skin, "aim").apply {
+        setDeadzone(0f)
+        setSize(250f, 250f)
+    }
 
     fun createFireButton(skin: Skin): TextButton = TextButton("FIRE", skin, "scifi").apply { setSize(250f, 250f) }
     fun createStationButton(text: String, skin: Skin): TextButton = TextButton(text, skin, "scifi").apply { setSize(400f, 90f) }

@@ -31,6 +31,7 @@ class EvolutionManager {
 
     /**
      * Applies the mandatory hardware baseline for a new Tier.
+     * v0.3.14: Phase 5.12 - Absolute Operational Restoration.
      */
     fun applyTierBaseline(world: World, player: Entity, tier: Int) {
         with(world) {
@@ -56,7 +57,9 @@ class EvolutionManager {
             module.description = stockWeapon.description
             module.projectileTier = stockWeapon.projectileTier
             module.rarity = stockWeapon.rarity
-            module.controlType = stockWeapon.controlType // Rule #11 Sync
+            module.controlType = stockWeapon.controlType
+            // v0.3.14: Absolute Operational Restoration - Forensic Schema Sync
+            module.tacticalSchema = stockWeapon.tacticalSchema
             module.fireRate = stockWeapon.fireRate
             module.projectileSpeed = stockWeapon.projectileSpeed
             module.projectileColor = stockWeapon.projectileColor

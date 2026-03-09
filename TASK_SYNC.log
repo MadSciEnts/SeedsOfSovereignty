@@ -1,14 +1,14 @@
 # ARCHITECTURAL SYNCHRONIZATION LOG
 
-## v0.3.0 ATO: Tactical Schema Migration (PLANNING)
-### Objective: Transition from hardcoded ControlTypes to a data-driven UI Schema where hardware dictates its own control layout.
+## v0.4.1 TVM: Bidirectional Feedback Loop (INITIATED)
+### Status: Transitioning from one-way input to a dual-signal tactical instrument.
 
-- [ ] Phase 1: Define `TacticalSchema` and `TacticalInput` data models.
-- [ ] Phase 2: Implement `TacticalClusterWidget` (The Schema Interpreter).
-- [ ] Phase 3: Integrate Dynamic Action Mapping (UI -> ECS Events).
-- [ ] Phase 4: Art Pass: Procedural technical frames for all input types.
+- [x] Phase 6.1: DNA Refactor - COMPLETE.
+- [ ] Phase 6.2: Implement HUDTextureGenerator (Visual Engine).
+- [ ] Phase 6.3: Implement TacticalHubComponent (Data Bridge).
+- [ ] Phase 6.4: Implement Signal-Aware Widgets (Counters, Gauges, Status Lights).
 
-## STATUS: IDLE / READY
-- Baseline: v0.2.0 Stable.
-- Concept: Tactical Virtual Machine (Hardware dictates HUD layout).
-- Awaiting Phase 1 directive.
+## STATUS: WAITING FOR USER
+- Objective: Procedural textures and real-time module feedback.
+- Rule #12: Reality-Anchor verified.
+- Persistence: ON.

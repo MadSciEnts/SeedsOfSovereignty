@@ -47,6 +47,7 @@ data class WeaponModuleComponent(
     var projectileTier: Int = 1,
     var rarity: Rarity = Rarity.COMMON,
     var controlType: ControlType = ControlType.BUTTON, // Rule #11: Control DNA
+    var tacticalSchema: TacticalSchema = TacticalSchema(listOf(InputChannel(ControlClassification.ACTION_BUTTON, "FIRE"))),
     var projectileSpeed: Float = 1000f,
     var fireRate: Float = 0.5f,
     var projectileColor: Color = Color.YELLOW,

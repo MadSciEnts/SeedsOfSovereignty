@@ -58,9 +58,16 @@ class DroneRegenSystem : IteratingSystem(family { all(DroneLauncherComponent, Dr
     }
 }
 
+/**
+ * Advanced fleet formation kernel (v0.3.0).
+ * Consumes drone directives from the TVM TacticalHubComponent.
+ * v0.4.0: Updated to use TacticalHubComponent.
+ */
 class DroneFormationSystem(
     private val camera: OrthographicCamera
-) : IteratingSystem(family { all(DroneComponent, PositionComponent, VelocityComponent, OrientationComponent) }) {
+) : IteratingSystem(family {
+    all(DroneComponent, PositionComponent, VelocityComponent, OrientationComponent)
+}) {
     private val enemyFamily by lazy { world.family { all(EnemyComponent, PositionComponent) } }
     private val targetPos = Vector2()
     private val steerForce = Vector2()
@@ -85,19 +92,32 @@ class DroneFormationSystem(
             return
         }
 
-        // 1. Get Fleet Intent & Ship Orientation
-        val fleet = if (owner.has(FleetCommandComponent)) owner[FleetCommandComponent] else null
-        val focusOffset = fleet?.slotFocusPoints?.getOrNull(drone.slotIndex) ?: Vector2.Zero
-        val shipAngle = if (owner.has(OrientationComponent)) owner[OrientationComponent].angleRad else 0f
+        // 1. Get TVM Tactical Intent
+        var localizationMode = FleetCommandComponent.LocalizationMode.CAMERA
+        rotatedOffset.set(0f, 0f)
 
-        // 2. Localization: Task Fix - Transform offset based on toggle mode (v0.2.1)
-        rotatedOffset.set(focusOffset)
-        if (fleet?.localization == FleetCommandComponent.LocalizationMode.SHIP) {
-            // Subtracting PI/2 because joysticks are Y-up, but ship nose is often PI/2 rotated in screen-space
-            rotatedOffset.rotateRad(shipAngle - MathUtils.PI/2f)
+        if (owner.has(TacticalHubComponent)) {
+            val hub = owner[TacticalHubComponent]
+            // Pull the persistent focus point from the TVM Vector map
+            val rawOffset = hub.vectors["DRONE_FOCUS"] ?: Vector2.Zero
+
+            // v0.3.0 Task Fix: Scale normalized -1..1 joystick input to tactical world units (150f max)
+            rotatedOffset.set(rawOffset).scl(150f)
+
+            if (owner.has(FleetCommandComponent)) {
+                localizationMode = owner[FleetCommandComponent].localization
+            }
         }
 
-        val pushMag = focusOffset.len() / 150f
+        val shipAngle = if (owner.has(OrientationComponent)) owner[OrientationComponent].angleRad else 0f
+
+        // 2. Localization: Transform offset based on toggle mode
+        if (localizationMode == FleetCommandComponent.LocalizationMode.SHIP) {
+            // Transform to ship-local space (PI/2 nose rotation compensated)
+            rotatedOffset.rotateRad(shipAngle - MathUtils.PI / 2f)
+        }
+
+        val pushMag = rotatedOffset.len() / 150f
 
         // 3. Calculate Target Position (Owner + (Transformed Offset) + Orbit)
         val ownerPos = owner[PositionComponent].pos

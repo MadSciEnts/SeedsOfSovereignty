@@ -6,6 +6,7 @@ import com.srw.seedsofsovereignty.component.*
 
 /**
  * Procedural generation utility for ship modules and salvage rewards.
+ * Updated (v0.4.0): Populates TacticalSchema DNA using Bidirectional Instrument channels.
  */
 object ModuleGenerator {
 
@@ -25,9 +26,17 @@ object ModuleGenerator {
         // Rule #11: Inject Control DNA based on Tier jump (T4+ unlocks independent turrets)
         val controlType = if (tier >= 4) ControlType.DIRECTIONAL_STICK else ControlType.BUTTON
 
+        // TVM Phase 6.1: Assign appropriate TacticalSchema with InputChannel
+        val schema = if (tier < 4) {
+            TacticalSchema(listOf(InputChannel(ControlClassification.ACTION_BUTTON, "FIRE", relX = 100f, relY = 0f)))
+        } else {
+            TacticalSchema(listOf(InputChannel(ControlClassification.MOVEMENT_STICK, "AIM", relX = 100f, relY = 0f)))
+        }
+
         val module = WeaponModuleComponent(
             name = name, description = desc, projectileTier = tier, rarity = rarity,
             controlType = controlType,
+            tacticalSchema = schema,
             projectileSpeed = 950f + (tier * 60f), fireRate = fireRate, effects = mutableListOf()
         )
 
@@ -45,12 +54,26 @@ object ModuleGenerator {
             tier == 5 -> 1; else -> 1
         }
 
+        // TVM Phase 6.1: Drones use TACTICAL_STICK + MODE toggle (Chained)
+        val schema = TacticalSchema(listOf(
+            InputChannel(ControlClassification.TACTICAL_STICK, "DRONE_FOCUS", relX = 100f, relY = 0f),
+            InputChannel(
+                classification = ControlClassification.TOGGLE_SWITCH,
+                actionKey = "MODE",
+                relX = -100f, // Relative to the TACTICAL_STICK
+                relY = 85f,
+                width = 120f,
+                height = 120f
+            )
+        ))
+
         return DroneModuleComponent(
             name = "GUARDIAN ${tier}${rarity.name[0]}",
             category = if (theme == Theme.ION) DroneCategory.DEFEND else DroneCategory.ATTACK,
             maxHealth = (50f + tier * 20f) * rarityMult,
             maxDrones = droneCount,
             rarity = rarity,
+            tacticalSchema = schema,
             weaponDNA = generateWeapon(tier, rarity)
         )
     }
