@@ -43,6 +43,7 @@ class PlayScreen(
     // 2. Adaptive Tactical Overlay (TVM v0.3.32 - Unified Source of Truth)
     private var selectedModuleIndex = 0
     private var lastObservedIdentity: String? = null
+    private var currentHUDStyle = "INDUSTRIAL"
 
     private val vitalsHUD = VitalsClusterWidget(drawer, skin, world)
 
@@ -134,6 +135,16 @@ class PlayScreen(
             with(world) {
                 // 1. Update ATO Hubs
                 vitalsHUD.update(player)
+
+                // TVM Phase 7.2: Evolution-linked HUD Skin
+                val evo = player[EvolutionComponent]
+                if (evo.currentTier >= 10 && currentHUDStyle != "IMPERIAL") {
+                    currentHUDStyle = "IMPERIAL"
+                    HUDFactory.swapSkin("IMPERIAL", skin)
+                    HUDFactory.refreshUI(uiStage, skin)
+                    // Trigger a commandMatrix refresh
+                    lastObservedIdentity = null
+                }
 
                 val slots = if (player.has(ModuleSlotComponent)) player[ModuleSlotComponent].slots else emptyList()
                 commandMatrix.syncLoadout(slots, selectedModuleIndex)

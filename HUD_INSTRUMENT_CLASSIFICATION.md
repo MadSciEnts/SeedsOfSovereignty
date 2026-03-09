@@ -32,7 +32,7 @@ To define a rigid, data-driven taxonomy for HUD controls. Instead of the UI "gue
 ### 5. DIAMOND_BUTTON
 - **Description:** A small directional tap surface used in 4-way arrays (e.g., Shields).
 - **Properties:** relX, relY, relativeTo, icon.
-- **Standard Footproject:** 80x80.
+- **Standard Footprint:** 80x80.
 - **Visuals:** Directional arrow icons, highlight on press.
 
 ### 6. PRECISION_SLIDER

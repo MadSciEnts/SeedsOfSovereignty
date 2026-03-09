@@ -4,11 +4,11 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.BitmapFont
-import com.badlogic.gdx.graphics.g2d.NinePatch
 import com.badlogic.gdx.scenes.scene2d.Actor
+import com.badlogic.gdx.scenes.scene2d.Group
+import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.ui.*
 import com.badlogic.gdx.scenes.scene2d.utils.Drawable
-import com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable
 import com.srw.seedsofsovereignty.component.InputChannel
 import com.srw.seedsofsovereignty.component.ControlClassification
 import com.srw.seedsofsovereignty.component.TacticalHubComponent
@@ -17,7 +17,7 @@ import com.srw.seedsofsovereignty.component.PlayerComponent
 import space.earlygrey.shapedrawer.ShapeDrawer
 
 object HUDFactory {
-    fun createSkin(): Skin {
+    fun createSkin(styleId: String = "INDUSTRIAL"): Skin {
         val skin = Skin()
 
         // 1. Core Pixels
@@ -42,26 +42,29 @@ object HUDFactory {
         skin.add("medium-font", mediumFont)
         skin.add("small-font", smallFont)
 
-        // 4. Panel Pixmap
-        val panelPixmap = Pixmap(64, 64, Pixmap.Format.RGBA8888).apply {
-            setColor(0.01f, 0.01f, 0.03f, 0.96f); fill()
-            setColor(0.2f, 0.5f, 0.8f, 1f); drawRectangle(0, 0, 64, 64)
-            fillRectangle(0, 0, 16, 4); fillRectangle(0, 0, 4, 16)
-            fillRectangle(48, 0, 16, 4); fillRectangle(60, 0, 4, 16)
-            fillRectangle(0, 60, 16, 4); fillRectangle(0, 48, 4, 16)
-            fillRectangle(48, 60, 16, 4); fillRectangle(60, 48, 4, 16)
-        }
-        skin.add("panel", NinePatchDrawable(NinePatch(Texture(panelPixmap), 20, 20, 20, 20)), Drawable::class.java)
-        panelPixmap.dispose()
-
         // 5. Labels & Styles
         skin.add("default", Label.LabelStyle(mainFont, Color.WHITE))
         skin.add("title", Label.LabelStyle(titleFont, Color.CYAN))
         skin.add("medium", Label.LabelStyle(mediumFont, Color.LIGHT_GRAY))
         skin.add("small", Label.LabelStyle(smallFont, Color.LIGHT_GRAY))
 
-        // TVM v0.4.0: Integrate procedural textures
-        val industrialCollection = HUDTextureGenerator.generate("INDUSTRIAL", skin)
+        skin.add("default", ScrollPane.ScrollPaneStyle().apply {
+            vScroll = skin.newDrawable("white", Color(0.1f, 0.3f, 0.5f, 0.3f))
+            vScrollKnob = skin.newDrawable("white", Color(0.2f, 0.6f, 1f, 0.8f))
+        })
+
+        // TVM Phase 7.2: Apply initial style
+        applyStyleToSkin(styleId, skin)
+
+        return skin
+    }
+
+    private fun applyStyleToSkin(styleId: String, skin: Skin) {
+        val collection = HUDTextureGenerator.generate(styleId, skin)
+        val mainFont = skin.getFont("default")
+
+        // Phase 7.2: Dynamic Panel Skinning
+        skin.add("panel", collection.panel, Drawable::class.java)
 
         // 6. Registration Helper
         fun registerStyle(name: String, textStyle: TextButton.TextButtonStyle) {
@@ -76,52 +79,86 @@ object HUDFactory {
         }
 
         registerStyle("scifi", TextButton.TextButtonStyle().apply {
-            up = industrialCollection.buttonUp
-            down = industrialCollection.buttonDown
-            over = industrialCollection.buttonUp
+            up = collection.buttonUp
+            down = collection.buttonDown
+            over = collection.buttonUp
             font = mainFont
-            fontColor = Color.WHITE
+            fontColor = if (styleId == "IMPERIAL") Color.GOLD else Color.WHITE
             overFontColor = Color.CYAN
             downFontColor = Color.BLACK
         })
 
         registerStyle("mode-toggle", TextButton.TextButtonStyle().apply {
-            up = industrialCollection.toggleOff
-            checked = industrialCollection.toggleOn
-            over = industrialCollection.toggleOff
-            down = industrialCollection.toggleOn
+            up = collection.toggleOff
+            checked = collection.toggleOn
+            over = collection.toggleOff
+            down = collection.toggleOn
             font = mainFont
             fontColor = Color.BLACK
         })
 
         // 7. Joysticks
         skin.add("default", Touchpad.TouchpadStyle().apply {
-            background = industrialCollection.joystickBg
-            knob = industrialCollection.joystickKnob
+            background = collection.joystickBg
+            knob = collection.joystickKnob
         })
 
         skin.add("aim", Touchpad.TouchpadStyle().apply {
-            background = industrialCollection.joystickBg
-            knob = industrialCollection.joystickKnob
+            background = collection.joystickBg
+            knob = collection.joystickKnob
         })
 
         skin.add("drone-mode", Touchpad.TouchpadStyle().apply {
-            background = industrialCollection.joystickBg
-            knob = industrialCollection.joystickKnob
+            background = collection.joystickBg
+            knob = collection.joystickKnob
         })
 
-        skin.add("default", ScrollPane.ScrollPaneStyle().apply {
-            vScroll = skin.newDrawable("white", Color(0.1f, 0.3f, 0.5f, 0.3f))
-            vScrollKnob = skin.newDrawable("white", Color(0.2f, 0.6f, 1f, 0.8f))
-        })
+        // Phase 7.2: Add generic keys for dynamic swapping
+        skin.add("current_slider_bg", collection.sliderBg, Drawable::class.java)
+        skin.add("current_slider_knob", collection.sliderKnob, Drawable::class.java)
+        skin.add("current_status_light", collection.statusLightYellow, Drawable::class.java)
+    }
 
-        return skin
+    fun swapSkin(styleId: String, skin: Skin) {
+        applyStyleToSkin(styleId, skin)
+    }
+
+    /**
+     * Phase 7.2: Force UI update for all relevant actors in stage.
+     */
+    fun refreshUI(stage: Stage, skin: Skin) {
+        stage.actors.forEach { refreshActor(it, skin) }
+    }
+
+    private fun refreshActor(actor: Actor, skin: Skin) {
+        when (actor) {
+            is TextButton -> {
+                // Determine style name. Most use "scifi", but some might use "mode-toggle"
+                val styleName = if (actor.style == skin.get("mode-toggle", TextButton.TextButtonStyle::class.java)) "mode-toggle" else "scifi"
+                actor.style = skin.get(styleName, TextButton.TextButtonStyle::class.java)
+            }
+            is Touchpad -> {
+                // Standard or Aim?
+                actor.style = skin.get("default", Touchpad.TouchpadStyle::class.java)
+            }
+            is Container<*> -> {
+                actor.background = skin.getDrawable("panel")
+                actor.actor?.let { refreshActor(it, skin) }
+            }
+            is Table -> {
+                actor.children.forEach { refreshActor(it, skin) }
+            }
+            is Group -> {
+                actor.children.forEach { refreshActor(it, skin) }
+            }
+        }
     }
 
     /**
      * TVM Phase 6.3: Factory Visual Refactor.
      * v0.4.0: Updated to use procedural skins and signal hooks.
      * v0.4.1: Signal-Aware Actors and Footprint Calibration.
+     * Phase 7.2: Updated to use dynamic skin keys.
      */
     fun createTacticalInput(skin: Skin, channel: InputChannel, world: World): Actor {
         val baseActor: Actor = when (channel.classification) {
@@ -183,14 +220,17 @@ object HUDFactory {
                 Table(skin).apply {
                     val slider = Slider(0f, 1f, 0.1f, false, skin).apply {
                         name = channel.actionKey
-                        style = Slider.SliderStyle(style).apply { background = skin.getDrawable("ind_s_bg"); knob = skin.getDrawable("ind_s_knob") }
+                        style = Slider.SliderStyle(style).apply {
+                            background = skin.getDrawable("current_slider_bg")
+                            knob = skin.getDrawable("current_slider_knob")
+                        }
                     }
                     add(slider).fillX().expandX()
                     name = channel.actionKey
                 }
             }
             ControlClassification.STATUS_LIGHT -> {
-                Image(skin.getDrawable("ind_light_yellow")).apply {
+                Image(skin.getDrawable("current_status_light")).apply {
                     name = channel.actionKey
                 }
             }
