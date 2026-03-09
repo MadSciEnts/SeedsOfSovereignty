@@ -6,15 +6,16 @@
 - [x] Phase 6: Core Infrastructure COMPLETE.
 - [x] Phase 7.1 (Drone Avionics): Bidirectional feedback loop is active and verified.
 - [x] Phase 7.2 (Dynamic Skinning): Imperial Style is implemented and linked to Tier 10 evolution.
+- [x] Phase 7.3 (Scalable Visuals): Monolithic texture generator was decomposed into a modular system.
 
-## NEXT GOAL: Phase 7.3 - Scalable Visual Engine (v0.5.2)
-### Objective: Refactor the monolithic texture generator into a modular, interface-based system.
+## NEXT GOAL: Phase 8 - UI Visual Unification (v0.6.0)
+### Objective: Refactor legacy station and popup UIs to use the new `HUDFactory` and `TacticalStyleGenerator` system.
 
-- [ ] Step 1: Define TacticalStyleGenerator interface.
-- [ ] Step 2: Decompose Industrial/Imperial styles into individual files.
-- [ ] Step 3: Refactor HUDTextureGenerator into a simple factory router.
+- [ ] Step 1: Update `StationHangarUI` to use "INDUSTRIAL" and "IMPERIAL" styles.
+- [ ] Step 2: Update `MarketTable` to use procedural assets.
+- [ ] Step 3: Update `EvolutionReportPopup` with dynamic, tier-appropriate visuals.
 
 ## STATUS: IDLE / READY
 - Baseline: v0.5.2 Stable.
 - Review Protocol: Forensic Audit (Rule #12) verified.
-- Awaiting Phase 7.3 deployment directive.
+- Awaiting Phase 8 deployment directive.
