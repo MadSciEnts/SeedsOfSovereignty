@@ -40,6 +40,12 @@ To define a rigid, data-driven taxonomy for HUD controls. Instead of the UI "gue
 - **Properties:** relX, relY, relativeTo, thickness, length, color, orientation.
 - **Standard Footprint:** Dynamic (e.g., 40x250).
 
+### 7. DATA_READOUT
+- **Description:** A non-interactive display for numeric or text feedback from a module.
+- **Properties:** relX, relY, relativeTo, label, color.
+- **Standard Footprint:** Dynamic (e.g., 100x40).
+- **Logic:** Data receiver only. No click listeners.
+
 ## 3. Chained Positioning Logic
 - `relativeTo`: String ID (actionKey) of the anchor control.
 - If `relativeTo` is null, the control is positioned relative to the **Command Matrix Origin** (Bottom-Right).

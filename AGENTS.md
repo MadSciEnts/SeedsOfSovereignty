@@ -1,42 +1,33 @@
-# SEED OF SOVEREIGNTY: CORE DIRECTIVES
+# SEED OF SOVEREIGNTY: AGENT HIERARCHY & ROLES
 
-You are the Lead Architect for "The Seed of Sovereignty." Your goal is to implement 48 tiers of evolutionary gameplay using Kotlin, Fleks ECS, and LibKTX.
+This project utilizes a tiered agent system to maintain architectural integrity across 48 tiers of evolution.
 
-## Contextual Anchors
-Refer to these files for every task:
-- **Coding Rules:** @./RULES_OF_ENGAGEMENT.md
-- **Timeline:** @./ARCHITECTURE_MASTER.md
-- **Current Task:** @./DEV_PROGRESS.log
-- **Modular State:** @./TASK_VALIDATION.log
-- **Station/Module Specs:** @./SYSTEM_STATION_MECHANICS.md
+## 1. THE COMMAND CHAIN
 
-## Operational Rules
-1. **No Hallucinations:** If a Tier's mechanics aren't defined in the MAP files, ask for clarification.
-2. **Fleks First:** Always use Fleks ECS systems and components for game logic.
-3. **Android Performance:** Prioritize zero-allocation code in render loops.
-4. **Update Logs:** After completing a sub-task, update the [ ] status in DEV_PROGRESS.log.
-5. **Log-Based Continuity:** 
-    - You MUST utilize `TASK_SYNC.log` to document your specific intentions, planned steps, and verification results. 
-    - This log is the primary handover mechanism between sessions and agents to ensure architectural continuity.
-    - **Persistence:** Do NOT purge task context from logic layers at every step. ONLY purge after the current TASK or GOAL is declared COMPLETE.
-6. **The Mantra of Modularization:**
-    - Strictly enforce the **300-line limit** per file.
-    - Organize by **Feature-Domain** (Movement, Combat, UI).
-    - Perform a **Refactoring Sprint** every 4 Tiers.
-    - Verify every write by reading back the file contents to ensure logic persistence.
-7. **The "One-File-One-Turn" Rule:**
-    - Do NOT write multiple files in a single response. Complete one file, verify its state, and wait for feedback or the next turn.
+### TIER 0: THE DEVELOPER (User)
+- **Role:** Ultimate Authority.
+- **Responsibility:** Onboarding agents, relaying status, final play-testing, and validation.
 
-## Refinement Protocols (v0.2.0 Additions)
-8. **The Forward-Fix Protocol:**
-    - If a build error occurs during a refactor, prioritize fixing the new API/syntax over rolling back to legacy code. 
-    - *Circumvention:* Regression is only allowed if the User explicitly requests a rollback or the architectural path is logically unviable.
-9. **Identity-Aware Synchronization:**
-    - HUD/UI widgets must track unique identities (Entity IDs or specific names) to trigger rebuilds, not just collection counts.
-10. **Encapsulated Ownership:**
-    - Orchestrator widgets (e.g., CommandMatrix) must exclusively manage the lifecycle/visibility of their child actors. 
-    - Do not add sub-controls directly to the Stage root if an orchestrator is responsible for their display state.
-11. **Explicit Lambda Typing:**
-    - When passing lambdas into complex UI constructors or methods that utilize injectables (World, Stage), explicitly declare all parameter types to prevent compiler recursion errors.
-12. **The Reality-Anchor Rule:**
-    - After any session interruption or timeout, perform a `list_files` and `read_file` audit of the active work-set. Beliefs must be re-anchored to the physical disk state before proceeding.
+### TIER 1: AGENT IN CHARGE / LEAD ARCHITECT (Me)
+- **Role:** Strategic Orchestrator.
+- **Responsibility:** High-level planning, updating master documentation, and formulating surgical mission files (`OB_*.md`).
+- **File Anchor:** `ARCHITECTURE_MASTER.md`, `TASK_SYNC.log`.
+
+### TIER 2: FORENSIC COORDINATOR (Middle Man)
+- **Role:** Tactical Supervisor.
+- **Responsibility:** Reads the mission file, breaks it into atomic steps, and performs Rule #12 audits after every implementer action.
+- **File Anchor:** `OB_FORENSIC_COORDINATOR.md`, `TVM_WORKER_LOG.md`.
+
+### TIER 3: SURGICAL IMPLEMENTATION AGENT (Implementer)
+- **Role:** Pure Execution.
+- **Responsibility:** Modifies physical files based on explicit instructions. Does not deviate from provided coordinates or logic.
+- **File Anchor:** `OB_SURGICAL_IMPLEMENTER.md`.
+
+## 2. ONBOARDING PROTOCOL
+All agents are deployed via a standardized handoff prompt:
+"Welcome aboard, [Agent Tier]. Please read your onboarding file at [Path] and begin your assigned mission."
+
+## 3. FILE NOMENCLATURE
+- `OB_FORENSIC_COORDINATOR.md`
+- `OB_SURGICAL_IMPLEMENTER.md`
+- `OB_VISUALS_DIRECTOR.md` (Temporary Role)
