@@ -22,24 +22,27 @@ class DroneRegenSystem : IteratingSystem(family { all(DroneLauncherComponent, Dr
         // 1. Retrieve the TacticalHubComponent from the player entity.
         val player = world.family { all(PlayerComponent, TacticalHubComponent) }.firstOrNull()
         player?.get(TacticalHubComponent)?.let { hub ->
+            // Phase 9.1: Unique Signal Keys per Slot
+            val slotIdx = launcher.slotIndex
+
             // 2. Push Signal Updates: DRONES_ACTIVE and DRONES_REMAINING
-            hub.signals["DRONES_ACTIVE"] = StatusSignal(
+            hub.signals["DRONES_ACTIVE_$slotIdx"] = StatusSignal(
                 value = launcher.activeDrones.toFloat(),
                 label = "ACTIVE"
             )
-            hub.signals["DRONES_REMAINING"] = StatusSignal(
+            hub.signals["DRONES_REMAINING_$slotIdx"] = StatusSignal(
                 value = (module.maxDrones - launcher.activeDrones).toFloat(),
                 label = "RESERVE"
             )
 
-            // 3. Listen for Manual Deploy: Check hub.scalars["DRONE_DEPLOY"]
+            // 3. Listen for Manual Deploy: Check hub.scalars["DRONE_DEPLOY_$slotIdx"]
             // CommandMatrixWidget updates hub.scalars[actionKey] when an ACTION_BUTTON is pressed.
-            if (hub.scalars["DRONE_DEPLOY"] == 1f) {
+            if (hub.scalars["DRONE_DEPLOY_$slotIdx"] == 1f) {
                 if (launcher.activeDrones < module.maxDrones) {
                     spawnDrone(entity, launcher, module)
                 }
                 // Reset the input to prevent multiple spawns in a single trigger frame (Momentary behavior)
-                hub.scalars["DRONE_DEPLOY"] = 0f
+                hub.scalars["DRONE_DEPLOY_$slotIdx"] = 0f
             }
         }
 
@@ -122,9 +125,10 @@ class DroneFormationSystem(
 
         if (owner.has(TacticalHubComponent)) {
             val hub = owner[TacticalHubComponent]
-            // Pull the persistent focus point from the TVM Vector map
-            // Supporting both legacy "DRONE_FOCUS" and new "DRONE_MOVE" actionKeys
-            val rawOffset = hub.vectors["DRONE_MOVE"] ?: hub.vectors["DRONE_FOCUS"] ?: Vector2.Zero
+            val slotIdx = drone.slotIndex
+
+            // Phase 9.1: Unique Vector Keys per Slot to prevent crosstalk
+            val rawOffset = hub.vectors["DRONE_MOVE_$slotIdx"] ?: hub.vectors["DRONE_MOVE"] ?: Vector2.Zero
 
             // v0.3.0 Task Fix: Scale normalized -1..1 joystick input to tactical world units (150f max)
             rotatedOffset.set(rawOffset).scl(150f)

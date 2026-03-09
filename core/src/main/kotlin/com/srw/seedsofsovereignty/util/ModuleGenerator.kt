@@ -44,7 +44,7 @@ object ModuleGenerator {
         return module
     }
 
-    fun generateDroneModule(tier: Int, rarity: Rarity = rollRarity()): DroneModuleComponent {
+    fun generateDroneModule(tier: Int, rarity: Rarity = rollRarity(), slotIndex: Int = 0): DroneModuleComponent {
         val theme = rollTheme()
         val rarityMult = getRarityMultiplier(rarity)
 
@@ -55,11 +55,12 @@ object ModuleGenerator {
         }
 
         // TVM Phase 6.2: Drones use chained instrument model (Stick -> Button -> Readout 1 -> Readout 2)
+        // Phase 9.1: Appending slotIndex to actionKeys/signalKeys to prevent crosstalk.
         val schema = TacticalSchema(listOf(
             // 1. Primary Flight Stick (Anchor at 0,0)
             InputChannel(
                 classification = ControlClassification.MOVEMENT_STICK,
-                actionKey = "DRONE_MOVE",
+                actionKey = "DRONE_MOVE_$slotIndex",
                 label = "FLIGHT",
                 relX = 0f,
                 relY = 0f,
@@ -69,7 +70,7 @@ object ModuleGenerator {
             // 2. Deploy Button (Offset from Stick)
             InputChannel(
                 classification = ControlClassification.ACTION_BUTTON,
-                actionKey = "DRONE_DEPLOY",
+                actionKey = "DRONE_DEPLOY_$slotIndex",
                 label = "DEPLOY",
                 relX = 0f,
                 relY = 300f, // Positioned above the stick
@@ -79,8 +80,8 @@ object ModuleGenerator {
             // 3. Active Drones Readout (Offset from Button)
             InputChannel(
                 classification = ControlClassification.DATA_READOUT,
-                actionKey = "READOUT_ACTIVE",
-                signalKey = "DRONES_ACTIVE",
+                actionKey = "READOUT_ACTIVE_$slotIndex",
+                signalKey = "DRONES_ACTIVE_$slotIndex",
                 label = "ACTIVE",
                 relX = 200f, // Offset to the right of the button
                 relY = 0f,
@@ -90,8 +91,8 @@ object ModuleGenerator {
             // 4. Remaining Drones Readout (Offset from Active Readout)
             InputChannel(
                 classification = ControlClassification.DATA_READOUT,
-                actionKey = "READOUT_REMAINING",
-                signalKey = "DRONES_REMAINING",
+                actionKey = "READOUT_REMAINING_$slotIndex",
+                signalKey = "DRONES_REMAINING_$slotIndex",
                 label = "RESERVE",
                 relX = 0f,
                 relY = -80f, // Positioned below Active readout

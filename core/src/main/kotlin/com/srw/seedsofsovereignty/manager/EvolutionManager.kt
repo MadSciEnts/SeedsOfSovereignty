@@ -7,6 +7,7 @@ import com.srw.seedsofsovereignty.util.ModuleGenerator
 
 /**
  * Manages ship progression and hardware synchronization.
+ * Updated (v0.5.3): Phase 9.1 Drone Control Crosstalk Fix - Sync slotIndex to ModuleGenerator.
  */
 class EvolutionManager {
 
@@ -99,7 +100,8 @@ class EvolutionManager {
                 val newSlotIndex = i
                 val sEntity = world.entity { e ->
                     e += DroneLauncherComponent(slotIndex = newSlotIndex)
-                    e += ModuleGenerator.generateDroneModule(tier, Rarity.COMMON)
+                    // TVM Phase 9.1: Pass slot index to generate unique tactical schema
+                    e += ModuleGenerator.generateDroneModule(tier, Rarity.COMMON, slotIndex = newSlotIndex)
                 }
 
                 val dModule = sEntity[DroneModuleComponent]
