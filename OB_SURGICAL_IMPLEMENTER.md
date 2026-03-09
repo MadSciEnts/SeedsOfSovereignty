@@ -1,32 +1,34 @@
-# MISSION: Phase 9.1 - Drone Control Crosstalk Fix (Surgical Implementer)
+# MISSION: Phase 9.2 - Persistent Drone Geometry (Surgical Implementer)
 
-## 1. MISSION GOALS
-- Ensure each equipped drone module is controlled by its own unique `TACTICAL_STICK`.
-- Prevent a single joystick input from controlling all drone modules simultaneously.
+## TASK 1: DNA & Persistence Components
+- **File:** `core/src/main/kotlin/com/srw/seedsofsovereignty/component/TacticalSchema.kt`
+    - Add `val relativeTo: String? = null` to the `InputChannel` data class.
+- **File:** `core/src/main/kotlin/com/srw/seedsofsovereignty/component/CoreComponents.kt`
+    - Add `TacticalPersistenceComponent` containing `val persistentInputs: MutableMap<String, Vector2> = mutableMapOf()`.
+- **File:** `core/src/main/kotlin/com/srw/seedsofsovereignty/screen/PlayScreen.kt`
+    - Add `it += TacticalPersistenceComponent()` to the player entity initialization.
 
-## 2. SURGICAL TASKS
+## TASK 2: Save & Restore Stick State
+- **File:** `core/src/main/kotlin/com/srw/seedsofsovereignty/ui/CommandMatrixWidget.kt`
+    - In `updateTacticalSurface`, retrieve the `TacticalPersistenceComponent` from the player.
+    - When building a `TACTICAL_STICK`:
+        1. Check `persistentInputs` for the `channel.actionKey`.
+        2. If found, use `touchpad.setKnobPosition(saved.x, saved.y)` to restore state.
+        3. In the `ChangeListener`, save the new `knobPercent` back to the map.
 
-### STEP 1: Unique Action Keys in ModuleGenerator.kt
-- **File:** `C:/Users/steve/AndroidStudioProjects/SeedsOfSovereignty/core/src/main/kotlin/com/srw/seedsofsovereignty/util/ModuleGenerator.kt`
-- **Change:** Modify `generateDroneModule(tier: Int, rarity: Rarity = rollRarity())` to include an optional `slotIndex: Int = 0` parameter.
-- **Change:** Update the `InputChannel` with `actionKey = "DRONE_MOVE"` to use `actionKey = "DRONE_MOVE_$slotIndex"`.
-- **Change:** Update the `InputChannel` with `actionKey = "DRONE_DEPLOY"` to use `actionKey = "DRONE_DEPLOY_$slotIndex"`.
-- **Change:** Update the `InputChannel` with `signalKey = "DRONES_ACTIVE"` to use `signalKey = "DRONES_ACTIVE_$slotIndex"`.
-- **Change:** Update the `InputChannel` with `signalKey = "DRONES_REMAINING"` to use `signalKey = "DRONES_REMAINING_$slotIndex"`.
+## TASK 3: Activate Deploy Button & Unique Keys
+- **File:** `core/src/main/kotlin/com/srw/seedsofsovereignty/component/DroneComponents.kt`
+    - Update the default `DroneModuleComponent` tactical schema to include:
+        1. `InputChannel(ControlClassification.TACTICAL_STICK, "DRONE_MOVE", relX = 0f, relY = 0f)`
+        2. `InputChannel(ControlClassification.ACTION_BUTTON, "DRONE_DEPLOY", label = "DEPLOY", relX = 260f, relY = 0f)`
+- **File:** `core/src/main/kotlin/com/srw/seedsofsovereignty/ui/CommandMatrixWidget.kt`
+    - In `updateTacticalSurface`, when processing a schema, if the `selectedIndex` is > 0, suffix drone-related keys (`DRONE_MOVE`, `DRONE_DEPLOY`) with `_$selectedIndex` before passing them to the callback and listeners. This resolves the **Crosstalk Bug**.
 
-### STEP 2: Update Callers of generateDroneModule
-- **File:** `C:/Users/steve/AndroidStudioProjects/SeedsOfSovereignty/core/src/main/kotlin/com/srw/seedsofsovereignty/manager/EvolutionManager.kt`
-- **Change:** In `syncDroneSlots`, pass the `newSlotIndex` to `ModuleGenerator.generateDroneModule(tier, Rarity.COMMON, slotIndex = newSlotIndex)`.
-- **Note:** Check other callers in `WorldSystems.kt` and `MarketTable.kt` and ensure they pass a reasonable default or the intended slot index if available.
+## TASK 4: Anchor-Based Layout
+- **File:** `core/src/main/kotlin/com/srw/seedsofsovereignty/ui/TacticalClusterWidget.kt`
+    - Refactor `renderSchema` to support the `relativeTo` property.
+    - If `relativeTo` is null, use the previous actor in the list as the anchor (current behavior).
+    - If `relativeTo` is provided, find the actor with that `actionKey` and position the new channel relative to it.
 
-### STEP 3: ECS Signal Consumption in DroneSystems.kt
-- **File:** `C:/Users/steve/AndroidStudioProjects/SeedsOfSovereignty/core/src/main/kotlin/com/srw/seedsofsovereignty/system/DroneSystems.kt`
-- **Change:** In `DroneRegenSystem.onTickEntity`:
-    - Use `launcher.slotIndex` to format keys: `DRONES_ACTIVE_${launcher.slotIndex}`, `DRONES_REMAINING_${launcher.slotIndex}`, and `DRONE_DEPLOY_${launcher.slotIndex}`.
-- **Change:** In `DroneFormationSystem.onTickEntity`:
-    - Retrieve the drone's `slotIndex` from its `DroneComponent`.
-    - Use this `slotIndex` to pull the vector from `hub.vectors["DRONE_MOVE_$slotIndex"]`.
-
-## 3. PROTOCOL
-- Perform the changes accurately.
-- Report completion when finished.
+---
+**Status:** Awaiting Execution.

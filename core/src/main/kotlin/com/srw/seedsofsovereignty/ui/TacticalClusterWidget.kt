@@ -9,7 +9,7 @@ import com.srw.seedsofsovereignty.component.TacticalSchema
 /**
  * The Render Engine for Tactical Schemas (v0.4.0).
  * Refactored for Bidirectional Chained Instrument model.
- * v0.4.0: Uses relative chaining (relX, relY) and binds to TacticalHubComponent.
+ * v0.5.3: Implemented Anchor-Based Layout supporting 'relativeTo' DNA.
  */
 class TacticalClusterWidget(private val skin: Skin) : WidgetGroup() {
     private val channelActors = mutableMapOf<String, Actor>()
@@ -27,23 +27,31 @@ class TacticalClusterWidget(private val skin: Skin) : WidgetGroup() {
     ) {
         clearPassData()
 
-        var lastX = 0f
-        var lastY = 0f
+        var lastActor: Actor? = null
 
         schema.inputs.forEach { channel ->
             val actor = inputFactory(channel, actionCallback)
+            // Note: actionKey might be modified by the caller for unique slot instances
             channelActors[channel.actionKey] = actor
 
-            // Chained Relative Positioning
-            val posX = lastX + channel.relX
-            val posY = lastY + channel.relY
+            // v0.5.3: Anchor-Based Layout
+            val anchor = if (channel.relativeTo != null) {
+                channelActors[channel.relativeTo]
+            } else {
+                lastActor
+            }
+
+            val baseX = anchor?.x ?: 0f
+            val baseY = anchor?.y ?: 0f
+
+            val posX = baseX + channel.relX
+            val posY = baseY + channel.relY
 
             actor.setSize(channel.width, channel.height)
             actor.setPosition(posX, posY)
             addActor(actor)
 
-            lastX = posX
-            lastY = posY
+            lastActor = actor
         }
     }
 

@@ -35,3 +35,10 @@ class PlayerComponent : Component<PlayerComponent> {
     override fun type() = PlayerComponent
     companion object : ComponentType<PlayerComponent>()
 }
+
+data class TacticalPersistenceComponent(
+    val persistentInputs: MutableMap<String, Vector2> = mutableMapOf()
+) : Component<TacticalPersistenceComponent> {
+    override fun type() = TacticalPersistenceComponent
+    companion object : ComponentType<TacticalPersistenceComponent>()
+}

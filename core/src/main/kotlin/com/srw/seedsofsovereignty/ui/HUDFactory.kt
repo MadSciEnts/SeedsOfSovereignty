@@ -4,6 +4,7 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.BitmapFont
+import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Group
 import com.badlogic.gdx.scenes.scene2d.Stage
@@ -185,7 +186,7 @@ object HUDFactory {
      * v0.4.1: Signal-Aware Actors and Footprint Calibration.
      * Phase 7.2: Updated to use dynamic skin keys.
      */
-    fun createTacticalInput(skin: Skin, channel: InputChannel, world: World): Actor {
+    fun createTacticalInput(skin: Skin, channel: InputChannel, world: World, restoreState: Vector2? = null): Actor {
         val baseActor: Actor = when (channel.classification) {
             ControlClassification.ACTION_BUTTON -> {
                 object : TextButton(channel.label ?: channel.actionKey, skin, "scifi") {
@@ -230,6 +231,7 @@ object HUDFactory {
                 SovereigntyTouchpad(15f, skin, "default").apply {
                     name = channel.actionKey
                     isPersistent = true
+                    restoreState?.let { setKnobPosition(it.x, it.y) }
                 }
             }
             ControlClassification.DIAMOND_GRID -> {

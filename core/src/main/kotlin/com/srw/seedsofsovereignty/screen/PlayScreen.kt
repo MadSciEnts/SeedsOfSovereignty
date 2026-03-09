@@ -71,6 +71,7 @@ class PlayScreen(
         world.entity {
             it += PlayerComponent()
             it += TacticalHubComponent() // The zero-allocation bidirectional hub
+            it += TacticalPersistenceComponent()
             it += PositionComponent()
             it += OrientationComponent()
             it += VelocityComponent()

@@ -128,6 +128,16 @@ class CommandMatrixWidget(
      * Updates the tactical surface and binds UI events to the ECS Action Hub.
      */
     fun updateTacticalSurface(schema: TacticalSchema) {
+        // Task 4: Unique Drone Deploy Keys
+        val processedInputs = schema.inputs.map { input ->
+            if (input.actionKey == "DRONE_DEPLOY") {
+                input.copy(actionKey = "DRONE_DEPLOY_$selectedIndex")
+            } else {
+                input
+            }
+        }
+        val processedSchema = schema.copy(inputs = processedInputs)
+
         val actionCallback: (String, Any) -> Unit = { actionKey, value ->
             with(world) {
                 val playerFamily = family { all(PlayerComponent, TacticalHubComponent) }
@@ -146,6 +156,12 @@ class CommandMatrixWidget(
                             hub.vectors[actionKey]?.set(value) ?: run {
                                 hub.vectors[actionKey] = Vector2(value)
                             }
+
+                            // Task 3: Persistent Stick Logic - Save State
+                            if (player.has(TacticalPersistenceComponent)) {
+                                val persistence = player[TacticalPersistenceComponent]
+                                persistence.persistentInputs[actionKey] = Vector2(value)
+                            }
                         }
                         is Float -> {
                             hub.scalars[actionKey] = value
@@ -155,8 +171,17 @@ class CommandMatrixWidget(
             }
         }
 
-        clusterInterpreter.renderSchema(schema, actionCallback) { channel, callback ->
-            val actor = HUDFactory.createTacticalInput(skin, channel, world)
+        clusterInterpreter.renderSchema(processedSchema, actionCallback) { channel, callback ->
+            // Task 3: Persistent Stick Logic - Restore State
+            var restoreVector: Vector2? = null
+            with(world) {
+                val playerFamily = family { all(PlayerComponent, TacticalPersistenceComponent) }
+                playerFamily.firstOrNull()?.let { player ->
+                    restoreVector = player[TacticalPersistenceComponent].persistentInputs[channel.actionKey]
+                }
+            }
+
+            val actor = HUDFactory.createTacticalInput(skin, channel, world, restoreVector)
 
             when (channel.classification) {
                 ControlClassification.ACTION_BUTTON -> {

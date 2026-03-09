@@ -15,8 +15,9 @@ data class InputChannel(
     val classification: ControlClassification,
     val actionKey: String, // Key for pushing control data to the module
     val signalKey: String? = null, // Optional key for pulling feedback data from the module
-    val relX: Float = 0f, // X offset relative to the previous channel in the list
-    val relY: Float = 0f, // Y offset relative to the previous channel in the list
+    val relativeTo: String? = null, // Key of the channel to position relative to
+    val relX: Float = 0f, // X offset relative to the anchor channel
+    val relY: Float = 0f, // Y offset relative to the anchor channel
     val width: Float = 250f, // Physical footprint width
     val height: Float = 250f, // Physical footprint height
     val label: String? = null,
