@@ -19,6 +19,30 @@ class DroneRegenSystem : IteratingSystem(family { all(DroneLauncherComponent, Dr
         droneFamily.forEach { if (it[DroneComponent].slotIndex == launcher.slotIndex) activeCount++ }
         launcher.activeDrones = activeCount
 
+        // 1. Retrieve the TacticalHubComponent from the player entity.
+        val player = world.family { all(PlayerComponent, TacticalHubComponent) }.firstOrNull()
+        player?.get(TacticalHubComponent)?.let { hub ->
+            // 2. Push Signal Updates: DRONES_ACTIVE and DRONES_REMAINING
+            hub.signals["DRONES_ACTIVE"] = StatusSignal(
+                value = launcher.activeDrones.toFloat(),
+                label = "ACTIVE"
+            )
+            hub.signals["DRONES_REMAINING"] = StatusSignal(
+                value = (module.maxDrones - launcher.activeDrones).toFloat(),
+                label = "RESERVE"
+            )
+
+            // 3. Listen for Manual Deploy: Check hub.scalars["DRONE_DEPLOY"]
+            // CommandMatrixWidget updates hub.scalars[actionKey] when an ACTION_BUTTON is pressed.
+            if (hub.scalars["DRONE_DEPLOY"] == 1f) {
+                if (launcher.activeDrones < module.maxDrones) {
+                    spawnDrone(entity, launcher, module)
+                }
+                // Reset the input to prevent multiple spawns in a single trigger frame (Momentary behavior)
+                hub.scalars["DRONE_DEPLOY"] = 0f
+            }
+        }
+
         if (launcher.activeDrones < module.maxDrones) {
             launcher.regenTimer += deltaTime
             if (launcher.regenTimer >= launcher.regenRate) {
@@ -99,7 +123,8 @@ class DroneFormationSystem(
         if (owner.has(TacticalHubComponent)) {
             val hub = owner[TacticalHubComponent]
             // Pull the persistent focus point from the TVM Vector map
-            val rawOffset = hub.vectors["DRONE_FOCUS"] ?: Vector2.Zero
+            // Supporting both legacy "DRONE_FOCUS" and new "DRONE_MOVE" actionKeys
+            val rawOffset = hub.vectors["DRONE_MOVE"] ?: hub.vectors["DRONE_FOCUS"] ?: Vector2.Zero
 
             // v0.3.0 Task Fix: Scale normalized -1..1 joystick input to tactical world units (150f max)
             rotatedOffset.set(rawOffset).scl(150f)

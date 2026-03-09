@@ -32,7 +32,7 @@ To define a rigid, data-driven taxonomy for HUD controls. Instead of the UI "gue
 ### 5. DIAMOND_BUTTON
 - **Description:** A small directional tap surface used in 4-way arrays (e.g., Shields).
 - **Properties:** relX, relY, relativeTo, icon.
-- **Standard Footprint:** 80x80.
+- **Standard Footproject:** 80x80.
 - **Visuals:** Directional arrow icons, highlight on press.
 
 ### 6. PRECISION_SLIDER
@@ -42,9 +42,9 @@ To define a rigid, data-driven taxonomy for HUD controls. Instead of the UI "gue
 
 ### 7. DATA_READOUT
 - **Description:** A non-interactive display for numeric or text feedback from a module.
-- **Properties:** relX, relY, relativeTo, label, color.
-- **Standard Footprint:** Dynamic (e.g., 100x40).
-- **Logic:** Data receiver only. No click listeners.
+- **Properties:** relX, relY, signalKey, label, width, height.
+- **Standard Footprint:** Dynamic (User Defined).
+- **Logic:** Data receiver only. Pulls numeric values from TacticalHub signals.
 
 ## 3. Chained Positioning Logic
 - `relativeTo`: String ID (actionKey) of the anchor control.

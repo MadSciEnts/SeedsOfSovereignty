@@ -194,6 +194,23 @@ object HUDFactory {
                     name = channel.actionKey
                 }
             }
+            ControlClassification.DATA_READOUT -> {
+                object : Label(channel.label ?: channel.actionKey, skin, "small") {
+                    override fun act(delta: Float) {
+                        super.act(delta)
+                        if (channel.signalKey != null) {
+                            world.family { all(PlayerComponent, TacticalHubComponent) }.firstOrNull()?.let { player ->
+                                val signal = with(world) { player[TacticalHubComponent].signals[channel.signalKey] }
+                                if (signal != null) {
+                                    setText("${channel.label ?: channel.actionKey}: ${signal.value.toInt()}")
+                                }
+                            }
+                        }
+                    }
+                }.apply {
+                    name = channel.actionKey
+                }
+            }
         }
 
         // Wrap in technical frame "The Cradle"
@@ -210,6 +227,10 @@ object HUDFactory {
                 ControlClassification.TACTICAL_STICK -> {
                     size(250f, 250f)
                     prefSize(250f, 250f)
+                }
+                ControlClassification.DATA_READOUT -> {
+                    size(channel.width, channel.height)
+                    prefSize(channel.width, channel.height)
                 }
                 else -> prefSize(channel.width, channel.height)
             }

@@ -54,16 +54,49 @@ object ModuleGenerator {
             tier == 5 -> 1; else -> 1
         }
 
-        // TVM Phase 6.1: Drones use TACTICAL_STICK + MODE toggle (Chained)
+        // TVM Phase 6.2: Drones use chained instrument model (Stick -> Button -> Readout 1 -> Readout 2)
         val schema = TacticalSchema(listOf(
-            InputChannel(ControlClassification.TACTICAL_STICK, "DRONE_FOCUS", relX = 100f, relY = 0f),
+            // 1. Primary Flight Stick (Anchor at 0,0)
             InputChannel(
-                classification = ControlClassification.TOGGLE_SWITCH,
-                actionKey = "MODE",
-                relX = -100f, // Relative to the TACTICAL_STICK
-                relY = 85f,
-                width = 120f,
-                height = 120f
+                classification = ControlClassification.MOVEMENT_STICK,
+                actionKey = "DRONE_MOVE",
+                label = "FLIGHT",
+                relX = 0f,
+                relY = 0f,
+                width = 250f,
+                height = 250f
+            ),
+            // 2. Deploy Button (Offset from Stick)
+            InputChannel(
+                classification = ControlClassification.ACTION_BUTTON,
+                actionKey = "DRONE_DEPLOY",
+                label = "DEPLOY",
+                relX = 0f,
+                relY = 300f, // Positioned above the stick
+                width = 150f,
+                height = 150f
+            ),
+            // 3. Active Drones Readout (Offset from Button)
+            InputChannel(
+                classification = ControlClassification.DATA_READOUT,
+                actionKey = "READOUT_ACTIVE",
+                signalKey = "DRONES_ACTIVE",
+                label = "ACTIVE",
+                relX = 200f, // Offset to the right of the button
+                relY = 0f,
+                width = 150f,
+                height = 60f
+            ),
+            // 4. Remaining Drones Readout (Offset from Active Readout)
+            InputChannel(
+                classification = ControlClassification.DATA_READOUT,
+                actionKey = "READOUT_REMAINING",
+                signalKey = "DRONES_REMAINING",
+                label = "RESERVE",
+                relX = 0f,
+                relY = -80f, // Positioned below Active readout
+                width = 150f,
+                height = 60f
             )
         ))
 

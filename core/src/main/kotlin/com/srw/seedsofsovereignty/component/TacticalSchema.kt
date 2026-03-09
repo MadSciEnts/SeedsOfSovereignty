@@ -4,7 +4,7 @@ package com.srw.seedsofsovereignty.component
  * Descriptive hardware classification for bidirectional instruments.
  */
 enum class ControlClassification {
-    ACTION_BUTTON, MOVEMENT_STICK, TACTICAL_STICK, TOGGLE_SWITCH, DIAMOND_GRID, MODIFIER_SLIDER, STATUS_LIGHT
+    ACTION_BUTTON, MOVEMENT_STICK, TACTICAL_STICK, TOGGLE_SWITCH, DIAMOND_GRID, MODIFIER_SLIDER, STATUS_LIGHT, DATA_READOUT
 }
 
 /**
