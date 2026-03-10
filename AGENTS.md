@@ -1,4 +1,4 @@
-# SEED OF SOVEREIGNTY: AGENT HIERARCHY & ROLES (v0.5.5)
+# SEED OF SOVEREIGNTY: AGENT HIERARCHY & ROLES (v0.8.1)
 
 ## 1. THE COMMAND CHAIN
 
@@ -32,3 +32,14 @@ Every prompt generated for the Developer to relay MUST begin with the tier/categ
 - **PROHIBITION:** T2 and T3 agents are strictly forbidden from removing, moving, or altering these comment blocks.
 - **ENFORCEMENT:** If a T3 agent removes a comment, the T2 Coordinator must fail the audit and command a revert.
 - **SURGICAL PRECISION:** All code edits must be performed *around* these annotations.
+
+## 5. STATUS STATEMENT RULE (v0.8.1)
+- **MANDATORY INDICATOR:** At the beginning and end of every task, report, or handoff, all agents MUST indicate their current mental/context load.
+- **FORMAT:** `[ (current) / Max : Category1, Category2, ... ]`
+- **CATEGORIES:**
+    - `ARCHITECT_SYNC`: Synchronizing strategic blueprints.
+    - `COORD_AUDIT`: Performing forensic code review.
+    - `SURGICAL_EXEC`: Actively modifying source files.
+    - `READY`: Idle and awaiting command.
+- **MULTI-TASKING:** Agents may list multiple categories to reflect a task that spans different operational roles (e.g., `[ 2 / 4 : ARCHITECT_SYNC, COORD_AUDIT ]`).
+- **REASONING:** Ensures high-tier agents monitor their own context weight and delegate tasks before "Cognitive Collapse" occurs.

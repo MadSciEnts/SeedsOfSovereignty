@@ -1,4 +1,4 @@
-# ARCHITECTURE MASTER: The 48-Tier Evolution
+# ARCHITECTURE MASTER: The 48-Tier Evolution (v0.8.0)
 
 ## 1. The Progression Curve
 The game is divided into 4 Epochs. Every 12 Tiers, the perspective and primary gameplay loop fundamentally shift.
@@ -10,26 +10,24 @@ The game is divided into 4 Epochs. Every 12 Tiers, the perspective and primary g
 | **III** | 25–36 | The Overlord | Space Station | Base Management/Defense |
 | **IV** | 37–48 | The Sovereign | Galactic Hive | Grand Strategy/4X |
 
-## 2. Evolution Mechanics
-- **Tiers vs. Sub-Tiers:** Each Tier (e.g., Tier 1) is composed of 4 sub-tiers (a, b, c, d) representing incremental hardware upgrades.
-- **Twin-Stick Transition:** Control moves from Single-Stick (T1-T3) to Dual-Stick (T4-T12) once independent turret tracking is unlocked.
+## 2. The Concentric Quadrant Diagnostic (CQD)
+Introduced in v0.8.0, the CQD replaces linear status bars with a diegetic, multi-layered "Blueprint" readout.
+
+### 2.1 Ring Hierarchy
+- **Outer Layers (Cyan):** Shields. Managed via individual Shield Modules. 1 Module = 1 Ring.
+- **Inner Layers (Red):** Hull/Armor. Core Hull + optional Armor Modules.
+- **Core (Yellow):** Internal Systems. Damage here directly impacts module performance.
+
+### 2.2 Hybrid Slot Architecture
+Ships utilize a mix of Fixed and Universal slots to balance necessity with specialization.
+- **Fixed Slots:** Engine, Reactor, Primary Hull.
+- **Universal Slots:** Weapons, Shields, Drones, Utilities. 
+- **Chassis Limits:** DNA defines the `maxLayers` (Shield/Hull) a ship can support.
 
 ## 3. The Power Baseline (Epoch I)
-- **Tier 1: Proto-Interceptor** (Single-Stick)
-- **Tier 2: Violet Interceptor** (Agility Focus)
-- **Tier 3: Drone Carrier** (Initial AI Support)
-- **Tier 4: Sentinel** (Twin-Stick Debut)
-- **Tier 5: Shielded Bulwark** (Defense Focus)
-- **Tier 6: Sentinel+** (Advanced Tracking)
-- **Tier 7: Wraith** (Stealth/Speed)
-- **Tier 8: Dreadnought** (Heavy Kinetic)
 - **Tier 9: Vanguard** (Current Apex - High Energy)
-- **Tier 10-12:** [TBD] Final Epoch I Evolutions.
+- **Tier 10-12:** Final Epoch I Evolutions.
 
 ## 4. Technical Milestones
-- **Status:** Professional Market UI implemented with procedural data-links.
-- **Status:** Multi-offer module logic integrated into Station Markets.
-- **Status:** TVM v0.4.4 "Chained Instrument" architecture is stable.
-    - **DNA:** Descriptive `InputChannel` with relative positioning.
-    - **Visuals:** `HUDTextureGenerator` provides procedural skins.
-    - **Hub:** `TacticalHubComponent` provides a bidirectional data bridge.
+- **v0.7.3:** Elliptical Phalanx implemented (Organic Drone Motion).
+- **v0.8.0:** CQD Blueprint & Hybrid Slot Architecture defined.
