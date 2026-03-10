@@ -1,6 +1,6 @@
 # DEVELOPMENT PROGRESS LOG
 
-## Current Milestone: TVM v0.7.1 - The Tactical Surface (Completed)
+## Current Milestone: TVM v0.7.3 - The Elliptical Phalanx (Completed)
 
 ### Epoch I: The Pilot (Foundation)
 - [x] GDX-Liftoff & Project Architecture Setup
@@ -22,8 +22,12 @@
     - [x] **Stability:** Fixed the "Origin-Snap" bug in `SovereigntyTouchpad`.
     - [x] **UX:** Implemented 10% Snap-to-Origin deadzone for drones/orbiting.
     - [x] **Modularity:** Migrated `DroneGenerator` to use the new `TACTICAL_SURFACE` classification.
+- [x] **Phase 10.0.1: Visual Scaling & Organic Motion (v0.7.3)**
+    - [x] **Reticle Scaling:** Doubled Tactical Reticle size to 80x80 with high-vis crosshairs.
+    - [x] **Organic Motion:** Implemented "The Elliptical Phalanx" in `DroneFormationSystem`.
+    - [x] **Dynamic Eccentricity:** Drones now "squish" into tactical shells based on distance.
 
 ## Current Global Stats
 - **Active Tier:** 9/48 (Current Apex: Vanguard)
 - **Active Epoch:** II: The Admiral
-- **Build Version:** 0.7.1 (Tactical Surface)
+- **Build Version:** 0.7.3 (Elliptical Phalanx)
