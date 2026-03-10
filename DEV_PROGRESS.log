@@ -19,8 +19,12 @@
     - [x] **Art-Awareness:** Unified NinePatch slicing with procedural drawing logic (Art-Aware geometry).
     - [x] **Bidirectional Hub:** Established `TacticalHubComponent` for real-time feedback loops.
     - [x] **Stability:** Successfully achieved 1:1 input parity and robust bottom-right stage anchoring.
+- [x] **Phase 9.4: Individualized Formation Control (v0.5.0)**
+    - [x] Bridged `DRONE_MODE_SIGNAL_$slotIndex` to `DroneFormationSystem`.
+    - [x] Removed legacy Global Mode UI and associated coupling.
+    - [x] Implemented robust key suffixing for drone-specific tactical inputs.
 
 ## Current Global Stats
 - **Active Tier:** 9/48 (Current Apex: Vanguard)
-- **Active Epoch:** Transitioning I -> II
-- **Build Version:** 0.4.4-stable (Bidirectional Instrument)
+- **Active Epoch:** II: The Admiral
+- **Build Version:** 0.5.0 (Individualized Formation)

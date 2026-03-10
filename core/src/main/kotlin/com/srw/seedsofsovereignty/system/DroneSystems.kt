@@ -19,13 +19,17 @@ class DroneRegenSystem : IteratingSystem(family { all(DroneLauncherComponent, Dr
         droneFamily.forEach { if (it[DroneComponent].slotIndex == launcher.slotIndex) activeCount++ }
         launcher.activeDrones = activeCount
 
-        // 1. Retrieve the TacticalHubComponent from the player entity.
         val player = world.family { all(PlayerComponent, TacticalHubComponent) }.firstOrNull()
         player?.get(TacticalHubComponent)?.let { hub ->
-            // Phase 9.1: Unique Signal Keys per Slot
             val slotIdx = launcher.slotIndex
 
-            // 2. Push Signal Updates: DRONES_ACTIVE and DRONES_REMAINING
+            // Phase 9.8: Signal Hardening - Sync Mode Signal from Hub Scalar
+            val modeValue = hub.scalars["DRONE_MODE_$slotIdx"] ?: 0f
+            hub.signals["DRONE_MODE_SIGNAL_$slotIdx"] = StatusSignal(
+                value = modeValue,
+                label = "MODE"
+            )
+
             hub.signals["DRONES_ACTIVE_$slotIdx"] = StatusSignal(
                 value = launcher.activeDrones.toFloat(),
                 label = "ACTIVE"
@@ -35,13 +39,10 @@ class DroneRegenSystem : IteratingSystem(family { all(DroneLauncherComponent, Dr
                 label = "RESERVE"
             )
 
-            // 3. Listen for Manual Deploy: Check hub.scalars["DRONE_DEPLOY_$slotIdx"]
-            // CommandMatrixWidget updates hub.scalars[actionKey] when an ACTION_BUTTON is pressed.
             if (hub.scalars["DRONE_DEPLOY_$slotIdx"] == 1f) {
                 if (launcher.activeDrones < module.maxDrones) {
                     spawnDrone(entity, launcher, module)
                 }
-                // Reset the input to prevent multiple spawns in a single trigger frame (Momentary behavior)
                 hub.scalars["DRONE_DEPLOY_$slotIdx"] = 0f
             }
         }
@@ -86,9 +87,10 @@ class DroneRegenSystem : IteratingSystem(family { all(DroneLauncherComponent, Dr
 }
 
 /**
- * Advanced fleet formation kernel (v0.3.0).
+ * Advanced fleet formation kernel (v0.5.6).
  * Consumes drone directives from the TVM TacticalHubComponent.
- * v0.4.0: Updated to use TacticalHubComponent.
+ * Phase 9.8: Consuming individualized DRONE_MODE_SIGNAL.
+ * Phase 9.9.2: Removed non-indexed fallback for DRONE_MOVE.
  */
 class DroneFormationSystem(
     private val camera: OrthographicCamera
@@ -119,7 +121,6 @@ class DroneFormationSystem(
             return
         }
 
-        // 1. Get TVM Tactical Intent
         var localizationMode = FleetCommandComponent.LocalizationMode.CAMERA
         rotatedOffset.set(0f, 0f)
 
@@ -127,28 +128,22 @@ class DroneFormationSystem(
             val hub = owner[TacticalHubComponent]
             val slotIdx = drone.slotIndex
 
-            // Phase 9.1: Unique Vector Keys per Slot to prevent crosstalk
-            val rawOffset = hub.vectors["DRONE_MOVE_$slotIdx"] ?: hub.vectors["DRONE_MOVE"] ?: Vector2.Zero
-
-            // v0.3.0 Task Fix: Scale normalized -1..1 joystick input to tactical world units (150f max)
+            val rawOffset = hub.vectors["DRONE_MOVE_$slotIdx"] ?: Vector2.Zero
             rotatedOffset.set(rawOffset).scl(150f)
 
-            if (owner.has(FleetCommandComponent)) {
-                localizationMode = owner[FleetCommandComponent].localization
-            }
+            // Phase 9.8: Explicit Signal consumption for Localization Mode
+            val modeSignal = hub.signals["DRONE_MODE_SIGNAL_$slotIdx"]?.value ?: 0f
+            localizationMode = if (modeSignal == 1f) FleetCommandComponent.LocalizationMode.SHIP else FleetCommandComponent.LocalizationMode.CAMERA
         }
 
         val shipAngle = if (owner.has(OrientationComponent)) owner[OrientationComponent].angleRad else 0f
 
-        // 2. Localization: Transform offset based on toggle mode
         if (localizationMode == FleetCommandComponent.LocalizationMode.SHIP) {
-            // Transform to ship-local space (PI/2 nose rotation compensated)
             rotatedOffset.rotateRad(shipAngle - MathUtils.PI / 2f)
         }
 
         val pushMag = rotatedOffset.len() / 150f
 
-        // 3. Calculate Target Position (Owner + (Transformed Offset) + Orbit)
         val ownerPos = owner[PositionComponent].pos
         val droneIndex = entity.id % 8
         val orbitAngle = globalOrbitBase + (droneIndex * MathUtils.PI2 / 8f)
@@ -159,12 +154,10 @@ class DroneFormationSystem(
             .add(rotatedOffset)
             .add(MathUtils.cos(orbitAngle) * dynamicRadius, MathUtils.sin(orbitAngle) * dynamicRadius)
 
-        // 4. Flocking / Steering
         steerForce.set(targetPos).sub(pos).scl(5f)
         vel.add(steerForce.x * deltaTime, steerForce.y * deltaTime)
         pos.add(vel.x * deltaTime, vel.y * deltaTime)
 
-        // 5. Combat Targeting
         var targetEntity: Entity? = null
         var minDistSq = 160000f
         enemyFamily.forEach { enemy ->

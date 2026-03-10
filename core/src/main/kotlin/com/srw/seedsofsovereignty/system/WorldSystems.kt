@@ -172,8 +172,8 @@ class StationSpawnSystem : IntervalSystem(interval = Fixed(10f)) {
                     }
                     if (tier >= 5) {
                         for (i in 0 until 2) {
-                            // Phase 9.1: Defaulting to slot 0 for store-generated drone modules
-                            droneOffers.add(ModuleGenerator.generateDroneModule(tier, slotIndex = 0))
+                            // Phase 9.6: Dynamic suffixing handles indexing now.
+                            droneOffers.add(ModuleGenerator.generateDroneModule(tier))
                         }
                     }
                 }

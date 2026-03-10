@@ -110,7 +110,7 @@ class MarketTable(
             if (category == SlotType.WEAPON) market.weaponOffers.clear() else market.droneOffers.clear()
             for (i in 0 until 10) {
                 if (category == SlotType.WEAPON) market.weaponOffers.add(ModuleGenerator.generateWeapon(playerTier))
-                else market.droneOffers.add(ModuleGenerator.generateDroneModule(playerTier, slotIndex = 0))
+                else market.droneOffers.add(ModuleGenerator.generateDroneModule(playerTier))
             }
         }
 

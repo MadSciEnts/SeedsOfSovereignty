@@ -4,9 +4,7 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.math.Vector2
-import com.badlogic.gdx.scenes.scene2d.Action
 import com.badlogic.gdx.scenes.scene2d.Stage
-import com.badlogic.gdx.scenes.scene2d.actions.Actions
 import com.badlogic.gdx.scenes.scene2d.ui.Skin
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton
 import com.badlogic.gdx.utils.Align
@@ -38,7 +36,7 @@ class PlayScreen(
     private val skin: Skin = HUDFactory.createSkin()
 
     // 1. Core Controls (Movement is still a dedicated primary joystick)
-    private val moveJoystick: SovereigntyTouchpad = HUDFactory.createMoveJoystick(skin)
+    private val moveJoystick: SovereigntyTouchpad = HUDInputService.createMoveJoystick(skin)
 
     // 2. Adaptive Tactical Overlay (TVM v0.3.32 - Unified Source of Truth)
     private var selectedModuleIndex = 0
@@ -51,11 +49,10 @@ class PlayScreen(
         drawer,
         skin,
         world,
-        { newIndex: Int -> selectedModuleIndex = newIndex },
-        { toggleDroneLocalization() }
+        { newIndex: Int -> selectedModuleIndex = newIndex }
     )
 
-    private val testEvolveButton: TextButton = HUDFactory.createDebugButton("DEV: EVOLVE", skin)
+    private val testEvolveButton: TextButton = HUDInputService.createDebugButton("DEV: EVOLVE", skin)
 
     private val dockingManager = DockingManager(world)
     private val evolutionManager = EvolutionManager()
@@ -118,16 +115,6 @@ class PlayScreen(
         Gdx.input.inputProcessor = uiStage
     }
 
-    private fun toggleDroneLocalization() {
-        val player = world.family { all(PlayerComponent, FleetCommandComponent) }.firstOrNull() ?: return
-        with(world) {
-            val fleet = player[FleetCommandComponent]
-            fleet.localization = if (fleet.localization == FleetCommandComponent.LocalizationMode.CAMERA)
-                FleetCommandComponent.LocalizationMode.SHIP else FleetCommandComponent.LocalizationMode.CAMERA
-            commandMatrix.updateSpaceLabel(fleet.localization == FleetCommandComponent.LocalizationMode.CAMERA)
-        }
-    }
-
     override fun render(delta: Float) {
         val player = world.family { all(PlayerComponent, TacticalHubComponent, EvolutionComponent, DockingComponent, ApertureComponent, ChoiceComponent, FleetCommandComponent) }.firstOrNull()
 
@@ -165,7 +152,7 @@ class PlayScreen(
                         } else if (slot.type == SlotType.WEAPON && player.has(WeaponModuleComponent)) {
                             schema = player[WeaponModuleComponent].tacticalSchema
                         }
-                        commandMatrix.updateTacticalSurface(schema)
+                        commandMatrix.updateTacticalSurface(schema, selectedModuleIndex)
                         lastObservedIdentity = currentIdentity
                     }
                 }
@@ -173,21 +160,8 @@ class PlayScreen(
                 val docking = player[DockingComponent]
                 val aperture = player[ApertureComponent]
                 val choice = player[ChoiceComponent]
-                val hub = player[TacticalHubComponent]
-                val fleet = player[FleetCommandComponent]
 
-                // 4. TVM Phase 5.2: Consume "MODE" action to flip localization
-                // Button state is stored as scalar (1f = ON/SHIP, 0f = OFF/WLD)
-                val modeScalar = hub.scalars["MODE"] ?: 0f
-                val targetIsShipLocal = modeScalar > 0.5f
-                val currentIsWorld = fleet.localization == FleetCommandComponent.LocalizationMode.CAMERA
-
-                // Toggle logic: If the TVM state disagrees with the ECS state, sync them
-                if (targetIsShipLocal == currentIsWorld) {
-                    fleet.localization = if (targetIsShipLocal)
-                        FleetCommandComponent.LocalizationMode.SHIP else FleetCommandComponent.LocalizationMode.CAMERA
-                    commandMatrix.updateSpaceLabel(fleet.localization == FleetCommandComponent.LocalizationMode.CAMERA)
-                }
+                // Phase 9.4: Global "MODE" logic removed. Drone formation localization is now individualized.
 
                 val isFullyDocked = docking.isDocked && aperture.state == ApertureComponent.State.OPEN
                 val isUiRequested = isFullyDocked || choice.isAwaitingChoice

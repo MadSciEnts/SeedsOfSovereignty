@@ -7,14 +7,11 @@ import com.srw.seedsofsovereignty.util.ModuleGenerator
 
 /**
  * Manages ship progression and hardware synchronization.
- * Updated (v0.5.3): Phase 9.1 Drone Control Crosstalk Fix - Sync slotIndex to ModuleGenerator.
+ * Updated (v0.6.3): Phase 9.9.4 - Unified Command Matrix Indexing.
+ * Launcher slotIndex now matches the absolute index in the loadout bar for UI/ECS signal parity.
  */
 class EvolutionManager {
 
-    /**
-     * Dev Helper: Jumps the player to a specific tier for testing.
-     * Default behavior: Fills essence to trigger natural sub-tier evolution.
-     */
     fun cheatEvolve(world: World, targetTier: Int = -1) {
         val family = world.family { all(PlayerComponent, EvolutionComponent) }
         if (family.numEntities > 0) {
@@ -30,10 +27,6 @@ class EvolutionManager {
         }
     }
 
-    /**
-     * Applies the mandatory hardware baseline for a new Tier.
-     * v0.3.14: Phase 5.12 - Absolute Operational Restoration.
-     */
     fun applyTierBaseline(world: World, player: Entity, tier: Int) {
         with(world) {
             val evo = player[EvolutionComponent]
@@ -53,13 +46,11 @@ class EvolutionManager {
                 description = "Standard issue hardware for your new chassis."
             }
 
-            // Task Fix: Sync Control DNA so the HUD knows when to switch to Joystick
             module.name = stockWeapon.name
             module.description = stockWeapon.description
             module.projectileTier = stockWeapon.projectileTier
             module.rarity = stockWeapon.rarity
             module.controlType = stockWeapon.controlType
-            // v0.3.14: Absolute Operational Restoration - Forensic Schema Sync
             module.tacticalSchema = stockWeapon.tacticalSchema
             module.fireRate = stockWeapon.fireRate
             module.projectileSpeed = stockWeapon.projectileSpeed
@@ -97,11 +88,13 @@ class EvolutionManager {
             val currentDroneSlots = slotComp.slots.count { it.type == SlotType.DRONE }
 
             for (i in currentDroneSlots until targetDroneSlots) {
-                val newSlotIndex = i
+                // Phase 9.9.4: The launcher's slotIndex is its absolute index in the loadout bar.
+                // Since Slot 0 is always the Primary Weapon, drones start at absolute index slots.size.
+                val absoluteIndex = slotComp.slots.size
+
                 val sEntity = world.entity { e ->
-                    e += DroneLauncherComponent(slotIndex = newSlotIndex)
-                    // TVM Phase 9.1: Pass slot index to generate unique tactical schema
-                    e += ModuleGenerator.generateDroneModule(tier, Rarity.COMMON, slotIndex = newSlotIndex)
+                    e += DroneLauncherComponent(slotIndex = absoluteIndex)
+                    e += ModuleGenerator.generateDroneModule(tier, Rarity.COMMON)
                 }
 
                 val dModule = sEntity[DroneModuleComponent]

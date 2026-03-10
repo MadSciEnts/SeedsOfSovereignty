@@ -1,38 +1,34 @@
-# MISSION: Phase 9.2 - Persistent Drone Geometry (Forensic Coordinator)
+# MISSION: Phase 9.9.2 - Unified Addressing Pass (Forensic Coordinator)
 
-You are the **Forensic Coordinator**. Your objective is to resolve the remaining items in the `KNOWN_BUGS.md` file related to the Drone Module HUD.
+You are the **Forensic Coordinator**. Your objective is to unify the UI and ECS signal paths using Slot-Based addressing to resolve crosstalk and persistence failures.
 
-## 1. MISSION GOALS
-- Implement persistent stick positions for each drone module.
-- Activate the "Deploy Drone" button logic.
-- Fix the occlusion of the drone count `DATA_READOUT` labels.
+## 1. STRATEGIC SHIFT: SLOT-BASED ADDRESSING
+- **DECISION:** We are abandoning Entity ID suffixing. All tactical keys will use the module's **Slot Index** as the suffix (e.g., `DRONE_MOVE_0`).
+- **REASON:** This ensures signal parity between UI/Systems and allows persistence to survive module swaps.
 
-## 2. SURGICAL WORKFLOW (v0.5.3 PROTOCOL)
-For each step below, you must:
+## 2. MISSION GOALS
+- UI Refactor: Update `TacticalInputController` to suffix keys with `slotIndex`.
+- Persistence: Ensure `CommandMatrixWidget` passes the correct `selectedIndex` (which is the slot index) to the controller.
+- Lifecycle: Verify `SovereigntyTouchpad` is using the `knobRestore` pass in `act()`.
+
+## 3. SURGICAL WORKFLOW (v0.5.6 PROTOCOL)
 1. Write explicit instructions into `OB_SURGICAL_IMPLEMENTER.md`.
-2. Provide the `[SESSION: CONTINUING]` prompt to the Developer (User) to relay.
-3. After the Implementer reports completion, perform a Rule #12 audit (`read_file`).
-4. Maintain a single Implementer session per the "Single Blade" rule.
+2. Provide the handoff prompt to the Developer (User).
+3. **MANDATORY:** Perform a Rule #12 audit (`read_file`) after the implementer finishes each step.
+4. **STOP** and wait for Developer confirmation.
 
 ---
 
-### STEP 1: Persistent State Component
-- **Task:** Create a new component `TacticalPersistenceComponent`.
-- **Action:** This component will hold a `MutableMap<String, Vector2>` to store the last known knob position for any `TACTICAL_STICK` that has `isPersistent = true` in its DNA.
-- **Action:** Add this component to the Player entity in `PlayScreen.kt`.
+### STEP 1: UI Suffixing (Slot-Based)
+- **File:** `core/src/main/kotlin/com/srw/seedsofsovereignty/ui/TacticalInputController.kt`
+- **Action:** Refactor `processSchema`. It should no longer take a `slotEntity`. It must take a `slotIndex: Int`.
+- **Logic:** Suffix all tactical keys with `_$slotIndex`.
 
-### STEP 2: Save & Restore Stick State
-- **Task:** Update `CommandMatrixWidget.kt`.
-- **Action:** When a stick's `ChangeListener` fires, save its `knobPercent` to the `TacticalPersistenceComponent` map, using the stick's `actionKey` as the map key.
-- **Action:** When a new tactical surface is rendered, check if a stick's `actionKey` exists in the persistence map. If it does, set the touchpad's knob position to the saved value.
+### STEP 2: Widget Integration
+- **File:** `core/src/main/kotlin/com/srw/seedsofsovereignty/ui/CommandMatrixWidget.kt`
+- **Action:** In `updateTacticalSurface`, pass the `selectedIndex` to `inputController.processSchema`.
+- **Logic:** This "Hard-Wires" the visible UI to the correct signal slot.
 
-### STEP 3: Activate Deploy Button
-- **Task:** Update `DroneSystems.kt`.
-- **Action:** In the `DroneRegenSystem`, listen for the `DRONE_DEPLOY_<slotIndex>` action key in the `TacticalHubComponent` scalars. When the value is `1f`, deploy one drone if available.
-
-### STEP 4: Fix Readout Layout
-- **Task:** Update `TacticalClusterWidget.kt`.
-- **Action:** The current logic places all controls relative to the widget's origin. Refactor the layout loop to correctly apply the `relX` and `relY` offsets from the `InputChannel` DNA, using the `relativeTo` key to find the anchor actor.
-
-## 3. FINAL SIGN-OFF
-After Step 4 is verified, report completion to the Lead Architect and update `TVM_WORKER_LOG.md`.
+### STEP 3: System Verification
+- **File:** `core/src/main/kotlin/com/srw/seedsofsovereignty/system/DroneSystems.kt`
+- **Action:** Ensure all signal lookups are using `slotIdx` or `launcher.slotIndex`. (Note: This may already be correct, but must be verified).

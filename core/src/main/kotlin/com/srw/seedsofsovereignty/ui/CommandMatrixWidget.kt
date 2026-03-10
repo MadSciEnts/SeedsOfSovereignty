@@ -1,14 +1,11 @@
 package com.srw.seedsofsovereignty.ui
 
 import com.badlogic.gdx.graphics.Color
-import com.badlogic.gdx.graphics.g2d.Batch
-import com.badlogic.gdx.math.Vector2
-import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.InputEvent
 import com.badlogic.gdx.scenes.scene2d.ui.*
-import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
 import com.badlogic.gdx.utils.Align
+import com.github.quillraven.fleks.Entity
 import com.srw.seedsofsovereignty.component.*
 import space.earlygrey.shapedrawer.ShapeDrawer
 
@@ -16,51 +13,43 @@ import space.earlygrey.shapedrawer.ShapeDrawer
  * Technical Command Deck (v0.3.32).
  * Refactored into a Fixed-Size Hardware Instrument (WidgetGroup).
  * v0.4.0: Updated for Bidirectional Instrument DNA using TacticalHubComponent.
+ * v0.4.2 (Phase 9.6): Stabilized input listeners with Container unwrapping logic.
+ * v0.4.3 (Phase 9.6): Delegated input logic to TacticalInputController.
+ * v0.5.6 (Phase 9.9): Wide Deck Lockdown - Expanded to 550px.
+ * v0.5.7: Entity ID Binding. Passes slotEntity to input controller for crosstalk isolation.
+ * Phase 9.9.2: Slot-Based Suffixing. Passes slotIndex to input controller.
  */
 class CommandMatrixWidget(
     private val drawer: ShapeDrawer,
     private val skin: Skin,
     private val world: com.github.quillraven.fleks.World,
-    private val onSelectionChanged: (Int) -> Unit,
-    private val onSpaceToggled: () -> Unit
+    private val onSelectionChanged: (Int) -> Unit
 ) : WidgetGroup() {
 
     private val loadoutBar = Table(skin)
     private val clusterInterpreter = TacticalClusterWidget(skin)
-    private val spaceToggle = TextButton("WLD", skin, "mode-toggle")
+    private val inputController = TacticalInputController(world, skin)
 
     private var selectedIndex: Int = 0
     private var currentSlotIdentities = mutableListOf<String>()
 
     init {
-        // v0.3.32: Step 1: Compact Root. Set size FIRST.
-        setSize(350f, 330f)
+        // Phase 9.9: Wide Deck Expansion.
+        setSize(550f, 330f)
 
         // Set origin SECOND.
         setOrigin(Align.bottomRight)
 
         addActor(loadoutBar)
-        // v0.3.32: Welded Positioning.
-        loadoutBar.setSize(250f, 70f)
-        loadoutBar.setPosition(width - 250f, 255f)
+        // Phase 9.3, Step 1: RTL Layout Fix - Initial Anchoring
+        loadoutBar.right()
+        loadoutBar.setSize(550f, 70f)
+        loadoutBar.setPosition(0f, 255f)
 
         addActor(clusterInterpreter)
         // v0.3.32: Absolute cluster anchor.
-        clusterInterpreter.setSize(350f, 250f)
+        clusterInterpreter.setSize(550f, 250f)
         clusterInterpreter.setPosition(0f, 0f)
-
-        spaceToggle.addListener(object : ClickListener() {
-            override fun clicked(event: InputEvent?, x: Float, y: Float) {
-                onSpaceToggled()
-            }
-        })
-    }
-
-    /**
-     * Updates the toggle button text to reflect the current fleet mode.
-     */
-    fun updateSpaceLabel(isWorld: Boolean) {
-        spaceToggle.setText(if (isWorld) "WLD" else "LOC")
     }
 
     /**
@@ -79,9 +68,11 @@ class CommandMatrixWidget(
 
         for (i in 0 until loadoutBar.children.size) {
             val btn = loadoutBar.getChild(i) as? HUDModuleSlotButton ?: continue
-            btn.setFocused(i == selectedIndex)
+            // Phase 9.3, Step 1: Map child index back to slot index (reversed addition)
+            val slotIndex = (loadoutBar.children.size - 1) - i
+            btn.setFocused(slotIndex == selectedIndex)
 
-            val slot = slots[i]
+            val slot = slots[slotIndex]
             val slotEntity = slot.slotEntity
             with(world) {
                 if (slotEntity != null && world.contains(slotEntity)) {
@@ -93,7 +84,7 @@ class CommandMatrixWidget(
                         btn.updateDNA(d.weaponDNA.projectileTier, d.weaponDNA.projectileColor)
                     }
                 } else {
-                    btn.updateDNA(slot.equippedTier, com.badlogic.gdx.graphics.Color.YELLOW, false)
+                    btn.updateDNA(slot.equippedTier, Color.YELLOW, false)
                 }
             }
         }
@@ -101,7 +92,10 @@ class CommandMatrixWidget(
 
     private fun rebuildLayout(slots: List<ModuleSlot>) {
         loadoutBar.clear()
-        slots.forEachIndexed { index, slot ->
+        // Phase 9.3, Step 1: RTL Layout Fix - Reverse Iteration
+        // Adding buttons in reverse order (N-1 downTo 0) ensures Slot 1 (index 0) is added LAST (far right).
+        for (i in slots.size - 1 downTo 0) {
+            val slot = slots[i]
             var controlType = ControlType.BUTTON
             val slotEntity = slot.slotEntity
             with(world) {
@@ -114,7 +108,7 @@ class CommandMatrixWidget(
             val btn = HUDModuleSlotButton(drawer, skin, controlType)
             btn.addListener(object : ClickListener() {
                 override fun clicked(event: InputEvent?, x: Float, y: Float) {
-                    onSelectionChanged(index)
+                    onSelectionChanged(i)
                 }
             })
 
@@ -127,122 +121,31 @@ class CommandMatrixWidget(
     /**
      * Updates the tactical surface and binds UI events to the ECS Action Hub.
      */
-    fun updateTacticalSurface(schema: TacticalSchema) {
-        // Task 4: Unique Drone Deploy Keys
-        val processedInputs = schema.inputs.map { input ->
-            if (input.actionKey == "DRONE_DEPLOY") {
-                input.copy(actionKey = "DRONE_DEPLOY_$selectedIndex")
-            } else {
-                input
-            }
-        }
-        val processedSchema = schema.copy(inputs = processedInputs)
+    fun updateTacticalSurface(schema: TacticalSchema, slotIndex: Int) {
+        val processedSchema = inputController.processSchema(schema, slotIndex)
 
-        val actionCallback: (String, Any) -> Unit = { actionKey, value ->
-            with(world) {
-                val playerFamily = family { all(PlayerComponent, TacticalHubComponent) }
-                playerFamily.firstOrNull()?.let { player ->
-                    val hub = player[TacticalHubComponent]
-                    when (value) {
-                        is Boolean -> {
-                            if (actionKey == "FIRE") {
-                                if (value) hub.activeBitmask = hub.activeBitmask or (1L shl 0)
-                                else hub.activeBitmask = hub.activeBitmask and (1L shl 0).inv()
-                            } else {
-                                hub.scalars[actionKey] = if (value) 1f else 0f
-                            }
-                        }
-                        is Vector2 -> {
-                            hub.vectors[actionKey]?.set(value) ?: run {
-                                hub.vectors[actionKey] = Vector2(value)
-                            }
-
-                            // Task 3: Persistent Stick Logic - Save State
-                            if (player.has(TacticalPersistenceComponent)) {
-                                val persistence = player[TacticalPersistenceComponent]
-                                persistence.persistentInputs[actionKey] = Vector2(value)
-                            }
-                        }
-                        is Float -> {
-                            hub.scalars[actionKey] = value
-                        }
-                    }
-                }
-            }
+        clusterInterpreter.renderSchema(processedSchema, inputController.actionCallback) { channel, callback ->
+            inputController.bindInstrument(channel, callback)
         }
 
-        clusterInterpreter.renderSchema(processedSchema, actionCallback) { channel, callback ->
-            // Task 3: Persistent Stick Logic - Restore State
-            var restoreVector: Vector2? = null
-            with(world) {
-                val playerFamily = family { all(PlayerComponent, TacticalPersistenceComponent) }
-                playerFamily.firstOrNull()?.let { player ->
-                    restoreVector = player[TacticalPersistenceComponent].persistentInputs[channel.actionKey]
-                }
-            }
+        // Phase 9.9: Re-enforce stable 550x330 footprint.
+        setSize(550f, 330f)
+        // Phase 9.3, Step 1: RTL Layout Fix - Re-enforce Anchoring
+        loadoutBar.right()
+        loadoutBar.setSize(550f, 70f)
+        loadoutBar.setPosition(0f, 255f)
 
-            val actor = HUDFactory.createTacticalInput(skin, channel, world, restoreVector)
-
-            when (channel.classification) {
-                ControlClassification.ACTION_BUTTON -> {
-                    actor.addListener(object : ClickListener() {
-                        override fun touchDown(event: InputEvent?, x: Float, y: Float, pointer: Int, button: Int): Boolean {
-                            callback(channel.actionKey, true)
-                            return true
-                        }
-                        override fun touchUp(event: InputEvent?, x: Float, y: Float, pointer: Int, button: Int) {
-                            callback(channel.actionKey, false)
-                        }
-                    })
-                }
-                ControlClassification.TOGGLE_SWITCH -> {
-                    actor.addListener(object : ChangeListener() {
-                        override fun changed(event: ChangeEvent?, target: Actor?) {
-                            val btn = target as? Button ?: (target as? Container<*>)?.actor as? Button
-                            btn?.let { callback(channel.actionKey, it.isChecked) }
-                        }
-                    })
-                }
-                ControlClassification.MOVEMENT_STICK, ControlClassification.TACTICAL_STICK -> {
-                    actor.addListener(object : ChangeListener() {
-                        private val knobPercent = Vector2()
-                        override fun changed(event: ChangeEvent?, target: Actor?) {
-                            val pad = target as? Touchpad ?: (target as? Container<*>)?.actor as? Touchpad
-                            pad?.let {
-                                knobPercent.set(it.knobPercentX, it.knobPercentY)
-                                callback(channel.actionKey, knobPercent)
-                            }
-                        }
-                    })
-                }
-                ControlClassification.MODIFIER_SLIDER -> {
-                    actor.addListener(object : ChangeListener() {
-                        override fun changed(event: ChangeEvent?, target: Actor?) {
-                            val sld = target as? Slider ?: (target as? Container<*>)?.actor as? Slider
-                            sld?.let { callback(channel.actionKey, it.value) }
-                        }
-                    })
-                }
-                else -> { /* No-op */ }
-            }
-            actor
-        }
-
-        // v0.3.32: Re-enforce stable 350x330 footprint.
-        setSize(350f, 330f)
-        loadoutBar.setSize(250f, 70f)
-        loadoutBar.setPosition(width - 250f, 255f)
-        clusterInterpreter.setSize(350f, 250f)
+        clusterInterpreter.setSize(550f, 250f)
         clusterInterpreter.setPosition(0f, 0f)
     }
 
     override fun act(delta: Float) {
         super.act(delta)
-        // TVM v0.4.0/v0.4.1: Signal feedback loop is now handled internally by actors created in HUDFactory
     }
 
     fun getSlotButton(index: Int): HUDModuleSlotButton? {
         if (index < 0 || index >= loadoutBar.children.size) return null
-        return loadoutBar.getChild(index) as? HUDModuleSlotButton
+        // Phase 9.3, Step 1: Map external index to internal reversed child index
+        return loadoutBar.getChild((loadoutBar.children.size - 1) - index) as? HUDModuleSlotButton
     }
 }
