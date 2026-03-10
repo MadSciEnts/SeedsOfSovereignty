@@ -17,7 +17,7 @@ class VitalsClusterWidget(
     private val drawer: ShapeDrawer,
     private val skin: Skin,
     private val world: World
-) : Table(skin) {
+) : Table(skin), SignalObserver {
 
     private var healthBar: HudBar? = null
     private var shieldBar: HudBar? = null
@@ -30,6 +30,7 @@ class VitalsClusterWidget(
 
     /**
      * Updates internal bars based on live ECS data from the player ship.
+     * Note: Prefer onSignalReceived for event-driven updates where available.
      */
     fun update(player: Entity) {
         var needsLayout = false
@@ -74,6 +75,24 @@ class VitalsClusterWidget(
         if (needsLayout) {
             invalidateHierarchy()
             pack()
+        }
+    }
+
+    override fun onSignalReceived(signal: StatusSignal) {
+        // Handle signals like "SYSTEMS_INTEGRITY" or label-based updates
+        when (signal.label) {
+            "STRUCTURAL", "SYSTEMS_INTEGRITY" -> healthBar?.let {
+                it.current = signal.value
+                signal.maxValue?.let { max -> it.max = max }
+            }
+            "DEFLECTOR" -> shieldBar?.let {
+                it.current = signal.value
+                signal.maxValue?.let { max -> it.max = max }
+            }
+            "EVO-LINK" -> essenceBar?.let {
+                it.current = signal.value
+                signal.maxValue?.let { max -> it.max = max }
+            }
         }
     }
 }

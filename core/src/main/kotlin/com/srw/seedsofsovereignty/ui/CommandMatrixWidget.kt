@@ -140,6 +140,10 @@ class CommandMatrixWidget(
 
     override fun act(delta: Float) {
         super.act(delta)
+        // AGGREGATOR BRIDGE: Pass signals from Hub to UI observers in the cluster.
+        inputController.updateSignals { key, signal ->
+            clusterInterpreter.onSignalReceived(key, signal)
+        }
     }
 
     fun getSlotButton(index: Int): HUDModuleSlotButton? {

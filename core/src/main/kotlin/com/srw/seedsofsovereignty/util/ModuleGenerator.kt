@@ -16,6 +16,15 @@ object ModuleGenerator {
     fun generateDroneModule(tier: Int, rarity: Rarity = WeaponGenerator.rollRarity()) =
         DroneGenerator.generateDroneModule(tier, rarity)
 
+    fun generateShield(tier: Int, rarity: Rarity = WeaponGenerator.rollRarity()) =
+        ShieldGenerator.generateShield(tier, rarity)
+
+    fun generateArmor(tier: Int, rarity: Rarity = WeaponGenerator.rollRarity()) =
+        ArmorGenerator.generateArmor(tier, rarity)
+
+    fun generateHull(tier: Int, rarity: Rarity = WeaponGenerator.rollRarity()) =
+        ArmorGenerator.generateHull(tier, rarity)
+
     /**
      * Task: Unified Salvage Pipeline.
      * Generates a procedural salvage payload based on enemy difficulty.

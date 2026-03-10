@@ -41,3 +41,10 @@ data class TacticalHubComponent(
     override fun type() = TacticalHubComponent
     companion object : ComponentType<TacticalHubComponent>()
 }
+
+/**
+ * Interface for UI elements that listen to StatusSignals from the ECS.
+ */
+interface SignalObserver {
+    fun onSignalReceived(signal: StatusSignal)
+}

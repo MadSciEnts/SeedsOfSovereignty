@@ -14,6 +14,22 @@ import com.srw.seedsofsovereignty.component.TacticalSchema
  */
 class TacticalClusterWidget(private val skin: Skin) : WidgetGroup() {
     private val channelActors = mutableMapOf<String, Actor>()
+    private val signalKeyMap = mutableMapOf<String, String>()
+
+    /**
+     * SIGNAL ROUTING: Dispatches signals to actors that match the signalKey.
+     */
+    fun onSignalReceived(key: String, signal: com.srw.seedsofsovereignty.component.StatusSignal) {
+        children.forEach { actor ->
+            val sigKey = signalKeyMap[actor.name]
+            if (sigKey == key) {
+                val target = if (actor is com.badlogic.gdx.scenes.scene2d.ui.Container<*>) actor.actor else actor
+                if (target is com.srw.seedsofsovereignty.component.SignalObserver) {
+                    target.onSignalReceived(signal)
+                }
+            }
+        }
+    }
 
     /**
      * Renders the schema and connects UI events to the action callback.
@@ -32,6 +48,10 @@ class TacticalClusterWidget(private val skin: Skin) : WidgetGroup() {
         // Create all actors first so that anchors (relativeTo) are guaranteed to exist.
         schema.inputs.forEach { channel ->
             val actor = inputFactory(channel, actionCallback)
+            actor.name = channel.actionKey
+            if (channel.signalKey != null) {
+                signalKeyMap[actor.name] = channel.signalKey!!
+            }
             channelActors[channel.actionKey] = actor
             actor.setSize(channel.width, channel.height)
             addActor(actor)
@@ -57,6 +77,7 @@ class TacticalClusterWidget(private val skin: Skin) : WidgetGroup() {
 
     private fun clearPassData() {
         channelActors.clear()
+        signalKeyMap.clear()
         clearChildren()
     }
 }

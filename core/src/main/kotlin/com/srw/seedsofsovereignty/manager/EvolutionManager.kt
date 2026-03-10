@@ -4,11 +4,12 @@ import com.github.quillraven.fleks.Entity
 import com.github.quillraven.fleks.World
 import com.srw.seedsofsovereignty.component.*
 import com.srw.seedsofsovereignty.util.ModuleGenerator
+import com.srw.seedsofsovereignty.util.ShieldGenerator
+import com.srw.seedsofsovereignty.util.ArmorGenerator
 
 /**
  * Manages ship progression and hardware synchronization.
- * Updated (v0.6.3): Phase 9.9.4 - Unified Command Matrix Indexing.
- * Launcher slotIndex now matches the absolute index in the loadout bar for UI/ECS signal parity.
+ * v0.8.9.1: Hardened Physical Slot Entity creation and linkage.
  */
 class EvolutionManager {
 
@@ -16,14 +17,9 @@ class EvolutionManager {
         val family = world.family { all(PlayerComponent, EvolutionComponent) }
         if (family.numEntities > 0) {
             val player = family.first()
-            with(world) {
-                if (targetTier > 0) {
-                    applyTierBaseline(world, player, targetTier)
-                } else {
-                    val evo = player[EvolutionComponent]
-                    evo.essenceCollected = evo.essenceRequired
-                }
-            }
+            val evo = with(world) { player[EvolutionComponent] }
+            if (targetTier > 0) applyTierBaseline(world, player, targetTier)
+            else applyTierBaseline(world, player, evo.currentTier + 1)
         }
     }
 
@@ -36,76 +32,54 @@ class EvolutionManager {
             evo.currentTier = tier
             evo.subTier = 1
 
-            weapon.barrels = 1
-            weapon.currentBarrel = 0
-            weapon.barrelSequence.clear()
-            weapon.barrelSequence.add(0)
-
-            val stockWeapon = ModuleGenerator.generateWeapon(tier, Rarity.COMMON).apply {
-                name = "STOCK T$tier"
-                description = "Standard issue hardware for your new chassis."
-            }
-
+            // 1. Reset Base Weapon
+            val stockWeapon = ModuleGenerator.generateWeapon(tier, Rarity.COMMON)
             module.name = stockWeapon.name
-            module.description = stockWeapon.description
-            module.projectileTier = stockWeapon.projectileTier
-            module.rarity = stockWeapon.rarity
-            module.controlType = stockWeapon.controlType
             module.tacticalSchema = stockWeapon.tacticalSchema
-            module.fireRate = stockWeapon.fireRate
-            module.projectileSpeed = stockWeapon.projectileSpeed
-            module.projectileColor = stockWeapon.projectileColor
-            module.effects.clear()
-            module.effects.addAll(stockWeapon.effects)
+            module.projectileTier = tier
 
-            syncDroneSlots(world, player, tier)
+            // 2. Scale Chassis
+            val maxShields = when { tier >= 25 -> 4; tier >= 13 -> 3; tier >= 5 -> 2; else -> 1 }
+            val maxHull = if (tier >= 13) 2 else 1
 
-            if (player.has(ModuleSlotComponent)) {
-                val slotComp = player[ModuleSlotComponent]
-                slotComp.slots.find { it.type == SlotType.WEAPON }?.let { ws ->
-                    ws.equippedName = module.name
-                    ws.equippedTier = module.projectileTier
-                }
+            player.configure {
+                it += ShipChassisComponent(maxShieldLayers = maxShields, maxHullLayers = maxHull, wireframeAsset = "blueprint_t$tier")
+                if (!it.has(QuadrantHealthComponent)) it += QuadrantHealthComponent()
             }
+
+            // 3. Sync Hardware
+            syncHardware(world, player, tier)
         }
     }
 
-    private fun syncDroneSlots(world: World, player: Entity, tier: Int) {
+    private fun syncHardware(world: World, player: Entity, tier: Int) {
         with(world) {
             val slotComp = if (player.has(ModuleSlotComponent)) player[ModuleSlotComponent] else {
                 player.configure { it += ModuleSlotComponent() }
                 player[ModuleSlotComponent]
             }
 
-            val targetDroneSlots = when {
-                tier >= 13 -> 4
-                tier >= 11 -> 3
-                tier >= 9 -> 2
-                tier >= 5 -> 1
-                else -> 0
-            }
+            // A. Fixed Core
+            ensureFixedHardware(world, slotComp, SlotType.FIXED_HULL, tier)
+            ensureFixedHardware(world, slotComp, SlotType.FIXED_ENGINE, tier)
+            ensureFixedHardware(world, slotComp, SlotType.FIXED_REACTOR, tier)
 
-            val currentDroneSlots = slotComp.slots.count { it.type == SlotType.DRONE }
-
-            for (i in currentDroneSlots until targetDroneSlots) {
-                // Phase 9.9.4: The launcher's slotIndex is its absolute index in the loadout bar.
-                // Since Slot 0 is always the Primary Weapon, drones start at absolute index slots.size.
-                val absoluteIndex = slotComp.slots.size
-
+            // B. Playtest Shield (Tier 2+)
+            if (tier >= 2 && slotComp.slots.none { it.type == SlotType.UNIVERSAL }) {
                 val sEntity = world.entity { e ->
-                    e += DroneLauncherComponent(slotIndex = absoluteIndex)
-                    e += ModuleGenerator.generateDroneModule(tier, Rarity.COMMON)
+                    e += ShieldGenerator.generateShield(tier, Rarity.COMMON)
                 }
-
-                val dModule = sEntity[DroneModuleComponent]
-                slotComp.slots.add(ModuleSlot(
-                    type = SlotType.DRONE,
-                    tier = tier,
-                    equippedName = dModule.name,
-                    equippedTier = tier,
-                    slotEntity = sEntity
-                ))
+                slotComp.slots.add(ModuleSlot(SlotType.UNIVERSAL, tier, "DEFLECTOR", tier, sEntity))
             }
+        }
+    }
+
+    private fun ensureFixedHardware(world: World, slotComp: ModuleSlotComponent, type: SlotType, tier: Int) {
+        if (slotComp.slots.none { it.type == type }) {
+            val hEntity = world.entity { e ->
+                if (type == SlotType.FIXED_HULL) e += ArmorGenerator.generateHull(tier, Rarity.COMMON)
+            }
+            slotComp.slots.add(ModuleSlot(type, tier, "INTERNAL SYSTEMS", tier, hEntity))
         }
     }
 }

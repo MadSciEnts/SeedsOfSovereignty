@@ -167,4 +167,19 @@ class TacticalInputController(
         }
         return actor
     }
+
+    /**
+     * AGGREGATOR BRIDGE: Broadcasts all StatusSignals from the Hub to UI observers.
+     */
+    fun updateSignals(callback: (String, StatusSignal) -> Unit) {
+        with(world) {
+            val playerFamily = family { all(PlayerComponent, TacticalHubComponent) }
+            playerFamily.firstOrNull()?.let { player ->
+                val hub = player[TacticalHubComponent]
+                hub.signals.forEach { (key, signal) ->
+                    callback(key, signal)
+                }
+            }
+        }
+    }
 }

@@ -45,6 +45,7 @@ class PlayScreen(
     private var currentHUDStyle = "INDUSTRIAL"
 
     private val vitalsHUD = VitalsClusterWidget(drawer, skin, world)
+    private val diagnosticHUD = DiagnosticWidget(drawer, skin)
 
     private val commandMatrix = CommandMatrixWidget(
         drawer,
@@ -95,6 +96,7 @@ class PlayScreen(
 
         uiStage.addActor(moveJoystick)
         uiStage.addActor(vitalsHUD)
+        uiStage.addActor(diagnosticHUD)
         uiStage.addActor(commandMatrix)
         uiStage.addActor(hangarUI)
         uiStage.addActor(testEvolveButton)
@@ -116,6 +118,15 @@ class PlayScreen(
             with(world) {
                 // 1. Update ATO Hubs
                 vitalsHUD.update(player)
+
+                // AGGREGATOR BRIDGE: Ensure DiagnosticWidget receives signals
+                val playerFamily = family { all(PlayerComponent, TacticalHubComponent) }
+                playerFamily.firstOrNull()?.let { p ->
+                    val hub = p[TacticalHubComponent]
+                    hub.signals.forEach { (key, signal) ->
+                        diagnosticHUD.onSignalReceived(signal.copy(label = key))
+                    }
+                }
 
                 // TVM Phase 7.2: Evolution-linked HUD Skin
                 val evo = player[EvolutionComponent]
@@ -161,6 +172,7 @@ class PlayScreen(
 
                 moveJoystick.isVisible = !isUiRequested
                 vitalsHUD.isVisible = !isUiRequested
+                diagnosticHUD.isVisible = !isUiRequested
                 commandMatrix.isVisible = !isUiRequested
                 testEvolveButton.isVisible = !isUiRequested
 
@@ -192,6 +204,9 @@ class PlayScreen(
         moveJoystick.setPosition(50f, 50f)
 
         vitalsHUD.setPosition(30f, uiViewport.worldHeight - 100f)
+
+        diagnosticHUD.setSize(120f, 120f)
+        diagnosticHUD.setPosition(30f, uiViewport.worldHeight - 150f)
 
         // v0.3.32: Compact Instrument Finalization - Correct Snap.
         // Origin is bottomRight, so (worldWidth - 40, 50) anchors the bottom-right corner of the widget.

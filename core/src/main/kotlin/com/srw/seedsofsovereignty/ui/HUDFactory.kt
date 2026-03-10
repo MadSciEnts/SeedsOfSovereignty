@@ -157,6 +157,9 @@ object HUDFactory {
                 // Standard or Aim?
                 actor.style = skin.get("default", Touchpad.TouchpadStyle::class.java)
             }
+            is DiagnosticWidget -> {
+                // Procedural widget - no style-specific children to refresh yet.
+            }
             is Container<*> -> {
                 actor.background = skin.getDrawable("panel")
                 actor.actor?.let { refreshActor(it, skin) }

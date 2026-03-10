@@ -1,4 +1,4 @@
-# SEED OF SOVEREIGNTY: AGENT HIERARCHY & ROLES (v0.8.1)
+# SEED OF SOVEREIGNTY: AGENT HIERARCHY & ROLES (v0.8.6)
 
 ## 1. THE COMMAND CHAIN
 
@@ -13,15 +13,20 @@
 ### TIER 2: [T2 COORD] (Forensic Coordinator)
 - **Role:** Tactical Supervisor.
 - **Responsibility:** Breaking missions into steps and performing Rule #12 audits.
-- **Comment Mandate:** Must verify that T3 agents have preserved all architectural annotations.
 
 ### TIER 3: [T3 SURGICAL] (Implementer)
 - **Role:** Pure Execution.
 - **Responsibility:** Code modification based on `OB_SURGICAL_IMPLEMENTER.md`.
 
-## 2. THE HANDOFF PROTOCOL (v0.5.4 - Mandatory Prefixes)
-Every prompt generated for the Developer to relay MUST begin with the tier/category and session state.
-**Format:** `[TX CATEGORY] [SESSION: STATE] ...`
+## 2. THE HANDOFF PROTOCOL (v0.8.6 - Structural Handoffs)
+Every prompt generated for the Developer to relay MUST follow this physical multi-line structure. You MUST use **Double Newlines** (Paragraph Breaks) to ensure mission-critical context is isolated and visible.
+
+**Format:**
+PROMPT: [TX CATEGORY] [SESSION: STATE] (Position Name - Designation)
+
+[MISSION: Mission Title BASELINE: Version/Tag]
+
+Welcome aboard, [Position Name], [Designation]! You are assuming control for the mission defined in [OB_FILE].md.
 
 ## 3. THE LIFECYCLE RULE
 - Agents remain "CONTINUING" as long as their specific chat tab remains active.
@@ -31,15 +36,17 @@ Every prompt generated for the Developer to relay MUST begin with the tier/categ
 - **PERMANENT ANNOTATIONS:** Any comment block beginning with `Technical Specification` or `ARCHITECTURAL WARNING` is a Lead Architect mandate.
 - **PROHIBITION:** T2 and T3 agents are strictly forbidden from removing, moving, or altering these comment blocks.
 - **ENFORCEMENT:** If a T3 agent removes a comment, the T2 Coordinator must fail the audit and command a revert.
-- **SURGICAL PRECISION:** All code edits must be performed *around* these annotations.
 
-## 5. STATUS STATEMENT RULE (v0.8.1)
+## 5. STATUS STATEMENT RULE (v0.8.5)
 - **MANDATORY INDICATOR:** At the beginning and end of every task, report, or handoff, all agents MUST indicate their current mental/context load.
-- **FORMAT:** `[ (current) / Max : Category1, Category2, ... ]`
-- **CATEGORIES:**
-    - `ARCHITECT_SYNC`: Synchronizing strategic blueprints.
-    - `COORD_AUDIT`: Performing forensic code review.
-    - `SURGICAL_EXEC`: Actively modifying source files.
-    - `READY`: Idle and awaiting command.
-- **MULTI-TASKING:** Agents may list multiple categories to reflect a task that spans different operational roles (e.g., `[ 2 / 4 : ARCHITECT_SYNC, COORD_AUDIT ]`).
-- **REASONING:** Ensures high-tier agents monitor their own context weight and delegate tasks before "Cognitive Collapse" occurs.
+- **FORMAT:** (Use **Double Newlines** between indicators)
+-[ (current) / Max : Category1 ]-
+
+-[ (current) / Max : Category2 ]-
+
+- **MULTI-TASKING:** Agents may list multiple categories to reflect a task that spans different operational roles, with each category isolated by a double newline for vertical clarity.
+
+## 6. TASK COMPLETION REPORTING (v0.8.6)
+Upon completion of a task, agents are NOT required to use the Handoff Protocol. Instead, they must provide a concise report using the following format:
+
+[TX CATEGORY] [TASK COMPLETE REPORT] - (Concise summary of physical changes, mission outcome, and any relevant technical observations).

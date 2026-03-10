@@ -22,7 +22,7 @@ data class ModuleSlot(
     var slotEntity: Entity? = null // Reference to the entity holding the module stats
 )
 
-enum class SlotType { WEAPON, DRONE, UTILITY }
+enum class SlotType { FIXED_ENGINE, FIXED_REACTOR, FIXED_HULL, WEAPON, DRONE, UNIVERSAL }
 
 /**
  * Manages a pending decision for the player.
@@ -35,4 +35,13 @@ data class ChoiceComponent(
     enum class ChoiceType { EVOLUTION_UPGRADE, LOOT_FOUND }
     override fun type() = ChoiceComponent
     companion object : ComponentType<ChoiceComponent>()
+}
+
+data class ShipChassisComponent(
+    val maxShieldLayers: Int = 1,
+    val maxHullLayers: Int = 1,
+    val wireframeAsset: String = "blueprint_default"
+) : Component<ShipChassisComponent> {
+    override fun type() = ShipChassisComponent
+    companion object : ComponentType<ShipChassisComponent>()
 }

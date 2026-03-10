@@ -75,9 +75,10 @@ class SovereigntyGame : KtxGame<KtxScreen>() {
 
                 add(RadarRenderSystem(batch, drawer, uiViewport))
 
-                // RESTORED: HUDSystem is now a logic-only system (v0.2.0 ATO)
-                add(HUDSystem())
+                // Phase 11.2 Integration: Logic Hub for CQD
+                add(DiagnosticSignalSystem())
 
+                add(HUDSystem())
                 add(OriginSystem())
             }
         }
