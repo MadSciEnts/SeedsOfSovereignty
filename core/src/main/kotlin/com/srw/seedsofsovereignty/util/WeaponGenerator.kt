@@ -6,6 +6,7 @@ import com.srw.seedsofsovereignty.component.*
 
 /**
  * WeaponGenerator (Phase 9.6): Extracted procedural weapon generation logic.
+ * v0.6.6: Geometry Conforming Pass. Unified hub coordinates (300, 0) for sticks and (375, 75) for buttons.
  */
 object WeaponGenerator {
 
@@ -25,11 +26,13 @@ object WeaponGenerator {
         // Rule #11: Inject Control DNA based on Tier jump (T4+ unlocks independent turrets)
         val controlType = if (tier >= 4) ControlType.DIRECTIONAL_STICK else ControlType.BUTTON
 
-        // TVM Phase 6.1: Assign appropriate TacticalSchema with InputChannel
+        // TVM Phase 10.1: Geometry Conforming. Primary interactive element anchored at (300, 0) hub.
         val schema = if (tier < 4) {
-            TacticalSchema(listOf(InputChannel(ControlClassification.ACTION_BUTTON, "FIRE", relX = 100f, relY = 0f)))
+            // Tier 1-3: Button centered within the 250px hub area (300+75, 0+75)
+            TacticalSchema(listOf(InputChannel(ControlClassification.ACTION_BUTTON, "FIRE", relX = 375f, relY = 75f, width = 100f, height = 100f)))
         } else {
-            TacticalSchema(listOf(InputChannel(ControlClassification.MOVEMENT_STICK, "AIM", relX = 100f, relY = 0f)))
+            // Tier 4-6+: Joystick occupying the full 250px hub area
+            TacticalSchema(listOf(InputChannel(ControlClassification.MOVEMENT_STICK, "AIM", relX = 300f, relY = 0f, width = 250f, height = 250f)))
         }
 
         val module = WeaponModuleComponent(

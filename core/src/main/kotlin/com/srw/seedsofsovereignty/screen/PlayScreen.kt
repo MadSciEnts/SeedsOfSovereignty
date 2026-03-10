@@ -16,13 +16,14 @@ import com.srw.seedsofsovereignty.manager.EvolutionManager
 import com.srw.seedsofsovereignty.manager.MarketManager
 import com.srw.seedsofsovereignty.system.PlayerInputSystem
 import com.srw.seedsofsovereignty.ui.*
+import com.srw.seedsofsovereignty.util.ModuleGenerator
 import ktx.app.KtxScreen
 import space.earlygrey.shapedrawer.ShapeDrawer
 
 /**
  * High-fidelity mission theater (v0.3.32).
  * Redirected to TVM (Tactical Virtual Machine) input kernel.
- * v0.4.0: Updated for Bidirectional Instrument DNA.
+ * v0.6.6: Geometry Conforming. Synchronized starting weapon with modular DNA.
  */
 class PlayScreen(
     private val world: World,
@@ -73,22 +74,14 @@ class PlayScreen(
             it += OrientationComponent()
             it += VelocityComponent()
             it += WeaponComponent()
-            it += WeaponModuleComponent(
-                name = "Stock T1",
-                description = "Standard kinetic stream.",
-                projectileTier = 1,
-                rarity = Rarity.COMMON,
-                controlType = ControlType.BUTTON,
-                // TVM v0.4.0: Updated schema for bidirectional instruments
-                tacticalSchema = TacticalSchema(listOf(InputChannel(ControlClassification.ACTION_BUTTON, "FIRE"))),
-                projectileSpeed = 1000f,
-                fireRate = 0.6f,
-                projectileColor = Color.YELLOW,
-                effects = mutableListOf(
-                    ProjectileEffect(EffectType.HULL_DAMAGE, 10f, vfx = ImpactVfxType.SPARK_YELLOW),
-                    ProjectileEffect(EffectType.SHIELD_DAMAGE, 10f, vfx = ImpactVfxType.SHIELD_RIPPLE_BLUE)
-                )
-            )
+
+            // v0.6.6: Hard-wired starting weapon to use conformed procedural DNA.
+            // This ensures the starting "FIRE" button is correctly positioned and styled.
+            it += ModuleGenerator.generateWeapon(1, Rarity.COMMON).apply {
+                name = "Stock T1"
+                description = "Standard kinetic stream."
+            }
+
             it += SensorComponent(radius = 1000f)
             it += EvolutionComponent(currentTier = 1, subTier = 1, essenceCollected = 0, essenceRequired = 5)
             it += DockingComponent()

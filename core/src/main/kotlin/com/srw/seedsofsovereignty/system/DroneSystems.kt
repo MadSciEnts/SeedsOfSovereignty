@@ -90,7 +90,7 @@ class DroneRegenSystem : IteratingSystem(family { all(DroneLauncherComponent, Dr
  * Advanced fleet formation kernel (v0.5.6).
  * Consumes drone directives from the TVM TacticalHubComponent.
  * Phase 9.8: Consuming individualized DRONE_MODE_SIGNAL.
- * Phase 9.9.2: Removed non-indexed fallback for DRONE_MOVE.
+ * Phase 10.1: Fixed Vector2.Zero poisoning by using safe Vector2 instance copying.
  */
 class DroneFormationSystem(
     private val camera: OrthographicCamera
@@ -128,8 +128,11 @@ class DroneFormationSystem(
             val hub = owner[TacticalHubComponent]
             val slotIdx = drone.slotIndex
 
-            val rawOffset = hub.vectors["DRONE_MOVE_$slotIdx"] ?: Vector2.Zero
-            rotatedOffset.set(rawOffset).scl(150f)
+            // v0.6.6: Fixed Vector2.Zero poisoning. Correctly fetching and copying vector value.
+            val rawOffset = hub.vectors["DRONE_MOVE_$slotIdx"]
+            if (rawOffset != null) {
+                rotatedOffset.set(rawOffset).scl(150f)
+            }
 
             // Phase 9.8: Explicit Signal consumption for Localization Mode
             val modeSignal = hub.signals["DRONE_MODE_SIGNAL_$slotIdx"]?.value ?: 0f
