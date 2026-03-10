@@ -19,7 +19,8 @@ data class TextureCollection(
     val statusLightRed: Drawable,
     val statusLightYellow: Drawable,
     val statusLightGreen: Drawable,
-    val panel: Drawable
+    val panel: Drawable,
+    val reticle: Drawable // Added for TacticalSurface support
 )
 
 /**

@@ -1,4 +1,4 @@
-# SEED OF SOVEREIGNTY: AGENT HIERARCHY & ROLES (v0.5.4)
+# SEED OF SOVEREIGNTY: AGENT HIERARCHY & ROLES (v0.5.5)
 
 ## 1. THE COMMAND CHAIN
 
@@ -13,7 +13,7 @@
 ### TIER 2: [T2 COORD] (Forensic Coordinator)
 - **Role:** Tactical Supervisor.
 - **Responsibility:** Breaking missions into steps and performing Rule #12 audits.
-- **Lifecycle:** Must maintain a single persistent T3 session. If no T3 session exists, it must generate a [NEW] prompt.
+- **Comment Mandate:** Must verify that T3 agents have preserved all architectural annotations.
 
 ### TIER 3: [T3 SURGICAL] (Implementer)
 - **Role:** Pure Execution.
@@ -21,12 +21,14 @@
 
 ## 2. THE HANDOFF PROTOCOL (v0.5.4 - Mandatory Prefixes)
 Every prompt generated for the Developer to relay MUST begin with the tier/category and session state.
-
 **Format:** `[TX CATEGORY] [SESSION: STATE] ...`
 
-**Example:**
-`[T3 SURGICAL] [SESSION: NEW] Welcome aboard. Please read your onboarding file...`
-
 ## 3. THE LIFECYCLE RULE
-- Agents remain "CONTINUING" as long as their specific chat tab remains active in the Developer's IDE.
-- If an agent times out or the chat is cleared, the next handoff MUST be marked as [SESSION: NEW].
+- Agents remain "CONTINUING" as long as their specific chat tab remains active.
+- If an agent times out, the next handoff MUST be marked as [SESSION: NEW].
+
+## 4. ARCHITECTURAL COMMENT PRESERVATION (v0.5.5)
+- **PERMANENT ANNOTATIONS:** Any comment block beginning with `Technical Specification` or `ARCHITECTURAL WARNING` is a Lead Architect mandate.
+- **PROHIBITION:** T2 and T3 agents are strictly forbidden from removing, moving, or altering these comment blocks.
+- **ENFORCEMENT:** If a T3 agent removes a comment, the T2 Coordinator must fail the audit and command a revert.
+- **SURGICAL PRECISION:** All code edits must be performed *around* these annotations.

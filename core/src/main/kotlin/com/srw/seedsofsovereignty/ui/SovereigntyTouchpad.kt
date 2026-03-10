@@ -7,9 +7,11 @@ import com.badlogic.gdx.scenes.scene2d.ui.Touchpad
 import java.lang.reflect.Method
 
 /**
- * A customized Touchpad that supports persistent "Locking" and custom visual states.
- * When [isPersistent] is true, the knob stays at its last position when released.
- * v0.6.5: Behavior Lockdown. Uses reflection to force internal engine sync during restoration.
+ * Technical Specification: SovereigntyTouchpad (v0.7.1)
+ * ROLE: Primary Interaction Hub for Tactical Virtual Machine (TVM).
+ *
+ * ARCHITECTURAL WARNING:
+ * This class uses Java Reflection to bypass LibGDX package-private restrictions.
  */
 class SovereigntyTouchpad(
     deadzone: Float,
@@ -21,7 +23,6 @@ class SovereigntyTouchpad(
     private var persistentX: Float = 0f
     private var persistentY: Float = 0f
 
-    // Reflection bridge to access package-private calculation method in base Touchpad
     private val calculateMethod: Method? by lazy {
         try {
             Touchpad::class.java.getDeclaredMethod(
@@ -33,9 +34,6 @@ class SovereigntyTouchpad(
         } catch (e: Exception) { null }
     }
 
-    /**
-     * Setting this value triggers a one-time restoration in the next act() pass.
-     */
     var knobRestore: Vector2? = null
 
     override fun getKnobPercentX(): Float = if (isTouched) super.getKnobPercentX() else {
@@ -47,7 +45,6 @@ class SovereigntyTouchpad(
     }
 
     override fun act(delta: Float) {
-        // 1. Force engine-level restoration to move physical handle and update internal percentages
         knobRestore?.let {
             val bg = style.background
             val bgLeft = bg?.leftWidth ?: 0f
@@ -69,14 +66,10 @@ class SovereigntyTouchpad(
             knobRestore = null
         }
 
-        // 2. Capture memory while touched, but only for meaningful movements
+        // [CAPTURE PASS] - v0.7.1: Now allows capturing (0,0) to prevent snap-back.
         if (isTouched) {
-            val lx = super.getKnobPercentX()
-            val ly = super.getKnobPercentY()
-            if (Math.abs(lx) > 0.01f || Math.abs(ly) > 0.01f) {
-                persistentX = lx
-                persistentY = ly
-            }
+            persistentX = super.getKnobPercentX()
+            persistentY = super.getKnobPercentY()
         }
         super.act(delta)
     }
@@ -90,12 +83,10 @@ class SovereigntyTouchpad(
         validate()
         val style = style
         batch.setColor(color.r, color.g, color.b, color.a * parentAlpha)
-
         style.background?.draw(batch, x, y, width, height)
 
         val knob = style.knob
         if (knob != null) {
-            // Visual override to ensure the handle matches our persistent state when released
             val kpx = if (isTouched) super.getKnobPercentX() else (if (isPersistent) persistentX else 0f)
             val kpy = if (isTouched) super.getKnobPercentY() else (if (isPersistent) persistentY else 0f)
 

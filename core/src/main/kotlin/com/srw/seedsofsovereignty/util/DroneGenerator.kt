@@ -6,7 +6,7 @@ import com.srw.seedsofsovereignty.component.*
  * DroneGenerator (Phase 9.8): Hub-Relative Anchoring Refactor.
  * v0.5.6: All secondary controls now anchor to "DRONE_MOVE" hub.
  * Wide Deck Lockdown: Satellite Panel Ergonomics.
- * v0.6.5: Classification fix. Hub is now TACTICAL_STICK to enable persistence.
+ * v0.7.1: Migrated Primary Hub to TACTICAL_SURFACE for Zero-Snap persistence.
  */
 object DroneGenerator {
 
@@ -20,10 +20,10 @@ object DroneGenerator {
         }
 
         val schema = TacticalSchema(listOf(
-            // 1. Primary Flight Stick (Anchor Hub)
-            // v0.6.5: Classification upgraded to TACTICAL_STICK to trigger persistence in HUDInputService.
+            // 1. Primary Flight Hub (Tactical Surface)
+            // v0.7.1: Now uses TACTICAL_SURFACE to support true origin-locking and snap-to-center.
             InputChannel(
-                classification = ControlClassification.TACTICAL_STICK,
+                classification = ControlClassification.TACTICAL_SURFACE,
                 actionKey = "DRONE_MOVE",
                 label = "FLIGHT",
                 relX = 300f,

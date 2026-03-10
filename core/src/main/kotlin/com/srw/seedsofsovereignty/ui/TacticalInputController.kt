@@ -11,13 +11,14 @@ import com.github.quillraven.fleks.World
 import com.srw.seedsofsovereignty.component.*
 
 /**
- * Encapsulates input signal routing and tactical schema processing.
- * Part of Phase 9.6 Load Shedding.
- * v0.5.6: Signal Bridge Hardening. Immediate signal updates for toggle switches and scalars.
- * v0.5.7: Entity ID Binding. Tactical keys are suffixed by Entity ID for crosstalk isolation.
- * Phase 9.9.2: Slot-Based Suffixing. Uses slotIndex for universal suffixing.
- * Phase 9.9.3: Selective Suffixing. Protects global keys (FIRE, AIM) from suffixing.
- * Phase 9.9.4: Robust Prefix Detection. Suffixes DRONE_, DRONES_, and READOUT_ patterns.
+ * Technical Specification: TacticalInputController (v0.7.0)
+ * ROLE: Signal Bridge & Schema Processor for the TVM.
+ *
+ * DESIGN PRINCIPLES:
+ * 1. [SELECTIVE SUFFIXING] - Only module-specific keys (DRONE_, etc.) are suffixed.
+ * 2. [IDENTITY BINDING] - Uses slotIndex for signal parity between UI and Launcher.
+ * 3. [SIGNAL HARDENING] - Updates hub.signals immediately to bypass system latency.
+ * 4. [PERSISTENCE LOCK] - v0.7.0: Now supports TacticalSurface binding.
  */
 class TacticalInputController(
     private val world: World,
@@ -26,8 +27,7 @@ class TacticalInputController(
     private val signalMap = mutableMapOf<String, String>()
 
     /**
-     * Maps hardware action keys to their signal feedback keys and applies Slot Index suffixes.
-     * Only suffixes keys that are module-specific (DRONE_, DRONES_, READOUT_).
+     * DNA PROCESSOR: Suffixes module-specific keys with [slotIndex].
      */
     fun processSchema(schema: TacticalSchema, slotIndex: Int): TacticalSchema {
         signalMap.clear()
@@ -41,7 +41,6 @@ class TacticalInputController(
 
             var nextSignalKey = input.signalKey
             if (nextSignalKey != null) {
-                // v0.6.3: Detection expanded to include "DRONES_" pattern used by regen system.
                 if (nextSignalKey.startsWith("DRONE_") || nextSignalKey.startsWith("DRONES_") || nextSignalKey.startsWith("READOUT_")) {
                     nextSignalKey = "${nextSignalKey}$suffix"
                 }
@@ -61,8 +60,7 @@ class TacticalInputController(
     }
 
     /**
-     * Centralized callback for all tactical instruments.
-     * v0.5.6: Immediately updates hub.signals to bypass system-latency for toggle feedback.
+     * ECS HUB CONDUIT: Maps UI events to TacticalHubComponent.
      */
     val actionCallback: (String, Any) -> Unit = { actionKey, value ->
         with(world) {
@@ -71,14 +69,12 @@ class TacticalInputController(
                 val hub = player[TacticalHubComponent]
                 when (value) {
                     is Boolean -> {
-                        // FIRE is a global bitmask action. We check startsWith to handle potential legacy suffixing.
                         if (actionKey.startsWith("FIRE")) {
                             if (value) hub.activeBitmask = hub.activeBitmask or (1L shl 0)
                             else hub.activeBitmask = hub.activeBitmask and (1L shl 0).inv()
                         } else {
                             val scalarVal = if (value) 1f else 0f
                             hub.scalars[actionKey] = scalarVal
-                            // Signal Bridge Hardening: Sync signal immediately
                             signalMap[actionKey]?.let { sigKey ->
                                 hub.signals[sigKey] = StatusSignal(value = scalarVal)
                             }
@@ -94,7 +90,6 @@ class TacticalInputController(
                     }
                     is Float -> {
                         hub.scalars[actionKey] = value
-                        // Signal Bridge Hardening: Sync signal immediately
                         signalMap[actionKey]?.let { sigKey ->
                             hub.signals[sigKey] = StatusSignal(value = value)
                         }
@@ -104,6 +99,10 @@ class TacticalInputController(
         }
     }
 
+    /**
+     * INSTRUMENT BINDER: Creates actors and attaches event listeners.
+     * v0.7.0: Added TACTICAL_SURFACE support.
+     */
     fun bindInstrument(channel: InputChannel, callback: (String, Any) -> Unit): Actor {
         var restoreVector: Vector2? = null
         with(world) {
@@ -116,7 +115,6 @@ class TacticalInputController(
         val actor = HUDInputService.createTacticalInput(skin, channel, world, restoreVector)
         val instrument = if (actor is Container<*>) actor.actor else actor
 
-        // Phase 9.9.1: Hard-wired restoration to bypass layout lifecycle reset
         if (instrument is SovereigntyTouchpad) {
             instrument.knobRestore = restoreVector
         }
@@ -141,14 +139,18 @@ class TacticalInputController(
                     }
                 })
             }
-            ControlClassification.MOVEMENT_STICK, ControlClassification.TACTICAL_STICK -> {
+            ControlClassification.MOVEMENT_STICK, ControlClassification.TACTICAL_STICK, ControlClassification.TACTICAL_SURFACE -> {
                 instrument.addListener(object : ChangeListener() {
-                    private val knobPercent = Vector2()
+                    private val vec = Vector2()
                     override fun changed(event: ChangeEvent?, target: Actor?) {
-                        val pad = target as? Touchpad
-                        pad?.let {
-                            knobPercent.set(it.knobPercentX, it.knobPercentY)
-                            callback(channel.actionKey, knobPercent)
+                        when (target) {
+                            is Touchpad -> {
+                                vec.set(target.knobPercentX, target.knobPercentY)
+                                callback(channel.actionKey, vec)
+                            }
+                            is TacticalSurface -> {
+                                callback(channel.actionKey, target.getValue())
+                            }
                         }
                     }
                 })
