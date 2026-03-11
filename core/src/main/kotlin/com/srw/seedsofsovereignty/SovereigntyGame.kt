@@ -8,8 +8,8 @@ import com.github.quillraven.fleks.World
 import com.github.quillraven.fleks.configureWorld
 import com.srw.seedsofsovereignty.manager.EvolutionManager
 import com.srw.seedsofsovereignty.manager.SectorManager
+import com.srw.seedsofsovereignty.registry.SystemRegistry.configureSystems
 import com.srw.seedsofsovereignty.screen.PlayScreen
-import com.srw.seedsofsovereignty.system.*
 import com.srw.seedsofsovereignty.ui.AssetFactory
 import com.srw.seedsofsovereignty.ui.HUDFactory
 import ktx.app.KtxGame
@@ -18,21 +18,16 @@ import ktx.async.KtxAsync
 import space.earlygrey.shapedrawer.ShapeDrawer
 
 /**
- * Sovereign Strategic Hub (v2.5.4).
- * ROLE: Primary Registry with Aspect-Synchronized viewports.
+ * Sovereign Strategic Hub (v2.6.0).
+ * ROLE: Entry point utilizing the Sovereign Vault architectures.
  *
  * FIXES:
- * 1. [ASPECT] - Hardened viewport creation to ensure circular hulls.
- * 2. [PARTITION] - Maintained physics/UI separation for forensic clarity.
+ * 1. [SECURITY] - Migrated ECS draw order to SystemRegistry.kt for Lead Architect protection.
  */
-class SovereigntyGame : ktx.app.KtxGame<ktx.app.KtxScreen>() {
+class SovereigntyGame : KtxGame<KtxScreen>() {
     private val batch by lazy { SpriteBatch() }
-
-    // 1. PRIMARY PHYSICS CAMERA (Isolated)
     private val shipCamera by lazy { OrthographicCamera() }
     private val shipViewport by lazy { ExtendViewport(1280f, 720f, shipCamera) }
-
-    // 2. PRIMARY UI CAMERA
     private val uiViewport by lazy { ExtendViewport(1280f, 720f) }
 
     private val whitePixel by lazy { AssetFactory.createWhitePixel() }
@@ -50,55 +45,16 @@ class SovereigntyGame : ktx.app.KtxGame<ktx.app.KtxScreen>() {
                 add("gameViewport", shipViewport); add("uiViewport", uiViewport)
                 add(drawer); add(evolutionManager); add(sectorManager)
             }
-            systems {
-                add(ClearScreenSystem())
-                add(SectorPopulationSystem(shipCamera, sectorManager))
-                add(StarfieldSystem(batch, shipCamera, starTextures))
-
-                add(PlayerInputSystem(shipViewport))
-                add(EnemyAISystem(shipCamera))
-
-                add(DroneRegenSystem())
-                add(DroneFormationSystem(shipCamera))
-
-                add(MoveSystem())
-                add(CameraSystem(shipCamera))
-
-                add(WeaponSystem())
-                add(CombatSystem())
-                add(CollisionDamageSystem())
-                add(VitalsSystem())
-                add(StatusEffectSystem())
-                add(LifeSpanSystem())
-
-                add(EvolutionSystem(evolutionManager))
-                add(EvolutionCelebrationSystem(batch, drawer, uiViewport))
-
-                add(SensorSystem())
-                add(SensorVisualSystem())
-                add(StationSystem())
-                add(SalvageSystem())
-
-                // MANDATORY: Physics Objects FIRST (Ship Viewport)
-                add(EntityRenderSystem(batch, drawer, shipViewport, skin))
-
-                // MANDATORY: VFX SECOND (Ship Viewport)
-                add(RenderSystem(batch, drawer, shipViewport, skin))
-
-                add(RadarRenderSystem(batch, drawer, uiViewport))
-                add(DiagnosticSignalSystem())
-
-                // MANDATORY: Diegetic HUD TOP (Bridge between spaces)
-                add(DiegeticHUDSystem(batch, drawer, shipViewport, uiViewport, skin, sectorManager))
-
-                add(ApertureSystem(batch, drawer, uiViewport))
-                add(OriginSystem())
-            }
+            // --- PROTECTED REGISTRY HANDOFF ---
+            configureSystems(
+                batch, drawer, shipCamera, shipViewport, uiViewport,
+                skin, evolutionManager, sectorManager, starTextures
+            )
         }
     }
 
     override fun create() {
-        ktx.async.KtxAsync.initiate()
+        KtxAsync.initiate()
         addScreen(PlayScreen(world, batch, shipViewport, uiViewport, drawer))
         setScreen<PlayScreen>()
     }
