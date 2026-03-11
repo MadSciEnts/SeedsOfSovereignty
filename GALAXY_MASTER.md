@@ -1,27 +1,30 @@
-# SEED OF SOVEREIGNTY: THE GALAXY MASTER (v1.0.0)
+# SEED OF SOVEREIGNTY: THE GALAXY MASTER (v2.2.0)
 
-## 1. THE EPOCH PROGRESSION
-### 1.1 Epoch II: The Admiral (Tiers 13–24)
-- **Objective:** Build and maintain an Armada. The player ship is a "Flagship."
-- **Mechanics:** Formation toggles (Wedge, Sphere, Echelon), Fleet Sync (Focus Fire), and Fleet Cohesion management.
-- **Perspective:** Camera zooms out to accommodate the squadron.
+## 1. THE FOUR EPOCHS OF SOVEREIGNTY
+### 1.1 Epoch I: The Pilot (Tiers 1–12)
+- **Objective:** Individual Ship Mastery.
+- **Weaponry:** Introduction of Primary and Secondary weapon modules (Switchable via Command Matrix).
+- **Skill Pivot:** T1-3 (Homing/Fixed) -> T4-12 (Locked Power/Directional).
 
-### 1.2 Epoch III: The Overlord (Tiers 25–36)
-- **Objective:** Sector Conquest & Base Building.
-- **Mechanics:** Command mobile refineries, deploy automated defense grids, and manage sector resource extraction.
+### 1.2 Epoch II: The Carrier (Tiers 13–24)
+- **Objective:** Fleet Precursor (Submarine/Carrier style).
+- **Fighter Bays:** Deploys intelligent autonomous entities.
+- **Interaction:** Tactical joystick positions a "Mission Reticle" -> Launch button initiates mission on target.
+- **Missions:** Customizable AI behaviors (Attack, Defend, Escort) toggled in Command Matrix.
 
-### 1.3 Epoch IV: The Sovereign (Tiers 37–48)
-- **Objective:** Galactic Dominion.
-- **Mechanics:** Influence the geopolitical landscape of the galaxy. Final Tier evolution manifests the Sovereign-Class hull.
+### 1.3 Epoch III: The Admiral (Tiers 25–36)
+- **Objective:** Armada Sovereignty.
+- **Command Parity:** Fleet ships are commanded using the same "Mission Assignment" logic learned in Epoch II. 
+- **Scale:** Command a dozen ships; treat individual ships as Epoch I "Modules."
 
-## 2. DYNAMIC GALAXY EVENTS
-### 2.1 Environmental Hazards
-- **Solar Flares:** Periodically disable AR tethers and jitter the HUD.
-- **Nebula Pockets:** Massively reduce sensor range; requires "Husk Mode" navigation.
-### 2.2 Tactical Encounters
-- **Salvage Fleets:** Randomly spawned neutral fleets that can be raided for high-tier module DNA.
-- **Warp-Interdiction:** Enemies can pull the player out of Warp, forcing high-stakes ambush combat.
+### 1.4 Epoch IV: The Sovereign (Tiers 37–48)
+- **Objective:** Galactic Strategy (Space Station Hub).
 
-## 3. MISSION CONTROL & COMMAND
-- **The Core Loop:** Enter Sector -> Identify Threats -> Secure Control Points -> Harvest Resources -> Warp.
-- **Prestige:** Successful conquest of a Sector provides permanent "Sovereignty Points" used for Meta-Progression.
+## 2. THE RECURSIVE COMMAND MATRIX
+- **Core Loop:** Repeating 3-tier vertical shifts (Fixed -> Multi -> Defense -> Offense).
+- **Lateral Growth:** Offensive modules (Projectiles, Drones, Torpedoes) increase in quantity/barrel count per sub-tier (1, 2, 3).
+- **Weapon Stacking:** Support for Primary, Secondary, and future weapon categories switchable in-UI.
+
+## 3. SPATIAL & TACTICAL STANDARDS
+- **GSF 0.1:** 128x72 viewport baseline. 10x radius reduction.
+- **Filtering:** Categorical reticles (Danger, Goal, Utility).

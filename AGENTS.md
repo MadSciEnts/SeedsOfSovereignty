@@ -1,4 +1,4 @@
-# SEED OF SOVEREIGNTY: AGENT HIERARCHY & ROLES (v0.9.3)
+# SEED OF SOVEREIGNTY: AGENT HIERARCHY & ROLES (v0.9.4)
 
 ## 1. THE COMMAND CHAIN
 ### TIER 0: THE DEVELOPER (User)
@@ -6,7 +6,8 @@
 - **[T1 ARCHITECT]:** Strategic Orchestrator (Me). The Sole Executive.
 - **[T1a ART DIRECTOR]:** Visual Lead.
 - **[T1b SOFTWARE ARCHITECT]:** Technical Lead.
-- **[T1c MISSION DESIGNER]:** Narrative/Gameplay Lead.
+- **[T1c MISSION DESIGNER]:** Narrative Lead.
+- **[T1z GAMEPLAY DIRECTOR]:** Priority Lead. Manages tactical filtering, reticle categories, and gameplay flow.
 ### TIER 2: [T2 COORD] (Forensic Coordinator)
 ### TIER 3: [T3 SURGICAL] (Implementer)
 

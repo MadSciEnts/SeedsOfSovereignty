@@ -1,31 +1,25 @@
-# SEED OF SOVEREIGNTY: THE MASTER DNA (v1.2.0)
+# SEED OF SOVEREIGNTY: THE MASTER DNA (v1.4.0)
 
 ## 1. CORE MATHEMATICS & SPATIAL LOGIC
-### 1.1 Floating Origin Protocol
-- **The Snap:** If `abs(player.position) > 10,000`, the `OriginSystem` snaps all entities back: `entity.pos -= player.pos`.
-### 1.2 Camera Leash (Lerp)
-- **Lead Offset:** Camera follows `player.pos + (player.velocity * 0.5s)`.
-- **Dynamic Zoom:** Camera zoom lerps (1.0 to 1.4) during high-speed combat.
+### 1.1 Spatial Scaling (GSF 0.1)
+- **Standard:** 128x72 viewport baseline. 10x radius reduction. 
+- **Purpose:** Immersion through relative vastness; precision through reduced unit values.
 
-## 2. PROCEDURAL WEAPONRY & PROGRESSION
-### 2.1 Power Progression
-- 3-subtier model (a, b, c). Growth Factor: **3.2x DPS per Tier**.
-### 2.2 Visual Language
-- **Kinetic (Yellow)**, **Ion (Violet)**, **Acid (Green)**, **Piercer (Orange)**, **Disruptor (Cyan)**.
+### 1.2 Floating Origin Protocol
+- **The Snap:** Triggered at `abs(pos) > 10,000`.
+
+## 2. LATERAL & VERTICAL EVOLUTION (v1.4.0)
+### 2.1 Vertical Hooks (Major Tiers)
+- Shifts gameplay dimension (e.g., T4 Directional Fire, T13 Fighter Bays).
+- Affects ALL module types including Defense (Shields) and Utility (Engines).
+
+### 2.2 Lateral Growth (The Offensive Multiplier)
+- **Applicability:** Strictly limited to **OFFENSIVE** capabilities (Projectiles, Drones, Torpedoes).
+- **Sub-Tier 1:** 1x firing element. Base rate of fire/quantity.
+- **Sub-Tier 2:** 2x firing elements. 2x combined rate of fire/swarm size.
+- **Sub-Tier 3:** 3x firing elements. 3x combined rate of fire/swarm size.
+- **Exclusion:** Shields, Engines, and Power modules ignore sub-tier lateral growth. Their properties remain constant between major Tier shifts.
 
 ## 3. UI STYLE & AESTHETIC DNA
-### 3.1 Aesthetic: "Tactical Minimalism"
-- **Vibe:** Military terminal meets alien technology.
-- **Lines:** Precise 1-2px lines. No rounded borders.
-- **Typography:** Monospaced for data, wide-kerning sans-serif for headings.
-### 3.2 The "Aperture" Standard
-- **Frame:** 45-degree chamfered corners. 2-pixel borders with 1-pixel data-gaps.
-- **Animation:** Windows slide open from a central horizontal slit. Background world blurs/darkens on focus.
-### 3.3 Shader Standards
-- **Bloom:** Energy pixels (Value > 0.8) bleed light.
-- **Chromatic Aberration:** 1-pixel RGB shift during "Breach" or "Warp".
-- **Scanlines:** Subtle 10% opacity HUD overlay.
-
-## 4. DRONE ESCALATION
-- **Scaling:** 1 Slot (T5-8) -> 4 Slots (T13+).
-- **Count:** T5: 1 Drone -> T13+: 16 Drones.
+- **Aesthetic:** "Tactical Minimalism." 1-2px precise lines. 
+- **The "Aperture" Standard:** Chamfered corners with 1px data-gaps.

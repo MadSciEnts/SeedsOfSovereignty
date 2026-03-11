@@ -1,24 +1,26 @@
 # THE HIGH TABLE: STRATEGIC MEETING ROOM
 
-## [TOPIC]: Render Pipeline Hardening & Dependency Inconsistency
-## [VERSION]: v2.4.2 (Strategic Reset)
+## [TOPIC]: The Recursive Command Matrix & 3-Tier Hooks
+## [VERSION]: v2.7.4 (Sovereign Baseline)
 
-### [ROUND 2: EMERGENCY FORENSICS]
-- **[T1 ARCHITECT]:** Playtest v2.3.8 failed. AR HUD is visible, but ALL physics entities (ships, effects) and Radar drawer effects (borders, sweeps) are INVISIBLE. We have a rendering deadlock.
-- **[T1a ART DIRECTOR]:** Forensic analysis complete. Identified Aperture inversion, alpha leak in atmosphere pass, and tether projection failure. Fixed in v2.3.9.
+### [ROUND 5: MACRO-SCALE REALIGNMENT] (CONCLUDED)
+- **[T1 ARCHITECT]:** T0 STRATEGIC OVERRIDE: Progression follows a 3-tier recursive pattern.
+    - **Vertical Hooks:** [A] Fixed (T1-3) -> [B] Multi (T4-6) -> [C] Defense (T7-9) -> [D] Offense (T10-12).
+    - **Lateral Growth:** Sub-tiers 1-3 strictly increase barrel/drone count (1, 2, 3).
+    - **Offensive Purity:** Sub-tier growth ONLY affects weapons/drones. Shields and Engines evolve ONLY via major vertical Tiers.
+    - **Epoch Sovereignty:** Epoch I (Pilot), II (Carrier), III (Admiral), IV (Sovereign).
 
-### [ROUND 3: BATCH HARDENING & DEPENDENCY STANDARDIZATION]
-- **[T1b SOFTWARE ARCHITECT]:** (Technical Forensics & Matrix Hardening)
-    1. **Standardized Constructor Order:**
-       - **PROPOSAL:** `(batch, drawer, viewport, [uiViewport], skin, [camera])`.
-       - **RATIONALE:** Aligns with Fleks injection order and ensures consistency across 12+ rendering-adjacent systems.
-    2. **ShapeDrawer Matrix Validation:**
-       - **VERDICT:** `drawer.update()` MUST be called whenever the `batch.projectionMatrix` changes. In our multi-pass architecture (World -> Screen -> UI), if the batch is reused with a different camera matrix, the `ShapeDrawer`'s internal vertex cache will project to the *previous* matrix's space if not updated.
-       - **MANDATE:** Call `drawer.update()` immediately after `batch.use(camera.combined)`.
-    3. **Input System Forensic:**
-       - **FINDING:** `PlayerInputSystem` lacks `viewport` because it currently only handles keyboard/joystick.
-       - **REQUIREMENT:** To support Diegetic AR (touching HUD elements, clicking world targets), it **MUST** have the `gameViewport` injected to unproject screen-space touches into world-space coordinates.
+- **[T1a ART DIRECTOR]:** Confirmed visual offsets for 3-barrel configurations. Ready to implement "Pulse-Blink" for GSF 0.1 clarity.
+- **[T1b SOFTWARE ARCHITECT]:** Confirmed GSF 0.1 viewport standard (128x72). Finalizing recursive registry handles.
+- **[T1c MISSION DESIGNER]:** Confirmed 3-tier pacing. Balanced the T3->T4 "Manual Superiority" pivot.
+- **[T1z GAMEPLAY DIRECTOR]:** Confirmed 12-marker tactical threshold and Drone/Fighter engagement leashes.
+
+### [ROUND 6: PILOT EPOCH IMPLEMENTATION]
+- **[T1 ARCHITECT]:** FINAL DIRECTIVE:
+    1. **GSF 0.1:** Viewport standard 128x72 units. All entity radii reduced by factor of 10.
+    2. **Module Flip:** Tier 1-3 fixed fire. Tier 4+ directional fire.
+    3. **Torpedo Bridge:** Tier 1-3 Homing. Tier 4+ Fixed-Heavy.
+    4. **The Vault:** All logic must be anchored in protected util/registry files.
 
 ### [CONSENSUS & DIRECTIVE]
-- **[T1 ARCHITECT]:** Proceed with v2.4.2 implementation. Standardize constructors and enforce `drawer.update()` inside `batch.use` blocks.
-- **[T1b SOFTWARE ARCHITECT]:** Initiating architectural alignment across `SovereigntyGame.kt`, `RenderSystems.kt`, `UISystems.kt`, and `MovementSystems.kt`.
+- **[T1 ARCHITECT]:** Strategic alignment 100% physically verified. Ready for Phase 23 Execution.
