@@ -9,8 +9,7 @@ import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.utils.ScreenUtils
-import com.github.quillraven.fleks.Fixed
-import com.github.quillraven.fleks.IntervalSystem
+import com.github.quillraven.fleks.*
 import com.github.quillraven.fleks.World.Companion.family
 import com.srw.seedsofsovereignty.component.*
 import com.srw.seedsofsovereignty.manager.SectorManager
@@ -35,37 +34,67 @@ class StarfieldSystem(
 
     override fun onTick() {
         if (layers.isEmpty()) return
-
         val w = Gdx.graphics.width.toFloat()
         val h = Gdx.graphics.height.toFloat()
-
         starCamera.setToOrtho2D(0f, 0f, w, h)
         val originalMatrix = batch.projectionMatrix.cpy()
         batch.projectionMatrix = starCamera
-
         batch.use { b ->
             layers.forEachIndexed { index, texture ->
                 val factor = parallaxFactors.getOrElse(index) { 0.1f }
-
                 val zoomFactor = 1f + (camera.zoom - 1f) * zoomInfluence
                 val effectiveScale = starScale * zoomFactor
-
                 val uWidth = (w * effectiveScale) / texture.width
                 val vHeight = (h * effectiveScale) / texture.height
-
                 val uCenter = (camera.position.x * factor) / texture.width
                 val vCenter = (camera.position.y * factor) / texture.height
-
                 val u = uCenter - uWidth / 2f
                 val v = vCenter - vHeight / 2f
                 val u2 = uCenter + uWidth / 2f
                 val v2 = vCenter + vHeight / 2f
-
                 b.draw(texture, 0f, 0f, w, h, u, v, u2, v2)
             }
         }
-
         batch.projectionMatrix = originalMatrix
+    }
+}
+
+/**
+ * Manages Station proximity and docking logic (v2.4.5).
+ */
+class StationSystem : IteratingSystem(family { all(PlayerComponent, PositionComponent, DockingComponent) }) {
+    private val stationFamily by lazy { world.family { all(StationComponent, PositionComponent) } }
+
+    override fun onTickEntity(entity: Entity) {
+        val playerPos = entity[PositionComponent].pos
+        val docking = entity[DockingComponent]
+
+        if (docking.undockCooldown > 0f) {
+            docking.undockCooldown -= deltaTime
+            return
+        }
+
+        var nearest: Entity? = null
+        var minDistSq = Float.MAX_VALUE
+
+        stationFamily.forEach { station ->
+            val sPos = station[PositionComponent].pos
+            val d2 = playerPos.dst2(sPos)
+            if (d2 < minDistSq) {
+                minDistSq = d2
+                nearest = station
+            }
+        }
+
+        docking.nearestStation = nearest
+        docking.proximity = if (nearest != null) Math.sqrt(minDistSq.toDouble()).toFloat() else Float.MAX_VALUE
+
+        if (docking.proximity < 100f) {
+            docking.isDocked = true
+            entity[VelocityComponent].v.set(0f, 0f)
+        } else {
+            docking.isDocked = false
+        }
     }
 }
 
@@ -77,12 +106,9 @@ class SectorPopulationSystem(
         val sector = sectorManager.currentSector
         val player = world.family { all(PlayerComponent, EvolutionComponent) }.firstOrNull() ?: return
         val currentTier = player[EvolutionComponent].currentTier
-
-        // 1. Density Control
         val enemyCount = world.family { all(EnemyComponent) }.numEntities
         val stationCount = world.family { all(StationComponent) }.numEntities
 
-        // 2. Faction-Based Spawning logic
         when(sector.faction) {
             Faction.SWARM -> {
                 if (enemyCount < 8) spawnEnemy(currentTier, "Swarm")
@@ -108,7 +134,6 @@ class SectorPopulationSystem(
         val angle = MathUtils.random(0f, MathUtils.PI2)
         val spawnX = camera.position.x + MathUtils.cos(angle) * spawnRadius
         val spawnY = camera.position.y + MathUtils.sin(angle) * spawnRadius
-
         world.entity {
             it += PositionComponent().apply { pos.set(spawnX, spawnY) }
             it += VelocityComponent().apply { acceleration = 200f + (tier * 20f); friction = 1.0f }

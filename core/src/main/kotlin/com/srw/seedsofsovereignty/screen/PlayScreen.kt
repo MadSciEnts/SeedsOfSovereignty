@@ -22,13 +22,13 @@ import ktx.app.KtxScreen
 import space.earlygrey.shapedrawer.ShapeDrawer
 
 /**
- * High-fidelity mission theater (v2.2.5).
- * ROLE: The "Clean Slate" play arena utilizing the Diegetic HUD Orchestrator.
+ * High-fidelity mission theater (v2.5.4).
+ * ROLE: The "Clean Slate" play arena utilizing Partitioned Viewports.
  */
 class PlayScreen(
     private val world: World,
     private val batch: SpriteBatch,
-    private val viewport: Viewport,
+    private val shipViewport: Viewport, // v2.5.4: Renamed from viewport for parity
     private val uiViewport: Viewport,
     private val drawer: ShapeDrawer
 ) : ktx.app.KtxScreen {
@@ -36,26 +36,22 @@ class PlayScreen(
     private val uiStage = Stage(uiViewport, batch)
     private val skin: Skin = HUDFactory.createSkin()
 
-    // 1. Core Controls
     private val moveJoystick: SovereigntyTouchpad = HUDInputService.createMoveJoystick(skin)
     private val commandMatrix = CommandMatrixWidget(drawer, skin, world, { selectedModuleIndex = it })
     private val testEvolveButton: TextButton = HUDInputService.createDebugButton("DEV: EVOLVE", skin)
     private val testWarpButton: TextButton = HUDInputService.createDebugButton("DEV: WARP", skin)
 
-    // 2. Logic Managers
     private val evolutionManager = world.inject<EvolutionManager>()
     private val sectorManager = world.inject<SectorManager>()
     private val dockingManager = DockingManager(world)
     private val marketManager = MarketManager(world)
     private val hangarUI = StationHangarUI(skin, drawer, world, dockingManager, marketManager)
 
-    // 3. HUD State
     private var selectedModuleIndex = 0
     private var lastObservedIdentity: String? = null
     private var wasDocked = false
 
     init {
-        // Player Entity Initialization
         val player = world.entity {
             it += PlayerComponent(); it += TacticalHubComponent(); it += TacticalLockComponent(); it += TacticalPersistenceComponent()
             it += PositionComponent(); it += OrientationComponent(); it += VelocityComponent(); it += WeaponComponent()
@@ -66,7 +62,6 @@ class PlayScreen(
             it += ModuleGenerator.generateWeapon(1, Rarity.COMMON)
         }
 
-        // B. Initialize Diegetic HUD (The Clean Slate)
         HUDFactory.createPermanentHUDEntities(world, player)
         with(world) {
             HUDFactory.createInstrumentEntities(world, player, player[WeaponModuleComponent].tacticalSchema)
@@ -81,7 +76,6 @@ class PlayScreen(
             override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) { sectorManager.initiateWarp(world) }
         })
 
-        // D. Tactical Interaction Interceptor
         uiStage.addListener(object : InputListener() {
             override fun touchDown(event: InputEvent, x: Float, y: Float, pointer: Int, button: Int): Boolean {
                 if (event.target != uiStage.root) return false
@@ -97,7 +91,6 @@ class PlayScreen(
         if (player != null) {
             val inputSystem = world.system<PlayerInputSystem>()
             with(world) {
-                // 1. UI Visibility Logic
                 val docking = player[DockingComponent]
                 val aperture = player[ApertureComponent]
                 val choice = player[ChoiceComponent]
@@ -115,7 +108,6 @@ class PlayScreen(
                     wasDocked = true
                 } else if (!isUiRequested) { wasDocked = false }
 
-                // 2. Dynamic Tactical Sync
                 val slots = player[ModuleSlotComponent].slots
                 commandMatrix.syncLoadout(slots, selectedModuleIndex)
                 if (selectedModuleIndex < slots.size) {
@@ -144,7 +136,10 @@ class PlayScreen(
     }
 
     override fun resize(width: Int, height: Int) {
+        // FIX: Synchronized viewport update to restore circular hulls
+        shipViewport.update(width, height, true)
         uiViewport.update(width, height, true)
+
         moveJoystick.setPosition(50f, 50f)
         commandMatrix.setPosition(uiViewport.worldWidth - 40f, 50f, Align.bottomRight)
         hangarUI.setSize(uiViewport.worldWidth * 0.95f, uiViewport.worldHeight * 0.9f)

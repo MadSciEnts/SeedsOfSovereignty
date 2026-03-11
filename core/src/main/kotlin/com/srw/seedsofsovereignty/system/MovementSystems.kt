@@ -4,12 +4,19 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.Input.Keys
 import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.math.Vector2
+import com.badlogic.gdx.utils.viewport.Viewport
 import com.github.quillraven.fleks.*
 import com.github.quillraven.fleks.World.Companion.family
 import com.srw.seedsofsovereignty.component.*
 import com.srw.seedsofsovereignty.util.ProceduralShipDrawer
 
-class PlayerInputSystem : IteratingSystem(family { all(PlayerComponent, VelocityComponent) }) {
+/**
+ * Handles player control and input translation (v2.4.2).
+ * Updated to include gameViewport for screen-to-world unprojection.
+ */
+class PlayerInputSystem(
+    private val gameViewport: Viewport
+) : IteratingSystem(family { all(PlayerComponent, VelocityComponent) }) {
     private val moveForce = Vector2()
     val joystickVector = Vector2()
     val aimVector = Vector2()
@@ -30,6 +37,7 @@ class PlayerInputSystem : IteratingSystem(family { all(PlayerComponent, Velocity
 
         moveForce.set(joystickVector)
 
+        // Keyboard Support
         if (Gdx.input.isKeyPressed(Keys.W) || Gdx.input.isKeyPressed(Keys.UP)) moveForce.y += 1f
         if (Gdx.input.isKeyPressed(Keys.S) || Gdx.input.isKeyPressed(Keys.DOWN)) moveForce.y -= 1f
         if (Gdx.input.isKeyPressed(Keys.A) || Gdx.input.isKeyPressed(Keys.LEFT)) moveForce.x -= 1f
@@ -60,6 +68,15 @@ class PlayerInputSystem : IteratingSystem(family { all(PlayerComponent, Velocity
             weapon.isFiring = isFiringRequested || Gdx.input.isKeyPressed(Keys.SPACE)
         }
     }
+
+    /**
+     * Translates a screen touch to world coordinates for diegetic interaction.
+     */
+    fun getTouchWorld(screenX: Int, screenY: Int): Vector2 {
+        val vec = com.badlogic.gdx.math.Vector3(screenX.toFloat(), screenY.toFloat(), 0f)
+        gameViewport.unproject(vec)
+        return Vector2(vec.x, vec.y)
+    }
 }
 
 class MoveSystem : IteratingSystem(family { all(PositionComponent, VelocityComponent) }) {
@@ -72,7 +89,6 @@ class MoveSystem : IteratingSystem(family { all(PositionComponent, VelocityCompo
 
         var frictionFactor = vel.friction
 
-        // Task Fix: Replace legacy EssenceComponent with Salvage Pipeline (v0.1.9)
         if (entity.has(SalvageComponent)) {
             frictionFactor = 0.5f
         } else if (entity.has(PlayerComponent) && entity.has(EvolutionComponent)) {

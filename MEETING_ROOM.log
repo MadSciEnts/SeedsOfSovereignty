@@ -1,20 +1,24 @@
 # THE HIGH TABLE: STRATEGIC MEETING ROOM
 
-## [TOPIC]: Stabilization of AR Engine & Fleet Visibility
-## [VERSION]: v2.3.7 (Diegetic Engine)
+## [TOPIC]: Render Pipeline Hardening & Dependency Inconsistency
+## [VERSION]: v2.4.2 (Strategic Reset)
 
-### [ROUND 1: FORENSIC GATHERING] (CONCLUDED)
-- **[T1 ARCHITECT]:** Initial identification of Projection Singularity and Entity Leak. Purged previous task logic.
+### [ROUND 2: EMERGENCY FORENSICS]
+- **[T1 ARCHITECT]:** Playtest v2.3.8 failed. AR HUD is visible, but ALL physics entities (ships, effects) and Radar drawer effects (borders, sweeps) are INVISIBLE. We have a rendering deadlock.
+- **[T1a ART DIRECTOR]:** Forensic analysis complete. Identified Aperture inversion, alpha leak in atmosphere pass, and tether projection failure. Fixed in v2.3.9.
 
-- **[T1a ART DIRECTOR]:** Identified PPM absence and recommended a 4-plane Z-index stack. Flagged `SensorVisualSystem` GC pressure.
-- **[T1b SOFTWARE ARCHITECT]:** Math Proof: Raw world units collapse on high-res displays. Recommended `DIEGETIC_PPM = 12.0f`. Proposed persistent state-sync for markers.
-- **[T1c MISSION DESIGNER]:** Identified narrative failure of "Ghost Sectors." Recommended "Sensor Warm-up" and distance-based alpha culling.
+### [ROUND 3: BATCH HARDENING & DEPENDENCY STANDARDIZATION]
+- **[T1b SOFTWARE ARCHITECT]:** (Technical Forensics & Matrix Hardening)
+    1. **Standardized Constructor Order:**
+       - **PROPOSAL:** `(batch, drawer, viewport, [uiViewport], skin, [camera])`.
+       - **RATIONALE:** Aligns with Fleks injection order and ensures consistency across 12+ rendering-adjacent systems.
+    2. **ShapeDrawer Matrix Validation:**
+       - **VERDICT:** `drawer.update()` MUST be called whenever the `batch.projectionMatrix` changes. In our multi-pass architecture (World -> Screen -> UI), if the batch is reused with a different camera matrix, the `ShapeDrawer`'s internal vertex cache will project to the *previous* matrix's space if not updated.
+       - **MANDATE:** Call `drawer.update()` immediately after `batch.use(camera.combined)`.
+    3. **Input System Forensic:**
+       - **FINDING:** `PlayerInputSystem` lacks `viewport` because it currently only handles keyboard/joystick.
+       - **REQUIREMENT:** To support Diegetic AR (touching HUD elements, clicking world targets), it **MUST** have the `gameViewport` injected to unproject screen-space touches into world-space coordinates.
 
 ### [CONSENSUS & DIRECTIVE]
-- **[T1 ARCHITECT]:**
-    1. **EXECUTE PPM SCALE:** Refactor `DiegeticHUDSystem` to use `DIEGETIC_PPM = 12.0f`.
-    2. **EXECUTE PERSISTENT SYNC:** Refactor `SensorVisualSystem` to track/update markers via unique IDs instead of frame-clears.
-    3. **EXECUTE VISIBILITY RESTORATION:** Investigate `SensorSystem` to ensure `VisibleComponent` is correctly assigned.
-    4. **EXECUTE DEPTH STACK:** Apply Z-index layering: [Ships: 0, Tethers: 1, Labels: 2, Static HUD: 3].
-
-- **[NEXT STEP]:** [T1 ARCHITECT] assuming direct surgical control for technical calibration.
+- **[T1 ARCHITECT]:** Proceed with v2.4.2 implementation. Standardize constructors and enforce `drawer.update()` inside `batch.use` blocks.
+- **[T1b SOFTWARE ARCHITECT]:** Initiating architectural alignment across `SovereigntyGame.kt`, `RenderSystems.kt`, `UISystems.kt`, and `MovementSystems.kt`.

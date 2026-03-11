@@ -17,10 +17,22 @@ import ktx.app.KtxScreen
 import ktx.async.KtxAsync
 import space.earlygrey.shapedrawer.ShapeDrawer
 
-class SovereigntyGame : KtxGame<KtxScreen>() {
+/**
+ * Sovereign Strategic Hub (v2.5.4).
+ * ROLE: Primary Registry with Aspect-Synchronized viewports.
+ *
+ * FIXES:
+ * 1. [ASPECT] - Hardened viewport creation to ensure circular hulls.
+ * 2. [PARTITION] - Maintained physics/UI separation for forensic clarity.
+ */
+class SovereigntyGame : ktx.app.KtxGame<ktx.app.KtxScreen>() {
     private val batch by lazy { SpriteBatch() }
-    private val camera by lazy { OrthographicCamera() }
-    private val viewport by lazy { ExtendViewport(1280f, 720f, camera) }
+
+    // 1. PRIMARY PHYSICS CAMERA (Isolated)
+    private val shipCamera by lazy { OrthographicCamera() }
+    private val shipViewport by lazy { ExtendViewport(1280f, 720f, shipCamera) }
+
+    // 2. PRIMARY UI CAMERA
     private val uiViewport by lazy { ExtendViewport(1280f, 720f) }
 
     private val whitePixel by lazy { AssetFactory.createWhitePixel() }
@@ -34,28 +46,23 @@ class SovereigntyGame : KtxGame<KtxScreen>() {
     private val world: World by lazy {
         configureWorld {
             injectables {
-                add(batch)
-                add(skin)
-                add(camera)
-                add("gameViewport", viewport)
-                add("uiViewport", uiViewport)
-                add(drawer)
-                add(evolutionManager)
-                add(sectorManager)
+                add(batch); add(skin); add(shipCamera)
+                add("gameViewport", shipViewport); add("uiViewport", uiViewport)
+                add(drawer); add(evolutionManager); add(sectorManager)
             }
             systems {
                 add(ClearScreenSystem())
-                add(SectorPopulationSystem(camera, sectorManager))
-                add(StarfieldSystem(batch, camera, starTextures))
+                add(SectorPopulationSystem(shipCamera, sectorManager))
+                add(StarfieldSystem(batch, shipCamera, starTextures))
 
-                add(PlayerInputSystem())
-                add(EnemyAISystem(camera))
+                add(PlayerInputSystem(shipViewport))
+                add(EnemyAISystem(shipCamera))
 
                 add(DroneRegenSystem())
-                add(DroneFormationSystem(camera))
+                add(DroneFormationSystem(shipCamera))
 
                 add(MoveSystem())
-                add(CameraSystem(camera))
+                add(CameraSystem(shipCamera))
 
                 add(WeaponSystem())
                 add(CombatSystem())
@@ -72,34 +79,33 @@ class SovereigntyGame : KtxGame<KtxScreen>() {
                 add(StationSystem())
                 add(SalvageSystem())
 
-                // v2.2.1: Utilizing fully qualified names to resolve build conflicts
-                add(com.srw.seedsofsovereignty.system.ApertureSystem(batch, drawer, uiViewport))
-                add(com.srw.seedsofsovereignty.system.RadarRenderSystem(batch, drawer, uiViewport))
+                // MANDATORY: Physics Objects FIRST (Ship Viewport)
+                add(EntityRenderSystem(batch, drawer, shipViewport, skin))
 
-                add(EntityRenderSystem(batch, drawer, viewport, skin))
-                add(RenderSystem(batch, camera, drawer, skin))
+                // MANDATORY: VFX SECOND (Ship Viewport)
+                add(RenderSystem(batch, drawer, shipViewport, skin))
 
-                // Phase 11.2 Integration: Logic Hub for CQD
+                add(RadarRenderSystem(batch, drawer, uiViewport))
                 add(DiagnosticSignalSystem())
 
-                // Phase 15.0: The Diegetic HUD Engine (v2.2.1)
-                add(DiegeticHUDSystem(batch, drawer, viewport, uiViewport, skin, sectorManager))
+                // MANDATORY: Diegetic HUD TOP (Bridge between spaces)
+                add(DiegeticHUDSystem(batch, drawer, shipViewport, uiViewport, skin, sectorManager))
 
+                add(ApertureSystem(batch, drawer, uiViewport))
                 add(OriginSystem())
             }
         }
     }
 
     override fun create() {
-        KtxAsync.initiate()
-        addScreen(PlayScreen(world, batch, viewport, uiViewport, drawer))
+        ktx.async.KtxAsync.initiate()
+        addScreen(PlayScreen(world, batch, shipViewport, uiViewport, drawer))
         setScreen<PlayScreen>()
     }
 
     override fun dispose() {
         super.dispose()
-        batch.dispose()
-        skin.dispose()
+        batch.dispose(); skin.dispose()
         whitePixel.texture.dispose()
         starTextures.forEach { it.dispose() }
         world.dispose()

@@ -15,12 +15,17 @@ import ktx.graphics.use
 import space.earlygrey.shapedrawer.ShapeDrawer
 
 /**
- * Handles high-fidelity rendering of primary game entities.
+ * Handles high-fidelity rendering of primary game entities (v2.4.4).
+ * Standardized Constructor: (batch, drawer, shipViewport, skin)
+ *
+ * FIXES:
+ * 1. [PARTITION] - Locked to shipViewport to prevent UI matrix pollution.
+ * 2. [VISIBILITY] - Explicitly syncs drawer inside the batch block.
  */
 class EntityRenderSystem(
     private val batch: SpriteBatch,
     private val drawer: ShapeDrawer,
-    private val viewport: Viewport,
+    private val shipViewport: Viewport,
     private val skin: Skin
 ) : IteratingSystem(family { all(PositionComponent).any(PlayerComponent, EnemyComponent, DroneComponent, StationComponent, SalvageComponent) }) {
 
@@ -28,9 +33,12 @@ class EntityRenderSystem(
 
     override fun onTick() {
         renderTime += deltaTime
-        viewport.camera.update()
-        batch.use(viewport.camera.combined) {
+        shipViewport.camera.update()
+        batch.use(shipViewport.camera.combined) {
+            // SYNC drawer matrix to the isolated ship camera
+            drawer.update()
             super.onTick()
+            drawer.setColor(Color.WHITE)
         }
     }
 
@@ -66,7 +74,7 @@ class EntityRenderSystem(
     }
 
     private fun drawSalvageItem(x: Float, y: Float, salvage: SalvageComponent) {
-        val camera = viewport.camera as OrthographicCamera
+        val camera = shipViewport.camera as OrthographicCamera
         val jitterX = x + MathUtils.sin(renderTime * 4f) * 2.0f
         val jitterY = y + MathUtils.cos(renderTime * 5f) * 2.0f
         val baseSize = 24f * salvage.visualScale
@@ -98,18 +106,20 @@ class EntityRenderSystem(
 }
 
 /**
- * Technical pass for bullets and particles.
+ * Technical pass for bullets and particles (v2.4.4).
  */
 class RenderSystem(
     private val batch: SpriteBatch,
-    private val camera: com.badlogic.gdx.graphics.OrthographicCamera,
     private val drawer: ShapeDrawer,
+    private val shipViewport: Viewport,
     private val skin: Skin
 ) : IteratingSystem(family { all(PositionComponent).any(ProjectileComponent, ParticleComponent) }) {
 
     override fun onTick() {
-        batch.use(camera.combined) {
+        batch.use(shipViewport.camera.combined) {
+            drawer.update()
             super.onTick()
+            drawer.setColor(Color.WHITE)
         }
     }
 
@@ -162,9 +172,11 @@ class EvolutionCelebrationSystem(
     override fun onTick() {
         if (flashAlpha > 0f) {
             batch.use(uiViewport.camera.combined) {
+                drawer.update()
                 drawer.setColor(1f, 1f, 1f, flashAlpha)
                 drawer.filledRectangle(0f, 0f, uiViewport.worldWidth, uiViewport.worldHeight)
                 flashAlpha -= 2f * deltaTime
+                drawer.setColor(Color.WHITE)
             }
         }
         super.onTick()
@@ -172,7 +184,6 @@ class EvolutionCelebrationSystem(
 
     override fun onTickEntity(entity: Entity) {
         val celeb = entity[EvolutionCelebrationComponent]
-        // Task Fix: Increment the internal timer so the UI layer can time its flying icon phase.
         celeb.timer += deltaTime
 
         if (celeb.phase == EvolutionCelebrationComponent.Phase.TRIGGERED) {

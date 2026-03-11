@@ -14,10 +14,11 @@ import com.srw.seedsofsovereignty.component.*
 import com.srw.seedsofsovereignty.manager.SectorManager
 
 /**
- * High-fidelity HUD Factory (v2.3.6).
+ * High-fidelity HUD Factory (v2.4.5).
  * ROLE: Primary Spawner for Diegetic AR HUD Entities.
  *
- * v2.3.6: Fixed Smart-Cast resolution for parentId. Hardened permanent foundation.
+ * FIXES:
+ * 1. [CRASH] - Physically registered missing TouchpadStyles (aim, drone-mode).
  */
 object HUDFactory {
     fun createSkin(styleId: String = "INDUSTRIAL"): Skin {
@@ -63,9 +64,13 @@ object HUDFactory {
         }
         skin.add("mode-toggle", toggleStyle)
 
-        skin.add("default", Touchpad.TouchpadStyle().apply {
+        // Register Mandatory Touchpad Styles
+        val joystickStyle = Touchpad.TouchpadStyle().apply {
             background = collection.joystickBg; knob = collection.joystickKnob
-        })
+        }
+        skin.add("default", joystickStyle)
+        skin.add("aim", joystickStyle)
+        skin.add("drone-mode", joystickStyle)
     }
 
     fun swapSkin(styleId: String, skin: Skin) = applyStyleToSkin(styleId, skin)
@@ -78,7 +83,6 @@ object HUDFactory {
 
     fun createPermanentHUDEntities(world: World, player: Entity) {
         with(world) {
-            // MASTER DIAGNOSTIC CORE
             entity {
                 it += HUDElementComponent(space = HUDSpace.SCREEN, anchor = HUDAnchor.TOP_LEFT, offsetX = 100f, offsetY = -100f, width = 40f, height = 40f, zIndex = 10)
                 it += HUDRendererComponent(renderType = HUDRenderType.BLUEPRINT, styleId = "CORE_YELLOW", isVisible = true)
@@ -90,15 +94,14 @@ object HUDFactory {
         val channelToEntity = mutableMapOf<String, Entity>()
         with(world) {
             schema.inputs.forEach { channel ->
-                // Fix: Use local variable for parent resolution to allow smart-casting
-                val pId = channel.relativeTo?.let { channelToEntity[it] }
+                val pIdLocal = channel.relativeTo?.let { channelToEntity[it] }
 
                 val hudEntity = entity {
                     it += HUDInstrumentTag(); it += HUDTagComponent(ownerId = "TACTICAL")
                     it += HUDElementComponent(
                         space = HUDSpace.SCREEN,
                         anchor = HUDAnchor.BOTTOM_RIGHT,
-                        parentId = pId,
+                        parentId = pIdLocal,
                         offsetX = channel.relX,
                         offsetY = channel.relY,
                         width = channel.width,
