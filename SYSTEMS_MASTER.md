@@ -1,32 +1,30 @@
-# SEED OF SOVEREIGNTY: MASTER SYSTEMS ARCHITECTURE (v1.2.0)
+# SEED OF SOVEREIGNTY: MASTER SYSTEMS ARCHITECTURE (v1.3.0)
 
-## 1. CAMERA & VIEWPORT PARTITIONING (v1.2.0)
-### 1.1 The Ship Partition (Physical Layer)
-- **Component:** `shipCamera` & `shipViewport`.
-- **Units:** Orthographic (1280x720 world units). 
-- **Role:** Exclusively renders physical entities (Ships, Debris, Particles). This layer is immune to UI matrix pollution.
-- **Following:** Always centered on the player's "Lead Point".
+## 1. THE PARTITION PROTOCOL (v1.3.0)
+### 1.1 Physical Layer (The Ship Partition)
+- **Component:** `shipViewport` & `shipCamera`.
+- **Units:** 1280x720 world units.
+- **Mandate:** All physical hulls (Ships, Stations, Bullets) MUST render here.
+- **Scaling:** MUST be explicitly updated in `resize()` alongside the UI viewport to prevent "Stretched World" (ovular ship) bugs.
 
-### 1.2 The UI Partition (AR Layer)
+### 1.2 Diegetic Layer (The AR Partition)
 - **Component:** `uiViewport`.
-- **Units:** Screen-Pixel relative (Bottom-Left Origin).
-- **Role:** Renders diegetic AR overlays, tethers, and static HUD widgets.
-- **Projection Bridge:** AR elements in this layer track world entities using the `(uiWidth / 2f) + (sPos - pPos)` world-offset logic.
+- **Units:** Adaptive screen pixels (Bottom-Left Origin).
+- **Role:** Interactive AR HUD, tethers, and numerical telemetry.
+- **Projection Bridge:** World-to-UI mapping follows the `(uiWidth/2) + (worldDiff / zoom)` logic.
 
-## 2. ENVIRONMENTAL & SENSOR LOGIC
-### 2.1 Infinite Starfield
-- **Parallax:** 4 layers (Nebula, Distant, Mid, Near). 
-- **Texture:** UV Shifting quadruplets with Faction-based tinting.
-### 2.2 Minimap & Scanning
-- **Sensor Range:** Entity detection is bound by the `SensorComponent.radius`.
-- **Minimap Overlay:** Uses `(uiWidth - 160, uiHeight - 160)` anchor in Bottom-Left origin space.
+## 2. SHAPEDRAWER STATE MANAGEMENT
+- **Mandate:** `drawer.update()` MUST be called immediately after every `batch.use(matrix)` to synchronize the drawer with the current viewport partition.
+- **Safety Reset:** `drawer.setColor(Color.WHITE)` MUST be called at the end of every system pass to prevent alpha-leaks between partitions.
 
-## 3. STATION & MODULE ECONOMY
-### 3.1 The "Swap or Scrap" Loop
-- **Direct Action:** Modules found in wrecks or stations must be immediately swapped or scrapped for Essence.
-### 3.2 Diegetic Market
-- **Hangar UI:** 3-state flow (Welcome, Category, List). Physically hidden during flight.
+## 3. ECS EXECUTION ORDER (PHYSICAL DRAW)
+1. **ClearScreenSystem**: Wipes the OpenGL buffer.
+2. **StarfieldSystem**: Renders the parallax void.
+3. **EntityRenderSystem**: Draws ship hulls (Ship Viewport).
+4. **RenderSystem**: Draws bullets/VFX (Ship Viewport).
+5. **DiegeticHUDSystem**: Draws AR HUD (UI Viewport).
+6. **ApertureSystem**: Full-screen cinematic overlays.
 
-## 4. FLEET ECS ARCHITECTURE
-- **System Order:** Movement -> Combat -> Vitals -> SensorVisual -> DiegeticHUD.
-- **Z-Index Stack:** [0: Physics Objects] -> [1: AR Tethers] -> [2: AR Labels] -> [3: Static HUD Overlays].
+## 4. STATION ECONOMY
+- **Swap or Scrap:** Standardized logic for direct module replacement.
+- **Hangar UI:** 3-state flow (Welcome -> Category -> Market). MUST be hidden during flight.
