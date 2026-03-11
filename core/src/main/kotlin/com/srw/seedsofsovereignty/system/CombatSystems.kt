@@ -13,6 +13,7 @@ import com.srw.seedsofsovereignty.util.ProceduralShipDrawer
  * High-fidelity combat kernel (v0.3.21).
  * WeaponSystem now consumes firing directives and AIM vectors from the TVM TacticalHubComponent.
  * v0.4.0: Updated to use TacticalHubComponent.
+ * v0.4.1: Integrated TacticalLockComponent for auto-snapping.
  */
 class WeaponSystem : IteratingSystem(family {
     all(WeaponComponent, PositionComponent, VelocityComponent, OrientationComponent)
@@ -44,6 +45,18 @@ class WeaponSystem : IteratingSystem(family {
             aimVector?.let { vector ->
                 if (vector.len2() > 0.01f) {
                     weapon.aimAngleRad = vector.angleRad()
+                }
+            }
+
+            // v0.4.1: Tactical Lock Snapping
+            if (entity.has(TacticalLockComponent)) {
+                val lock = entity[TacticalLockComponent]
+                lock.targetEntity?.let { target ->
+                    if (target in world && target.has(PositionComponent)) {
+                        val targetPos = target[PositionComponent].pos
+                        val delta = Vector2(targetPos).sub(pos)
+                        weapon.aimAngleRad = delta.angleRad()
+                    }
                 }
             }
         }
@@ -144,6 +157,19 @@ class CombatSystem : IteratingSystem(family { all(ProjectileComponent, PositionC
                 EffectType.HULL_DAMAGE -> {
                     if (target.has(HealthComponent)) {
                         target[HealthComponent].current -= effect.potency
+
+                        // NEW: Spawn Damage Indicator if Target is Player (v19.1)
+                        if (target.has(PlayerComponent)) {
+                            world.entity {
+                                it += HUDInstrumentTag()
+                                it += HUDTagComponent(ownerId = "DANGER_AR")
+                                it += HUDElementComponent(space = HUDSpace.SCREEN, anchor = HUDAnchor.CENTER, layer = HUDLayer.VFX, width = 60f, height = 20f, offsetY = 100f)
+                                it += HUDRendererComponent(renderType = HUDRenderType.BLUEPRINT)
+                                it += HUDAnimationComponent(animationId = "GLITCH", intensity = 20.0f)
+                                it += LifeSpanComponent(remaining = 1.0f)
+                            }
+                        }
+
                         if (target[HealthComponent].current <= 0f && (target.has(EnemyComponent) || target.has(DroneComponent))) {
                             handleTargetDestruction(target)
                         }

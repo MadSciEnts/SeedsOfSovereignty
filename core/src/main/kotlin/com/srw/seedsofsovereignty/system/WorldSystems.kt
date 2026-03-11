@@ -13,6 +13,7 @@ import com.github.quillraven.fleks.Fixed
 import com.github.quillraven.fleks.IntervalSystem
 import com.github.quillraven.fleks.World.Companion.family
 import com.srw.seedsofsovereignty.component.*
+import com.srw.seedsofsovereignty.manager.SectorManager
 import com.srw.seedsofsovereignty.util.ModuleGenerator
 import ktx.graphics.use
 
@@ -68,115 +69,67 @@ class StarfieldSystem(
     }
 }
 
-class EnemySpawnSystem(
-    private val camera: OrthographicCamera
-) : IntervalSystem(interval = Fixed(2f)) {
+class SectorPopulationSystem(
+    private val camera: OrthographicCamera,
+    private val sectorManager: SectorManager
+) : IntervalSystem(interval = Fixed(5f)) {
     override fun onTick() {
-        val playerFamily = world.family { all(PlayerComponent, EvolutionComponent) }
-        val player = playerFamily.firstOrNull() ?: return
+        val sector = sectorManager.currentSector
+        val player = world.family { all(PlayerComponent, EvolutionComponent) }.firstOrNull() ?: return
         val currentTier = player[EvolutionComponent].currentTier
-        val playerPos = player[PositionComponent].pos
-        val stationFamily = world.family { all(StationComponent, PositionComponent) }
 
-        val nearStation = stationFamily.any { it[PositionComponent].pos.dst2(playerPos) < 490000f }
-        if (nearStation) return
-
+        // 1. Density Control
         val enemyCount = world.family { all(EnemyComponent) }.numEntities
-        if (enemyCount < 5) {
-            val spawnRadius = 800f * camera.zoom
-            val angle = MathUtils.random(0f, MathUtils.PI2)
-            val spawnX = camera.position.x + MathUtils.cos(angle) * spawnRadius
-            val spawnY = camera.position.y + MathUtils.sin(angle) * spawnRadius
+        val stationCount = world.family { all(StationComponent) }.numEntities
 
-            world.entity {
-                it += PositionComponent().apply { pos.set(spawnX, spawnY) }
-                it += VelocityComponent().apply {
-                    acceleration = when(currentTier) {
-                        1 -> 150f
-                        2 -> 250f
-                        3 -> 200f
-                        else -> 300f
-                    }
-                    friction = 1.0f
-                }
-                it += OrientationComponent()
-
-                // Unified Vitals: Every enemy MUST have a HealthComponent to take damage and drop loot
-                val hp = when(currentTier) {
-                    1 -> 20f
-                    2 -> 40f
-                    3 -> 60f
-                    4 -> 100f
-                    else -> 20f
-                }
-                it += HealthComponent(current = hp, max = hp)
-
-                it += EnemyComponent(
-                    type = when(currentTier) {
-                        1 -> "Swarm"
-                        2 -> "Reaper"
-                        3 -> "Phantom"
-                        else -> "Apex"
-                    }
-                )
-
-                val baseFireRate = when(currentTier) {
-                    1 -> 2.0f
-                    2 -> 1.5f
-                    else -> 1.0f
-                }
-
-                it += WeaponComponent(
-                    cooldown = MathUtils.random(0f, baseFireRate),
-                    barrels = 1
-                )
-
-                val enemyTier = if (it[EnemyComponent].type == "Reaper") 2 else 1
-                it += WeaponModuleComponent(
-                    name = "Enemy Pulse",
-                    projectileTier = enemyTier,
-                    projectileSpeed = 600f,
-                    effects = mutableListOf(
-                        ProjectileEffect(EffectType.HULL_DAMAGE, 5f, vfx = ImpactVfxType.SPARK_RED),
-                        ProjectileEffect(EffectType.SHIELD_DAMAGE, 5f, vfx = ImpactVfxType.SHIELD_RIPPLE_BLUE)
-                    )
-                )
-
-                it += VisibleComponent()
+        // 2. Faction-Based Spawning logic
+        when(sector.faction) {
+            Faction.SWARM -> {
+                if (enemyCount < 8) spawnEnemy(currentTier, "Swarm")
+                if (stationCount < 1) spawnStation(currentTier, "Hive")
+            }
+            Faction.VANGUARD -> {
+                if (enemyCount < 4) spawnEnemy(currentTier, "Vanguard Guard")
+                if (stationCount < 2) spawnStation(currentTier, "Outpost")
+            }
+            Faction.ANCIENTS -> {
+                if (enemyCount < 2) spawnEnemy(currentTier, "Ancient Sentry")
+                if (stationCount < 1) spawnStation(currentTier, "Monolith")
+            }
+            Faction.NEUTRAL -> {
+                if (enemyCount < 3) spawnEnemy(currentTier, "Scavenger")
+                if (stationCount < 3) spawnStation(currentTier, "Trading Hub")
             }
         }
     }
-}
 
-class StationSpawnSystem : IntervalSystem(interval = Fixed(10f)) {
-    override fun onTick() {
-        val playerFamily = world.family { all(PlayerComponent, PositionComponent, SensorComponent) }
-        val player = playerFamily.firstOrNull() ?: return
-        val playerPos = player[PositionComponent].pos
-        val sensorRadius = player[SensorComponent].radius
-        val tier = player[EvolutionComponent].currentTier
+    private fun spawnEnemy(tier: Int, type: String) {
+        val spawnRadius = 800f * camera.zoom
+        val angle = MathUtils.random(0f, MathUtils.PI2)
+        val spawnX = camera.position.x + MathUtils.cos(angle) * spawnRadius
+        val spawnY = camera.position.y + MathUtils.sin(angle) * spawnRadius
 
-        if (world.family { all(StationComponent) }.numEntities < 3) {
-            val spawnDist = sensorRadius * MathUtils.random(1.0f, 2.5f)
-            val angle = MathUtils.random(0f, MathUtils.PI2)
-            val spawnX = playerPos.x + MathUtils.cos(angle) * spawnDist
-            val spawnY = playerPos.y + MathUtils.sin(angle) * spawnDist
+        world.entity {
+            it += PositionComponent().apply { pos.set(spawnX, spawnY) }
+            it += VelocityComponent().apply { acceleration = 200f + (tier * 20f); friction = 1.0f }
+            it += OrientationComponent()
+            it += HealthComponent(current = 20f * tier, max = 20f * tier)
+            it += EnemyComponent(type = type)
+            it += WeaponComponent(cooldown = 1.5f, barrels = 1)
+            it += WeaponModuleComponent(name = "$type Cannon", projectileTier = tier)
+            it += VisibleComponent()
+        }
+    }
 
-            world.entity {
-                it += PositionComponent().apply { pos.set(spawnX, spawnY) }
-                it += StationComponent(name = "Outpost ${MathUtils.random(100, 999)}", radius = 200f)
-
-                it += MarketComponent().apply {
-                    for (i in 0 until 3) {
-                        weaponOffers.add(ModuleGenerator.generateWeapon(tier))
-                    }
-                    if (tier >= 5) {
-                        for (i in 0 until 2) {
-                            // Phase 9.6: Dynamic suffixing handles indexing now.
-                            droneOffers.add(ModuleGenerator.generateDroneModule(tier))
-                        }
-                    }
-                }
+    private fun spawnStation(tier: Int, name: String) {
+        val playerPos = world.family { all(PlayerComponent) }.first()[PositionComponent].pos
+        val angle = MathUtils.random(0f, MathUtils.PI2)
+        val dist = 1500f
+        world.entity {
+            it += PositionComponent().apply { pos.set(playerPos.x + MathUtils.cos(angle) * dist, playerPos.y + MathUtils.sin(angle) * dist) }
+            it += StationComponent(name = "$name ${MathUtils.random(100, 999)}", radius = 200f)
+            it += MarketComponent().apply {
+                for (i in 0 until 3) weaponOffers.add(ModuleGenerator.generateWeapon(tier))
             }
         }
     }

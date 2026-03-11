@@ -4,6 +4,7 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Vector2
 import com.github.quillraven.fleks.Component
 import com.github.quillraven.fleks.ComponentType
+import com.github.quillraven.fleks.Entity
 
 /**
  * Bidirectional data hub for the TVM (v0.4.0).
@@ -40,6 +41,18 @@ data class TacticalHubComponent(
 
     override fun type() = TacticalHubComponent
     companion object : ComponentType<TacticalHubComponent>()
+}
+
+/**
+ * Tracks the player's current tactical focus or weapon lock.
+ */
+data class TacticalLockComponent(
+    var targetEntity: Entity? = null,
+    var lockStrength: Float = 0f, // 0 to 1 for "locking on" animation
+    var isConfirmed: Boolean = false
+) : Component<TacticalLockComponent> {
+    override fun type() = TacticalLockComponent
+    companion object : ComponentType<TacticalLockComponent>()
 }
 
 /**

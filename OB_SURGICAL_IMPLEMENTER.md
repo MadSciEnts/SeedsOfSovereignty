@@ -1,50 +1,25 @@
-# SURGICAL IMPLEMENTATION PLAN (v0.8.0)
+# SURGICAL IMPLEMENTATION PLAN (v2.2.2)
 
-## MISSION: Phase 13.1 - HUD Anchor & Signal Binding
-**Status:** [ 2 / 2 : COMPLETE ]
+## MISSION: Phase 22.2 - Procedural Sector Population
+**Status:** [ 3 / 3 : COMPLETED ]
 
-## TASK 1: UPDATE HUDFactory REFRESH LOGIC
-**File:** `core/src/main/kotlin/com/srw/seedsofsovereignty/ui/HUDFactory.kt`
-**Status:** [ COMPLETE ]
+## TASK 1: IMPLEMENT SECTORPOPULATIONSYSTEM
+**File:** `core/src/main/kotlin/com/srw/seedsofsovereignty/system/WorldSystems.kt`
+**Status:** [ COMPLETED ]
 
 ### 1.1 Implementation
-Add a case for `DiagnosticWidget` in the `refreshActor` function to ensure it is handled during UI style swaps, even if it doesn't require specific property updates currently.
+Replaced `EnemySpawnSystem` and `StationSpawnSystem` with `SectorPopulationSystem`.
 
-```kotlin
-    private fun refreshActor(actor: Actor, skin: Skin) {
-        when (actor) {
-            // ... (Around line 125)
-            is DiagnosticWidget -> {
-                // Procedural widget - no style-specific children to refresh yet.
-            }
-            // ...
-        }
-    }
-```
-
-## TASK 2: REFACTOR VITALS CLUSTER WIDGET
-**File:** `core/src/main/kotlin/com/srw/seedsofsovereignty/ui/VitalsClusterWidget.kt`
-**Status:** [ COMPLETE ]
+## TASK 2: IMPLEMENT WORLD WIPE IN GALACTICMANAGER
+**File:** `core/src/main/kotlin/com/srw/seedsofsovereignty/manager/GalacticManager.kt`
+**Status:** [ COMPLETED ]
 
 ### 2.1 Implementation
-Update the `VitalsClusterWidget` to use the `SignalObserver` pattern for its bars, moving away from direct ECS polling in the `update` method where possible, or at least synchronizing with the new signal architecture.
+Updated `transitionTo` to clear existing sector entities while preserving Player and HUD components.
 
-```kotlin
-class VitalsClusterWidget(
-    private val drawer: ShapeDrawer,
-    private val skin: Skin,
-    private val world: World
-) : Table(skin), com.srw.seedsofsovereignty.component.SignalObserver {
+## TASK 3: UPDATE SOVEREIGNTYGAME INJECTION
+**File:** `core/src/main/kotlin/com/srw/seedsofsovereignty/SovereigntyGame.kt`
+**Status:** [ COMPLETED ]
 
-    // ...
-
-    override fun onSignalReceived(signal: com.srw.seedsofsovereignty.component.StatusSignal) {
-        // Handle signals like "SYSTEMS_INTEGRITY" to update specific bars
-    }
-}
-```
-
-*Note: I will perform a surgical edit to add the interface and a basic implementation of `onSignalReceived`.*
-
----
-**CRITICAL:** DO NOT remove or alter any existing architectural comments or annotations. Perform surgical edits around them.
+### 3.1 Implementation
+Updated system injection to use `SectorPopulationSystem`.

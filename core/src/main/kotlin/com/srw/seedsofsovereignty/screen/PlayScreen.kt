@@ -4,6 +4,8 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.math.Vector2
+import com.badlogic.gdx.scenes.scene2d.InputEvent
+import com.badlogic.gdx.scenes.scene2d.InputListener
 import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.ui.Skin
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton
@@ -11,9 +13,8 @@ import com.badlogic.gdx.utils.Align
 import com.badlogic.gdx.utils.viewport.Viewport
 import com.github.quillraven.fleks.*
 import com.srw.seedsofsovereignty.component.*
-import com.srw.seedsofsovereignty.manager.DockingManager
-import com.srw.seedsofsovereignty.manager.EvolutionManager
-import com.srw.seedsofsovereignty.manager.MarketManager
+import com.srw.seedsofsovereignty.manager.*
+import com.srw.seedsofsovereignty.system.DiegeticHUDSystem
 import com.srw.seedsofsovereignty.system.PlayerInputSystem
 import com.srw.seedsofsovereignty.ui.*
 import com.srw.seedsofsovereignty.util.ModuleGenerator
@@ -21,9 +22,8 @@ import ktx.app.KtxScreen
 import space.earlygrey.shapedrawer.ShapeDrawer
 
 /**
- * High-fidelity mission theater (v0.3.32).
- * Redirected to TVM (Tactical Virtual Machine) input kernel.
- * v0.6.6: Geometry Conforming. Synchronized starting weapon with modular DNA.
+ * High-fidelity mission theater (v2.2.5).
+ * ROLE: The "Clean Slate" play arena utilizing the Diegetic HUD Orchestrator.
  */
 class PlayScreen(
     private val world: World,
@@ -31,163 +31,109 @@ class PlayScreen(
     private val viewport: Viewport,
     private val uiViewport: Viewport,
     private val drawer: ShapeDrawer
-) : KtxScreen {
+) : ktx.app.KtxScreen {
 
     private val uiStage = Stage(uiViewport, batch)
     private val skin: Skin = HUDFactory.createSkin()
 
-    // 1. Core Controls (Movement is still a dedicated primary joystick)
+    // 1. Core Controls
     private val moveJoystick: SovereigntyTouchpad = HUDInputService.createMoveJoystick(skin)
-
-    // 2. Adaptive Tactical Overlay (TVM v0.3.32 - Unified Source of Truth)
-    private var selectedModuleIndex = 0
-    private var lastObservedIdentity: String? = null
-    private var currentHUDStyle = "INDUSTRIAL"
-
-    private val vitalsHUD = VitalsClusterWidget(drawer, skin, world)
-    private val diagnosticHUD = DiagnosticWidget(drawer, skin)
-
-    private val commandMatrix = CommandMatrixWidget(
-        drawer,
-        skin,
-        world,
-        { newIndex: Int -> selectedModuleIndex = newIndex }
-    )
-
+    private val commandMatrix = CommandMatrixWidget(drawer, skin, world, { selectedModuleIndex = it })
     private val testEvolveButton: TextButton = HUDInputService.createDebugButton("DEV: EVOLVE", skin)
+    private val testWarpButton: TextButton = HUDInputService.createDebugButton("DEV: WARP", skin)
 
+    // 2. Logic Managers
+    private val evolutionManager = world.inject<EvolutionManager>()
+    private val sectorManager = world.inject<SectorManager>()
     private val dockingManager = DockingManager(world)
-    private val evolutionManager = EvolutionManager()
     private val marketManager = MarketManager(world)
-
     private val hangarUI = StationHangarUI(skin, drawer, world, dockingManager, marketManager)
 
+    // 3. HUD State
+    private var selectedModuleIndex = 0
+    private var lastObservedIdentity: String? = null
     private var wasDocked = false
-    private val tempCoords = Vector2()
 
     init {
-        // Initialize Player Entity with TVM Action Hub
-        world.entity {
-            it += PlayerComponent()
-            it += TacticalHubComponent() // The zero-allocation bidirectional hub
-            it += TacticalPersistenceComponent()
-            it += PositionComponent()
-            it += OrientationComponent()
-            it += VelocityComponent()
-            it += WeaponComponent()
-
-            // v0.6.6: Hard-wired starting weapon to use conformed procedural DNA.
-            // This ensures the starting "FIRE" button is correctly positioned and styled.
-            it += ModuleGenerator.generateWeapon(1, Rarity.COMMON).apply {
-                name = "Stock T1"
-                description = "Standard kinetic stream."
-            }
-
-            it += SensorComponent(radius = 1000f)
-            it += EvolutionComponent(currentTier = 1, subTier = 1, essenceCollected = 0, essenceRequired = 5)
-            it += DockingComponent()
-            it += ApertureComponent()
-            it += ChoiceComponent()
-            it += FleetCommandComponent()
-            it += HealthComponent(current = 100f, max = 100f)
-            it += ShieldComponent(current = 50f, max = 50f)
+        // Player Entity Initialization
+        val player = world.entity {
+            it += PlayerComponent(); it += TacticalHubComponent(); it += TacticalLockComponent(); it += TacticalPersistenceComponent()
+            it += PositionComponent(); it += OrientationComponent(); it += VelocityComponent(); it += WeaponComponent()
+            it += SensorComponent(radius = 1000f); it += EvolutionComponent(currentTier = 1, subTier = 1)
+            it += DockingComponent(); it += ApertureComponent(); it += ChoiceComponent()
+            it += HealthComponent(); it += ShieldComponent()
             it += ModuleSlotComponent(mutableListOf(ModuleSlot(SlotType.WEAPON, 1, "Stock Kinetic", 1)))
+            it += ModuleGenerator.generateWeapon(1, Rarity.COMMON)
         }
 
-        uiStage.addActor(moveJoystick)
-        uiStage.addActor(vitalsHUD)
-        uiStage.addActor(diagnosticHUD)
-        uiStage.addActor(commandMatrix)
-        uiStage.addActor(hangarUI)
-        uiStage.addActor(testEvolveButton)
+        // B. Initialize Diegetic HUD (The Clean Slate)
+        HUDFactory.createPermanentHUDEntities(world, player)
+        with(world) {
+            HUDFactory.createInstrumentEntities(world, player, player[WeaponModuleComponent].tacticalSchema)
+        }
+
+        uiStage.addActor(moveJoystick); uiStage.addActor(commandMatrix); uiStage.addActor(hangarUI); uiStage.addActor(testEvolveButton); uiStage.addActor(testWarpButton)
 
         testEvolveButton.addListener(object : com.badlogic.gdx.scenes.scene2d.utils.ChangeListener() {
-            override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
-                evolutionManager.cheatEvolve(world)
-            }
+            override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) { evolutionManager.cheatEvolve(world) }
+        })
+        testWarpButton.addListener(object : com.badlogic.gdx.scenes.scene2d.utils.ChangeListener() {
+            override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) { sectorManager.initiateWarp(world) }
         })
 
+        // D. Tactical Interaction Interceptor
+        uiStage.addListener(object : InputListener() {
+            override fun touchDown(event: InputEvent, x: Float, y: Float, pointer: Int, button: Int): Boolean {
+                if (event.target != uiStage.root) return false
+                return world.system<DiegeticHUDSystem>().handleTouch(Gdx.input.x.toFloat(), Gdx.input.y.toFloat())
+            }
+        })
         Gdx.input.inputProcessor = uiStage
     }
 
     override fun render(delta: Float) {
-        val player = world.family { all(PlayerComponent, TacticalHubComponent, EvolutionComponent, DockingComponent, ApertureComponent, ChoiceComponent, FleetCommandComponent) }.firstOrNull()
+        val player = world.family { all(PlayerComponent, DockingComponent, ApertureComponent, ChoiceComponent) }.firstOrNull()
 
         if (player != null) {
             val inputSystem = world.system<PlayerInputSystem>()
             with(world) {
-                // 1. Update ATO Hubs
-                vitalsHUD.update(player)
-
-                // AGGREGATOR BRIDGE: Ensure DiagnosticWidget receives signals
-                val playerFamily = family { all(PlayerComponent, TacticalHubComponent) }
-                playerFamily.firstOrNull()?.let { p ->
-                    val hub = p[TacticalHubComponent]
-                    hub.signals.forEach { (key, signal) ->
-                        diagnosticHUD.onSignalReceived(signal.copy(label = key))
-                    }
-                }
-
-                // TVM Phase 7.2: Evolution-linked HUD Skin
-                val evo = player[EvolutionComponent]
-                if (evo.currentTier >= 10 && currentHUDStyle != "IMPERIAL") {
-                    currentHUDStyle = "IMPERIAL"
-                    HUDFactory.swapSkin("IMPERIAL", skin)
-                    HUDFactory.refreshUI(uiStage, skin)
-                    // Trigger a commandMatrix refresh
-                    lastObservedIdentity = null
-                }
-
-                val slots = if (player.has(ModuleSlotComponent)) player[ModuleSlotComponent].slots else emptyList()
-                commandMatrix.syncLoadout(slots, selectedModuleIndex)
-
-                // 2. Fetch Schema of selected system
-                if (selectedModuleIndex < slots.size) {
-                    val slot = slots[selectedModuleIndex]
-                    val slotEntity = slot.slotEntity
-                    val currentIdentity = slotEntity?.toString() ?: slot.equippedName
-
-                    // 3. Morph Tactical Surface only if identity changed
-                    if (currentIdentity != lastObservedIdentity) {
-                        var schema = TacticalSchema()
-                        if (slotEntity != null && world.contains(slotEntity)) {
-                            if (slotEntity.has(WeaponModuleComponent)) schema = slotEntity[WeaponModuleComponent].tacticalSchema
-                            if (slotEntity.has(DroneModuleComponent)) schema = slotEntity[DroneModuleComponent].tacticalSchema
-                        } else if (slot.type == SlotType.WEAPON && player.has(WeaponModuleComponent)) {
-                            schema = player[WeaponModuleComponent].tacticalSchema
-                        }
-                        commandMatrix.updateTacticalSurface(schema, selectedModuleIndex)
-                        lastObservedIdentity = currentIdentity
-                    }
-                }
-
+                // 1. UI Visibility Logic
                 val docking = player[DockingComponent]
                 val aperture = player[ApertureComponent]
                 val choice = player[ChoiceComponent]
-
-                // Phase 9.4: Global "MODE" logic removed. Drone formation localization is now individualized.
-
                 val isFullyDocked = docking.isDocked && aperture.state == ApertureComponent.State.OPEN
                 val isUiRequested = isFullyDocked || choice.isAwaitingChoice
 
+                hangarUI.isVisible = isUiRequested
                 moveJoystick.isVisible = !isUiRequested
-                vitalsHUD.isVisible = !isUiRequested
-                diagnosticHUD.isVisible = !isUiRequested
                 commandMatrix.isVisible = !isUiRequested
                 testEvolveButton.isVisible = !isUiRequested
+                testWarpButton.isVisible = !isUiRequested
 
-                if (isUiRequested) {
-                    if (!wasDocked) {
-                        if (!choice.isAwaitingChoice) hangarUI.resetToWelcome()
-                        wasDocked = true
+                if (isUiRequested && !wasDocked && !choice.isAwaitingChoice) {
+                    hangarUI.resetToWelcome()
+                    wasDocked = true
+                } else if (!isUiRequested) { wasDocked = false }
+
+                // 2. Dynamic Tactical Sync
+                val slots = player[ModuleSlotComponent].slots
+                commandMatrix.syncLoadout(slots, selectedModuleIndex)
+                if (selectedModuleIndex < slots.size) {
+                    val slot = slots[selectedModuleIndex]
+                    val slotEntity = slot.slotEntity
+                    val currentId = slotEntity?.toString() ?: slot.equippedName
+                    if (currentId != lastObservedIdentity) {
+                        HUDFactory.clearInstrumentEntities(world)
+                        val schema = if (slotEntity != null && world.contains(slotEntity)) {
+                            if (slotEntity.has(WeaponModuleComponent)) slotEntity[WeaponModuleComponent].tacticalSchema
+                            else if (slotEntity.has(DroneModuleComponent)) slotEntity[DroneModuleComponent].tacticalSchema
+                            else TacticalSchema()
+                        } else player[WeaponModuleComponent].tacticalSchema
+                        HUDFactory.createInstrumentEntities(world, player, schema)
+                        commandMatrix.updateTacticalSurface(schema, selectedModuleIndex)
+                        lastObservedIdentity = currentId
                     }
-                    hangarUI.isVisible = true
-                } else {
-                    hangarUI.isVisible = false
-                    wasDocked = false
                 }
-
-                // 5. Movement Routing (Still primary locomotion)
                 inputSystem.joystickVector.set(moveJoystick.knobPercentX, moveJoystick.knobPercentY)
             }
         }
@@ -198,26 +144,14 @@ class PlayScreen(
     }
 
     override fun resize(width: Int, height: Int) {
-        viewport.update(width, height)
         uiViewport.update(width, height, true)
-
         moveJoystick.setPosition(50f, 50f)
-
-        vitalsHUD.setPosition(30f, uiViewport.worldHeight - 100f)
-
-        diagnosticHUD.setSize(120f, 120f)
-        diagnosticHUD.setPosition(30f, uiViewport.worldHeight - 150f)
-
-        // v0.3.32: Compact Instrument Finalization - Correct Snap.
-        // Origin is bottomRight, so (worldWidth - 40, 50) anchors the bottom-right corner of the widget.
-        commandMatrix.setPosition(uiViewport.worldWidth - 40f, 50f, Align.bottomRight)  // LEAVE ALIGN.BOTTOMRIGHT. IT MUST BE HERE
-        hangarUI.setSize(uiStage.width * 0.95f, uiStage.height * 0.9f)
-        hangarUI.setPosition(uiStage.width / 2f - hangarUI.width / 2f, uiStage.height / 2f - hangarUI.height / 2f)
-        testEvolveButton.setPosition(uiStage.width / 2f - testEvolveButton.width / 2f, uiStage.height - 100f)
+        commandMatrix.setPosition(uiViewport.worldWidth - 40f, 50f, Align.bottomRight)
+        hangarUI.setSize(uiViewport.worldWidth * 0.95f, uiViewport.worldHeight * 0.9f)
+        hangarUI.setPosition(uiViewport.worldWidth / 2f - hangarUI.width / 2f, uiViewport.worldHeight / 2f - hangarUI.height / 2f)
+        testEvolveButton.setPosition(uiViewport.worldWidth / 2f - testEvolveButton.width / 2f, uiViewport.worldHeight - 100f)
+        testWarpButton.setPosition(uiViewport.worldWidth / 2f - testWarpButton.width / 2f, uiViewport.worldHeight - 180f)
     }
 
-    override fun dispose() {
-        uiStage.dispose()
-        skin.dispose()
-    }
+    override fun dispose() { uiStage.dispose(); skin.dispose() }
 }

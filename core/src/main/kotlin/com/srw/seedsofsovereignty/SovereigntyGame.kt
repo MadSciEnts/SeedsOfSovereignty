@@ -7,6 +7,7 @@ import com.badlogic.gdx.utils.viewport.ExtendViewport
 import com.github.quillraven.fleks.World
 import com.github.quillraven.fleks.configureWorld
 import com.srw.seedsofsovereignty.manager.EvolutionManager
+import com.srw.seedsofsovereignty.manager.SectorManager
 import com.srw.seedsofsovereignty.screen.PlayScreen
 import com.srw.seedsofsovereignty.system.*
 import com.srw.seedsofsovereignty.ui.AssetFactory
@@ -28,6 +29,7 @@ class SovereigntyGame : KtxGame<KtxScreen>() {
     private val skin: Skin by lazy { HUDFactory.createSkin() }
 
     private val evolutionManager = EvolutionManager()
+    private val sectorManager = SectorManager()
 
     private val world: World by lazy {
         configureWorld {
@@ -39,11 +41,11 @@ class SovereigntyGame : KtxGame<KtxScreen>() {
                 add("uiViewport", uiViewport)
                 add(drawer)
                 add(evolutionManager)
+                add(sectorManager)
             }
             systems {
                 add(ClearScreenSystem())
-                add(StationSpawnSystem())
-                add(EnemySpawnSystem(camera))
+                add(SectorPopulationSystem(camera, sectorManager))
                 add(StarfieldSystem(batch, camera, starTextures))
 
                 add(PlayerInputSystem())
@@ -66,19 +68,23 @@ class SovereigntyGame : KtxGame<KtxScreen>() {
                 add(EvolutionCelebrationSystem(batch, drawer, uiViewport))
 
                 add(SensorSystem())
+                add(SensorVisualSystem())
                 add(StationSystem())
                 add(SalvageSystem())
-                add(ApertureSystem(batch, drawer, uiViewport))
+
+                // v2.2.1: Utilizing fully qualified names to resolve build conflicts
+                add(com.srw.seedsofsovereignty.system.ApertureSystem(batch, drawer, uiViewport))
+                add(com.srw.seedsofsovereignty.system.RadarRenderSystem(batch, drawer, uiViewport))
 
                 add(EntityRenderSystem(batch, drawer, viewport, skin))
                 add(RenderSystem(batch, camera, drawer, skin))
 
-                add(RadarRenderSystem(batch, drawer, uiViewport))
-
                 // Phase 11.2 Integration: Logic Hub for CQD
                 add(DiagnosticSignalSystem())
 
-                add(HUDSystem())
+                // Phase 15.0: The Diegetic HUD Engine (v2.2.1)
+                add(DiegeticHUDSystem(batch, drawer, viewport, uiViewport, skin, sectorManager))
+
                 add(OriginSystem())
             }
         }

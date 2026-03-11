@@ -1,98 +1,189 @@
 package com.srw.seedsofsovereignty.system
 
+import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
-import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.math.MathUtils
+import com.badlogic.gdx.math.Rectangle
 import com.badlogic.gdx.math.Vector2
+import com.badlogic.gdx.math.Vector3
+import com.badlogic.gdx.scenes.scene2d.ui.Skin
 import com.badlogic.gdx.utils.viewport.Viewport
 import com.github.quillraven.fleks.Entity
 import com.github.quillraven.fleks.IteratingSystem
 import com.github.quillraven.fleks.World.Companion.family
 import com.srw.seedsofsovereignty.component.*
+import com.srw.seedsofsovereignty.manager.SectorManager
 import ktx.graphics.use
 import space.earlygrey.shapedrawer.ShapeDrawer
+
+/**
+ * Diegetic HUD System (v2.3.4)
+ * ROLE: Stabilized AR Orchestrator for Bottom-Left Origin Viewports.
+ *
+ * FIXES:
+ * 1. [SINGULARITY] - Fixed clumping via direct world-to-UI relative translation.
+ * 2. [VISIBILITY] - Corrected WORLD space draw coordinates to restore ship visibility.
+ */
+class DiegeticHUDSystem(
+    private val batch: SpriteBatch,
+    private val drawer: ShapeDrawer,
+    private val worldViewport: Viewport,
+    private val uiViewport: Viewport,
+    private val skin: Skin,
+    private val sectorManager: SectorManager
+) : IteratingSystem(family { all(HUDElementComponent) }) {
+
+    private val tempVec = Vector3()
+    private val outVec = Vector2()
+    private val activeLayers = mutableSetOf<HUDLayer>(HUDLayer.FLIGHT, HUDLayer.SYSTEM, HUDLayer.VFX)
+
+    override fun onTick() {
+        super.onTick()
+        // Pass 1: WORLD Space
+        batch.use(worldViewport.camera.combined) { renderSpace(HUDSpace.WORLD) }
+        // Pass 2: SCREEN Space
+        batch.use(uiViewport.camera.combined) {
+            renderSpace(HUDSpace.SCREEN)
+            renderAtmosphere()
+        }
+        renderTethers()
+    }
+
+    private fun renderSpace(space: HUDSpace) {
+        world.family { all(HUDElementComponent, HUDRendererComponent) }.forEach { entity ->
+            val hud = entity[HUDElementComponent]
+            val render = entity[HUDRendererComponent]
+            if (hud.space == space && render.isVisible && hud.layer in activeLayers) {
+                drawElement(entity, hud, render)
+            }
+        }
+    }
+
+    private fun drawElement(entity: Entity, hud: HUDElementComponent, render: HUDRendererComponent) {
+        val x: Float
+        val y: Float
+
+        if (hud.space == HUDSpace.SCREEN) {
+            val base = getAnchorPosition(hud.anchor)
+            x = base.x + hud.offsetX + hud.localX
+            y = base.y + hud.offsetY + hud.localY
+        } else {
+            // WORLD Space: Draw directly at raw physics coords
+            val wPos = if (entity.has(PositionComponent)) entity[PositionComponent].pos else Vector2.Zero
+            x = wPos.x + hud.localX
+            y = wPos.y + hud.localY
+        }
+
+        drawer.setColor(1f, 1f, 1f, hud.alpha)
+        when (render.renderType) {
+            HUDRenderType.ARC -> drawer.arc(x, y, hud.width / 2f, hud.rotation * MathUtils.degRad, MathUtils.PI2 * hud.scaleX, 2f)
+            HUDRenderType.BLUEPRINT -> drawer.rectangle(x - hud.width / 2f, y - hud.height / 2f, hud.width, hud.height, 1.5f)
+            HUDRenderType.TEXT -> render.localizationKey?.let { skin.getFont("default").draw(batch, it, x, y) }
+            else -> {}
+        }
+    }
+
+    private fun getAnchorPosition(anchor: HUDAnchor): Vector2 {
+        val w = uiViewport.worldWidth
+        val h = uiViewport.worldHeight
+        return when (anchor) {
+            HUDAnchor.TOP_LEFT -> outVec.set(0f, h)
+            HUDAnchor.TOP_RIGHT -> outVec.set(w, h)
+            HUDAnchor.BOTTOM_LEFT -> outVec.set(0f, 0f)
+            HUDAnchor.BOTTOM_RIGHT -> outVec.set(w, 0f)
+            HUDAnchor.CENTER -> outVec.set(w / 2f, h / 2f)
+            HUDAnchor.TOP_CENTER -> outVec.set(w / 2f, h)
+            HUDAnchor.BOTTOM_CENTER -> outVec.set(w / 2f, 0f)
+            HUDAnchor.LEFT_CENTER -> outVec.set(0f, h / 2f)
+            HUDAnchor.RIGHT_CENTER -> outVec.set(w, h / 2f)
+        }
+    }
+
+    private fun renderTethers() {
+        batch.use(uiViewport.camera.combined) {
+            world.family { all(HUDElementComponent, HUDLinkComponent) }.forEach { entity ->
+                val link = entity[HUDLinkComponent]
+                val source = link.sourceEntity ?: return@forEach
+                val target = link.targetEntity ?: return@forEach
+                if (source !in world || target !in world || !source.has(PositionComponent) || !target.has(HUDElementComponent)) return@forEach
+
+                // PROJECT: Relative world offset -> UI Space
+                val sPos = source[PositionComponent].pos
+                val player = world.family { all(PlayerComponent, PositionComponent) }.firstOrNull()
+                val pPos = if (player != null) player[PositionComponent].pos else Vector2.Zero
+
+                // Map to screen center + relative world difference
+                val sx = (uiViewport.worldWidth / 2f) + (sPos.x - pPos.x)
+                val sy = (uiViewport.worldHeight / 2f) + (sPos.y - pPos.y)
+
+                val tHud = target[HUDElementComponent]
+                val tBase = getAnchorPosition(tHud.anchor)
+                val tx = tBase.x + tHud.offsetX + tHud.localX
+                val ty = tBase.y + tHud.offsetY + tHud.localY
+
+                drawer.setColor(0f, 1f, 1f, 0.4f)
+                drawer.line(sx, sy, tx, ty, 1.2f)
+            }
+        }
+    }
+
+    override fun onTickEntity(entity: Entity) {
+        val hud = entity[HUDElementComponent]
+
+        // --- DIRECT WORLD-TO-UI TRACKING ---
+        if (entity.has(HUDLinkComponent) && hud.space == HUDSpace.SCREEN) {
+            val source = entity[HUDLinkComponent].sourceEntity
+            val player = world.family { all(PlayerComponent, PositionComponent) }.firstOrNull()
+            if (source != null && source in world && player != null) {
+                val sPos = source[PositionComponent].pos
+                val pPos = player[PositionComponent].pos
+
+                // Final fix: Set Screen-space offsets based on the relative world unit difference
+                hud.offsetX = (sPos.x - pPos.x)
+                hud.offsetY = (sPos.y - pPos.y)
+            }
+        }
+
+        val pId = hud.parentId
+        if (pId != null && pId !in world) { world -= entity; return }
+        if (entity.has(HUDAnimationComponent)) { entity[HUDAnimationComponent].elapsedTime += deltaTime }
+    }
+
+    fun handleTouch(screenX: Float, screenY: Float): Boolean { return false }
+
+    private fun renderAtmosphere() {
+        drawer.setColor(0f, 0f, 0f, 0.1f)
+        var yp = 0f
+        while (yp < uiViewport.worldHeight) {
+            drawer.line(0f, yp, uiViewport.worldWidth, yp, 1f)
+            yp += 4f
+        }
+    }
+}
 
 class RadarRenderSystem(
     private val batch: SpriteBatch,
     private val drawer: ShapeDrawer,
     private val uiViewport: Viewport
 ) : IteratingSystem(family { all(PositionComponent, PlayerComponent, SensorComponent) }) {
-
     private val targetsFamily by lazy { world.family { all(PositionComponent, VisibleComponent).none(PlayerComponent, ProjectileComponent) } }
     private var timeCount = 0f
-    private val tempVec = Vector2()
-
-    override fun onTick() {
-        timeCount += deltaTime
-        uiViewport.camera.update()
-        batch.use(uiViewport.camera.combined) {
-            super.onTick()
-        }
-    }
-
+    override fun onTick() { timeCount += deltaTime; batch.use(uiViewport.camera.combined) { super.onTick() } }
     override fun onTickEntity(entity: Entity) {
         val playerPos = entity[PositionComponent].pos
         val sensor = entity[SensorComponent]
-
-        val radarRadius = 120f
-        val centerX = uiViewport.worldWidth - radarRadius - 40f
-        val centerY = uiViewport.worldHeight - radarRadius - 40f
-
-        drawer.setColor(0f, 0.15f, 0f, 0.5f)
-        drawer.filledCircle(centerX, centerY, radarRadius)
-        drawer.setColor(Color.GREEN)
-        drawer.circle(centerX, centerY, radarRadius, 2f)
-
-        val scanAngle = (timeCount * 2.5f) % MathUtils.PI2
-        drawer.setColor(Color.LIME.r, Color.LIME.g, Color.LIME.b, 0.4f)
-        drawer.line(centerX, centerY, centerX + MathUtils.cos(scanAngle) * radarRadius, centerY + MathUtils.sin(scanAngle) * radarRadius, 2f)
-
+        // v2.3.4: Realigned to Top-Right corner of Bottom-Left origin viewport
+        val centerX = uiViewport.worldWidth - 160f
+        val centerY = uiViewport.worldHeight - 160f
+        drawer.setColor(0f, 0.15f, 0f, 0.5f); drawer.filledCircle(centerX, centerY, 120f)
         targetsFamily.forEach { target ->
             val targetPos = target[PositionComponent].pos
-            tempVec.set(targetPos).sub(playerPos)
-
-            val scale = radarRadius / sensor.radius
-            val rx = centerX + tempVec.x * scale
-            val ry = centerY + tempVec.y * scale
-
-            val distFromCenter = Vector2.dst(centerX, centerY, rx, ry)
-
-            if (distFromCenter <= radarRadius) {
-                when {
-                    target.has(StationComponent) -> {
-                        drawer.setColor(Color.CYAN); drawer.rectangle(rx - 4f, ry - 4f, 8f, 8f, 2f)
-                    }
-                    target.has(EnemyComponent) -> {
-                        val flicker = 0.5f + 0.5f * MathUtils.sin(timeCount * 15f)
-                        drawer.setColor(1f, 0f, 0f, flicker); drawer.filledCircle(rx, ry, 3f)
-                    }
-                    target.has(SalvageComponent) -> {
-                        drawer.setColor(Color.GOLD); drawer.filledCircle(rx, ry, 2f)
-                    }
-                    else -> {
-                        drawer.setColor(Color.WHITE); drawer.filledCircle(rx, ry, 2f)
-                    }
-                }
-            }
+            val rx = centerX + (targetPos.x - playerPos.x) * (120f / sensor.radius)
+            val ry = centerY + (targetPos.y - playerPos.y) * (120f / sensor.radius)
+            drawer.setColor(if (target.has(EnemyComponent)) Color.RED else Color.CYAN)
+            drawer.filledCircle(rx, ry, 3f)
         }
-
-        val playerAngle = entity[OrientationComponent].angleRad
-        drawer.setColor(Color.WHITE)
-        val pSize = 6f
-        drawer.line(centerX, centerY, centerX + MathUtils.cos(playerAngle) * pSize, centerY + MathUtils.sin(playerAngle) * pSize, 2f)
-        drawer.filledCircle(centerX, centerY, 3f)
-    }
-}
-
-/**
- * Standard HUD Logic pass (v0.2.0).
- * Manual bar drawing removed in favor of modular Stage widgets.
- */
-class HUDSystem : IteratingSystem(family { all(PlayerComponent).any(EvolutionComponent, HealthComponent, ShieldComponent) }) {
-    override fun onTickEntity(entity: Entity) {
-        // High-level HUD logic (alerts, distance warnings) remains here.
-        // Pixels are now handled by Stage widgets in PlayScreen.
     }
 }
 
@@ -101,44 +192,16 @@ class ApertureSystem(
     private val drawer: ShapeDrawer,
     private val uiViewport: Viewport
 ) : IteratingSystem(family { all(PlayerComponent, DockingComponent, ApertureComponent) }) {
-
-    override fun onTick() {
-        batch.use(uiViewport.camera.combined) {
-            super.onTick()
-        }
-    }
-
+    override fun onTick() { batch.use(uiViewport.camera.combined) { super.onTick() } }
     override fun onTickEntity(entity: Entity) {
-        val docking = entity[DockingComponent]
-        val aperture = entity[ApertureComponent]
-
-        if (docking.isDocked) {
-            if (aperture.state == ApertureComponent.State.CLOSED) aperture.state = ApertureComponent.State.OPENING
-        } else {
-            if (aperture.state == ApertureComponent.State.OPEN) aperture.state = ApertureComponent.State.CLOSING
-        }
-
-        val speed = 2f
-        when (aperture.state) {
-            ApertureComponent.State.OPENING -> {
-                aperture.openProgress += speed * deltaTime
-                if (aperture.openProgress >= 1f) { aperture.openProgress = 1f; aperture.state = ApertureComponent.State.OPEN }
-            }
-            ApertureComponent.State.CLOSING -> {
-                aperture.openProgress -= speed * deltaTime
-                if (aperture.openProgress <= 0f) { aperture.openProgress = 0f; aperture.state = ApertureComponent.State.CLOSED }
-            }
-            else -> {}
-        }
-
-        if (aperture.openProgress > 0f) {
-            val barHeight = (uiViewport.worldHeight / 2f) * (1f - aperture.openProgress)
+        val ap = entity[ApertureComponent]
+        if (entity[DockingComponent].isDocked) ap.openProgress = (ap.openProgress + 2f * deltaTime).coerceAtMost(1f)
+        else ap.openProgress = (ap.openProgress - 2f * deltaTime).coerceAtLeast(0f)
+        if (ap.openProgress > 0f) {
+            val h = (uiViewport.worldHeight / 2f) * (1f - ap.openProgress)
             drawer.setColor(0f, 0f, 0f, 0.8f)
-            drawer.filledRectangle(0f, uiViewport.worldHeight - barHeight, uiViewport.worldWidth, barHeight)
-            drawer.filledRectangle(0f, 0f, uiViewport.worldWidth, barHeight)
-            drawer.setColor(Color.CYAN)
-            drawer.line(0f, uiViewport.worldHeight - barHeight, uiViewport.worldWidth, uiViewport.worldHeight - barHeight, 2f)
-            drawer.line(0f, barHeight, uiViewport.worldWidth, barHeight, 2f)
+            drawer.filledRectangle(0f, uiViewport.worldHeight - h, uiViewport.worldWidth, h)
+            drawer.filledRectangle(0f, 0f, uiViewport.worldWidth, h)
         }
     }
 }
