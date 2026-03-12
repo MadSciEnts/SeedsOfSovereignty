@@ -18,17 +18,22 @@ import com.srw.seedsofsovereignty.system.DiegeticHUDSystem
 import com.srw.seedsofsovereignty.system.PlayerInputSystem
 import com.srw.seedsofsovereignty.ui.*
 import com.srw.seedsofsovereignty.util.ModuleGenerator
+import com.srw.seedsofsovereignty.util.ProceduralShipDrawer
 import ktx.app.KtxScreen
 import space.earlygrey.shapedrawer.ShapeDrawer
 
 /**
- * High-fidelity mission theater (v2.5.4).
- * ROLE: The "Clean Slate" play arena utilizing Partitioned Viewports.
+ * High-fidelity mission theater (v3.2.3).
+ * ROLE: Active-Wake visual standard.
+ *
+ * FIXES:
+ * 1. [WAKES] - Finalized organic wake standard (maxLength 48).
+ * 2. [HUD] - Diagnostic Rings BASELINE v3.2.3.
  */
 class PlayScreen(
     private val world: World,
     private val batch: SpriteBatch,
-    private val shipViewport: Viewport, // v2.5.4: Renamed from viewport for parity
+    private val shipViewport: Viewport,
     private val uiViewport: Viewport,
     private val drawer: ShapeDrawer
 ) : ktx.app.KtxScreen {
@@ -38,6 +43,7 @@ class PlayScreen(
 
     private val moveJoystick: SovereigntyTouchpad = HUDInputService.createMoveJoystick(skin)
     private val commandMatrix = CommandMatrixWidget(drawer, skin, world, { selectedModuleIndex = it })
+    private val diagnosticWidget = DiagnosticWidget(drawer, skin, world)
     private val testEvolveButton: TextButton = HUDInputService.createDebugButton("DEV: EVOLVE", skin)
     private val testWarpButton: TextButton = HUDInputService.createDebugButton("DEV: WARP", skin)
 
@@ -55,7 +61,14 @@ class PlayScreen(
         val player = world.entity {
             it += PlayerComponent(); it += TacticalHubComponent(); it += TacticalLockComponent(); it += TacticalPersistenceComponent()
             it += PositionComponent(); it += OrientationComponent(); it += VelocityComponent(); it += WeaponComponent()
-            it += SensorComponent(radius = 1000f); it += EvolutionComponent(currentTier = 1, subTier = 1)
+            it += SensorComponent(radius = 512f); it += EvolutionComponent(currentTier = 1, subTier = 1)
+
+            it += TacticalStatsComponent(attackDistance = 50f, maxSpeed = 100f, rotationSpeed = 2.5f)
+
+            // CALIBRATED PLAYER WAKE (v3.2.3): 48 segments, width = hullSize * 0.8, turbulence = 0.08f
+            val hullSize = ProceduralShipDrawer.getShipSize(1, 1)
+            it += TrailComponent(color = Color.CYAN.cpy(), maxLength = 48, width = hullSize * 0.8f, turbulenceIntensity = 0.08f)
+
             it += DockingComponent(); it += ApertureComponent(); it += ChoiceComponent()
             it += HealthComponent(); it += ShieldComponent()
             it += ModuleSlotComponent(mutableListOf(ModuleSlot(SlotType.WEAPON, 1, "Stock Kinetic", 1)))
@@ -63,11 +76,14 @@ class PlayScreen(
         }
 
         HUDFactory.createPermanentHUDEntities(world, player)
-        with(world) {
-            HUDFactory.createInstrumentEntities(world, player, player[WeaponModuleComponent].tacticalSchema)
-        }
+        with(world) { HUDFactory.createInstrumentEntities(world, player, player[WeaponModuleComponent].tacticalSchema) }
 
-        uiStage.addActor(moveJoystick); uiStage.addActor(commandMatrix); uiStage.addActor(hangarUI); uiStage.addActor(testEvolveButton); uiStage.addActor(testWarpButton)
+        uiStage.addActor(moveJoystick)
+        uiStage.addActor(commandMatrix)
+        uiStage.addActor(diagnosticWidget)
+        uiStage.addActor(hangarUI)
+        uiStage.addActor(testEvolveButton)
+        uiStage.addActor(testWarpButton)
 
         testEvolveButton.addListener(object : com.badlogic.gdx.scenes.scene2d.utils.ChangeListener() {
             override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) { evolutionManager.cheatEvolve(world) }
@@ -87,61 +103,38 @@ class PlayScreen(
 
     override fun render(delta: Float) {
         val player = world.family { all(PlayerComponent, DockingComponent, ApertureComponent, ChoiceComponent) }.firstOrNull()
-
         if (player != null) {
             val inputSystem = world.system<PlayerInputSystem>()
             with(world) {
-                val docking = player[DockingComponent]
-                val aperture = player[ApertureComponent]
-                val choice = player[ChoiceComponent]
-                val isFullyDocked = docking.isDocked && aperture.state == ApertureComponent.State.OPEN
-                val isUiRequested = isFullyDocked || choice.isAwaitingChoice
+                val docking = player[DockingComponent]; val aperture = player[ApertureComponent]; val choice = player[ChoiceComponent]
+                val isUiRequested = (docking.isDocked && aperture.state == ApertureComponent.State.OPEN) || choice.isAwaitingChoice
+                hangarUI.isVisible = isUiRequested; moveJoystick.isVisible = !isUiRequested; commandMatrix.isVisible = !isUiRequested
+                diagnosticWidget.isVisible = !isUiRequested
+                testEvolveButton.isVisible = !isUiRequested; testWarpButton.isVisible = !isUiRequested
 
-                hangarUI.isVisible = isUiRequested
-                moveJoystick.isVisible = !isUiRequested
-                commandMatrix.isVisible = !isUiRequested
-                testEvolveButton.isVisible = !isUiRequested
-                testWarpButton.isVisible = !isUiRequested
+                if (isUiRequested && !wasDocked && !choice.isAwaitingChoice) { hangarUI.resetToWelcome(); wasDocked = true } else if (!isUiRequested) { wasDocked = false }
 
-                if (isUiRequested && !wasDocked && !choice.isAwaitingChoice) {
-                    hangarUI.resetToWelcome()
-                    wasDocked = true
-                } else if (!isUiRequested) { wasDocked = false }
+                val slots = player[ModuleSlotComponent].slots; commandMatrix.syncLoadout(slots, selectedModuleIndex)
+                diagnosticWidget.update(player)
 
-                val slots = player[ModuleSlotComponent].slots
-                commandMatrix.syncLoadout(slots, selectedModuleIndex)
                 if (selectedModuleIndex < slots.size) {
-                    val slot = slots[selectedModuleIndex]
-                    val slotEntity = slot.slotEntity
-                    val currentId = slotEntity?.toString() ?: slot.equippedName
+                    val currentId = slots[selectedModuleIndex].slotEntity?.toString() ?: slots[selectedModuleIndex].equippedName
                     if (currentId != lastObservedIdentity) {
                         HUDFactory.clearInstrumentEntities(world)
-                        val schema = if (slotEntity != null && world.contains(slotEntity)) {
-                            if (slotEntity.has(WeaponModuleComponent)) slotEntity[WeaponModuleComponent].tacticalSchema
-                            else if (slotEntity.has(DroneModuleComponent)) slotEntity[DroneModuleComponent].tacticalSchema
-                            else TacticalSchema()
-                        } else player[WeaponModuleComponent].tacticalSchema
-                        HUDFactory.createInstrumentEntities(world, player, schema)
-                        commandMatrix.updateTacticalSurface(schema, selectedModuleIndex)
-                        lastObservedIdentity = currentId
+                        val schema = if (slots[selectedModuleIndex].slotEntity?.has(WeaponModuleComponent) == true) slots[selectedModuleIndex].slotEntity!![WeaponModuleComponent].tacticalSchema else player[WeaponModuleComponent].tacticalSchema
+                        HUDFactory.createInstrumentEntities(world, player, schema); commandMatrix.updateTacticalSurface(schema, selectedModuleIndex); lastObservedIdentity = currentId
                     }
                 }
                 inputSystem.joystickVector.set(moveJoystick.knobPercentX, moveJoystick.knobPercentY)
             }
         }
-
-        world.update(delta)
-        uiStage.act(delta)
-        uiStage.draw()
+        world.update(delta); uiStage.act(delta); uiStage.draw()
     }
 
     override fun resize(width: Int, height: Int) {
-        // FIX: Synchronized viewport update to restore circular hulls
-        shipViewport.update(width, height, true)
-        uiViewport.update(width, height, true)
-
-        moveJoystick.setPosition(50f, 50f)
-        commandMatrix.setPosition(uiViewport.worldWidth - 40f, 50f, Align.bottomRight)
+        shipViewport.update(width, height, true); uiViewport.update(width, height, true)
+        moveJoystick.setPosition(50f, 50f); commandMatrix.setPosition(uiViewport.worldWidth - 40f, 50f, Align.bottomRight)
+        diagnosticWidget.setPosition(20f, uiViewport.worldHeight - 20f, Align.topLeft)
         hangarUI.setSize(uiViewport.worldWidth * 0.95f, uiViewport.worldHeight * 0.9f)
         hangarUI.setPosition(uiViewport.worldWidth / 2f - hangarUI.width / 2f, uiViewport.worldHeight / 2f - hangarUI.height / 2f)
         testEvolveButton.setPosition(uiViewport.worldWidth / 2f - testEvolveButton.width / 2f, uiViewport.worldHeight - 100f)

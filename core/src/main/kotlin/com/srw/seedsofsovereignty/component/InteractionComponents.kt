@@ -4,8 +4,13 @@ import com.github.quillraven.fleks.Component
 import com.github.quillraven.fleks.ComponentType
 import com.github.quillraven.fleks.Entity
 
+/**
+ * Interaction Layer Components (v2.7.5).
+ * FIXES:
+ * 1. [GSF 0.1] - Reduced radii by factor of 10 for world scaling.
+ */
 data class SensorComponent(
-    var radius: Float = 1000f // Matches SYSTEM_MINIMAP_SENSORS.md spec
+    var radius: Float = 100f // GSF 0.1: Reduced from 1000f
 ) : Component<SensorComponent> {
     override fun type() = SensorComponent
     companion object : ComponentType<SensorComponent>()
@@ -18,7 +23,7 @@ class VisibleComponent : Component<VisibleComponent> {
 
 data class StationComponent(
     val name: String = "Outpost",
-    val radius: Float = 150f
+    val radius: Float = 15f // GSF 0.1: Reduced from 150f
 ) : Component<StationComponent> {
     override fun type() = StationComponent
     companion object : ComponentType<StationComponent>()

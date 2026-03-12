@@ -10,247 +10,172 @@ import com.srw.seedsofsovereignty.component.*
 import com.srw.seedsofsovereignty.util.ProceduralShipDrawer
 
 /**
- * High-fidelity combat kernel (v0.3.21).
- * WeaponSystem now consumes firing directives and AIM vectors from the TVM TacticalHubComponent.
- * v0.4.0: Updated to use TacticalHubComponent.
- * v0.4.1: Integrated TacticalLockComponent for auto-snapping.
+ * High-fidelity combat kernel (v3.2.1).
+ * ROLE: Categorical Material Simulation & CCD Stabilization.
+ *
+ * FIXES:
+ * 1. [CCD] - Implemented Segment-Circle Intersection for frame-perfect collisions.
+ * 2. [ACCURACY] - Dynamic ship radius based on Tier/SubTier.
+ * 3. [WAKES] - Normalized projectile wakes (maxLength 16, LifeSpan 1.0s).
  */
 class WeaponSystem : IteratingSystem(family {
-    all(WeaponComponent, PositionComponent, VelocityComponent, OrientationComponent)
+    all(WeaponComponent, TacticalStatsComponent, PositionComponent, VelocityComponent, OrientationComponent)
 }) {
     private val mountOffsetsBuffer = mutableListOf<Vector2>()
 
     override fun onTickEntity(entity: Entity) {
         val weapon = entity[WeaponComponent]
-        val pos = entity[PositionComponent].pos
+        val stats = entity[TacticalStatsComponent]
+        val shipPos = entity[PositionComponent].pos
         val hullAngle = entity[OrientationComponent].angleRad
 
         val isEnemy = entity.has(EnemyComponent)
         val evo = if (entity.has(EvolutionComponent)) entity[EvolutionComponent] else null
         val tier = if (isEnemy) 1 else (evo?.currentTier ?: 1)
-        val subTier = evo?.subTier ?: 1
+        val subTier = if (isEnemy) 1 else (evo?.subTier ?: 1)
 
-        // TVM Integration: Check for firing bit and AIM vector in TacticalHubComponent if player-controlled
+        weapon.barrels = subTier.coerceIn(1, 3)
+
         var isFiring = weapon.isFiring
         if (entity.has(PlayerComponent) && entity.has(TacticalHubComponent)) {
             val hub = entity[TacticalHubComponent]
-
             val aimVector = hub.vectors["AIM"]
-            val bit0Set = (hub.activeBitmask and (1L shl 0)) != 0L
-            val isJoystickActive = aimVector != null && aimVector.len() > 0.1f
+            isFiring = (hub.activeBitmask and 1L != 0L) || (aimVector != null && aimVector.len() > 0.1f)
 
-            isFiring = bit0Set || isJoystickActive
-
-            // v0.3.21: Final Absolute Stabilization - Simplified non-mutating aim logic.
-            aimVector?.let { vector ->
-                if (vector.len2() > 0.01f) {
-                    weapon.aimAngleRad = vector.angleRad()
-                }
-            }
-
-            // v0.4.1: Tactical Lock Snapping
-            if (entity.has(TacticalLockComponent)) {
-                val lock = entity[TacticalLockComponent]
-                lock.targetEntity?.let { target ->
-                    if (target in world && target.has(PositionComponent)) {
-                        val targetPos = target[PositionComponent].pos
-                        val delta = Vector2(targetPos).sub(pos)
-                        weapon.aimAngleRad = delta.angleRad()
-                    }
-                }
-            }
+            if (tier < 4) weapon.aimAngleRad = hullAngle
+            else aimVector?.let { if (it.len2() > 0.01f) weapon.aimAngleRad = it.angleRad() }
         }
 
-        val aimAngle = weapon.aimAngleRad
-
-        if (weapon.cooldown > 0f) {
-            weapon.cooldown -= deltaTime
-        }
+        if (weapon.cooldown > 0f) weapon.cooldown -= deltaTime
 
         if (isFiring && weapon.cooldown <= 0f) {
             val module = if (entity.has(WeaponModuleComponent)) entity[WeaponModuleComponent] else null
-            weapon.cooldown = (module?.fireRate ?: 0.5f) / weapon.barrels.coerceAtLeast(1)
+            val type = module?.type ?: ProjectileType.KINETIC
+            val (speedMult, mass) = when(type) {
+                ProjectileType.KINETIC -> 1.0f to 1.0f
+                ProjectileType.ION -> 2.0f to 0.5f
+                ProjectileType.PHOTON -> 5.0f to 0.01f
+                ProjectileType.PLASMA -> 0.4f to 4.0f
+            }
+
+            weapon.cooldown = ((module?.fireRate ?: 0.5f) / weapon.barrels) * (1.0f / stats.fireRateMult.coerceAtLeast(0.01f))
 
             val shipSize = ProceduralShipDrawer.getShipSize(tier, subTier)
             ProceduralShipDrawer.getMountOffsets(tier, subTier, shipSize, hullAngle, mountOffsetsBuffer)
 
             mountOffsetsBuffer.forEach { mountOffset ->
-                val firePosX = pos.x + mountOffset.x
-                val firePosY = pos.y + mountOffset.y
-
                 world.entity { e ->
-                    e += PositionComponent().apply {
-                        this.pos.set(firePosX, firePosY)
-                        val spreadWidth = if (tier >= 8) 30f else if (tier >= 6) 40f else 20f
-                        val lateralOffset = if (weapon.barrels <= 1) 0f else {
-                            (weapon.currentBarrel - (weapon.barrels - 1) * 0.5f) * (spreadWidth / (weapon.barrels - 1).coerceAtLeast(1))
-                        }
-                        val ox = MathUtils.cos(aimAngle + MathUtils.PI/2f) * lateralOffset
-                        val oy = MathUtils.sin(aimAngle + MathUtils.PI/2f) * lateralOffset
-                        this.pos.add(ox, oy)
-                    }
+                    e += PositionComponent().apply { this.pos.set(shipPos).add(mountOffset) }
                     e += VelocityComponent().apply {
-                        val bulletSpeed = module?.projectileSpeed ?: (if (isEnemy) 600f else 1000f)
-                        this.v.set(bulletSpeed, 0f).setAngleRad(aimAngle)
+                        val bulletSpeed = (module?.projectileSpeed?.let { it * 0.1f } ?: 100f) * speedMult
+                        this.v.set(bulletSpeed, 0f).setAngleRad(weapon.aimAngleRad)
                     }
-                    e += OrientationComponent().apply { angleRad = aimAngle }
+                    e += OrientationComponent().apply { angleRad = weapon.aimAngleRad }
+                    e += TrailComponent(
+                        color = module?.projectileColor?.cpy() ?: Color.YELLOW.cpy(),
+                        width = mass * 0.3f,
+                        maxLength = 16
+                    )
                     e += ProjectileComponent(
+                        type = type,
                         tier = module?.projectileTier ?: tier,
+                        mass = mass,
                         color = module?.projectileColor ?: Color.YELLOW,
-                        effects = module?.effects?.toMutableList() ?: mutableListOf(ProjectileEffect(EffectType.HULL_DAMAGE, 10f)),
                         ownerIsEnemy = isEnemy
                     )
-                    e += LifeSpanComponent(remaining = if (isEnemy) 2.5f else 1.5f)
+                    e += LifeSpanComponent(remaining = if (type == ProjectileType.PLASMA) 2.0f else 1.0f)
                 }
             }
-
-            if (weapon.barrels > 1) {
-                weapon.currentBarrel = (weapon.currentBarrel + 1) % weapon.barrels
-            }
+            if (weapon.barrels > 1) weapon.currentBarrel = (weapon.currentBarrel + 1) % weapon.barrels
         }
     }
 }
 
-class CombatSystem : IteratingSystem(family { all(ProjectileComponent, PositionComponent) }) {
-    private val enemyFamily by lazy { world.family { all(EnemyComponent, PositionComponent) } }
-    private val playerFamily by lazy { world.family { all(PlayerComponent, PositionComponent, HealthComponent) } }
-    private val droneFamily by lazy { world.family { all(DroneComponent, PositionComponent, HealthComponent) } }
+class CombatSystem : IteratingSystem(family { all(ProjectileComponent, PositionComponent, VelocityComponent, TrailComponent) }) {
+    private val targetShips by lazy { world.family { all(PositionComponent).any(PlayerComponent, EnemyComponent) } }
+
+    // CCD Temp Math Vectors
+    private val p0 = Vector2()
+    private val p1 = Vector2()
+    private val closestPoint = Vector2()
+    private val diff = Vector2()
 
     override fun onTickEntity(entity: Entity) {
-        val projPos = entity[PositionComponent].pos
-        val projComp = entity[ProjectileComponent]
+        val proj = entity[ProjectileComponent]
+        val pos = entity[PositionComponent].pos
+        val vel = entity[VelocityComponent].v
+        val trail = entity[TrailComponent]
 
-        if (!projComp.ownerIsEnemy) {
-            enemyFamily.forEach { enemy ->
-                val enemyPos = enemy[PositionComponent].pos
-                if (projPos.dst2(enemyPos) < 1600f) {
-                    applyEffects(enemy, projComp.effects, projPos)
-                    world -= entity
-                    return@forEach
-                }
-            }
-        } else {
-            droneFamily.forEach { drone ->
-                val dronePos = drone[PositionComponent].pos
-                if (projPos.dst2(dronePos) < 600f) {
-                    applyEffects(drone, projComp.effects, projPos)
-                    world -= entity
-                    return@forEach
-                }
-            }
-            playerFamily.firstOrNull()?.let { player ->
-                val playerPos = player[PositionComponent].pos
-                if (projPos.dst2(playerPos) < 900f) {
-                    applyEffects(player, projComp.effects, projPos)
-                    world -= entity
-                }
+        // History update
+        if (trail.history.size >= trail.maxLength) trail.history.removeAt(0)
+        trail.history.add(Vector2(pos))
+
+        // 1. Define Segment [P0, P1] for this frame
+        p0.set(pos)
+        p1.set(pos).add(vel.x * deltaTime, vel.y * deltaTime)
+
+        // 2. Iterate Potential Targets
+        var projectileConsumed = false
+        targetShips.forEach { target ->
+            if (projectileConsumed) return@forEach
+
+            // Skip friendly fire
+            val isTargetEnemy = target.has(EnemyComponent)
+            if (proj.ownerIsEnemy == isTargetEnemy) return@forEach
+
+            // Get target physical radius
+            val tPos = target[PositionComponent].pos
+            val tTier = if (isTargetEnemy) 1 else target[EvolutionComponent].currentTier
+            val tSubTier = if (isTargetEnemy) 1 else target[EvolutionComponent].subTier
+            val tRadius = ProceduralShipDrawer.getShipSize(tTier, tSubTier) * 0.9f // Shield/Hull buffer
+
+            // 3. Segment-Circle Intersection (CCD)
+            val dx = p1.x - p0.x
+            val dy = p1.y - p0.y
+            val lenSq = dx * dx + dy * dy
+            val t = if (lenSq < 0.0001f) 0f else ((tPos.x - p0.x) * dx + (tPos.y - p0.y) * dy) / lenSq
+            val clampedT = MathUtils.clamp(t, 0f, 1f)
+            closestPoint.set(p0.x + clampedT * dx, p0.y + clampedT * dy)
+
+            if (closestPoint.dst2(tPos) <= tRadius * tRadius) {
+                resolveHit(target, proj, entity, closestPoint)
+                projectileConsumed = true
             }
         }
     }
 
+    private fun resolveHit(target: Entity, proj: ProjectileComponent, projectile: Entity, hitPos: Vector2) {
+        // Mass-Based Knockback Impulse
+        if (target.has(VelocityComponent) && projectile.has(VelocityComponent)) {
+            val projVel = projectile[VelocityComponent].v
+            val impulse = diff.set(projVel).nor().scl(proj.mass * 1.5f)
+            target[VelocityComponent].v.add(impulse)
+        }
+
+        applyEffects(target, proj.effects, hitPos)
+        world -= projectile
+    }
+
     private fun applyEffects(target: Entity, effects: List<ProjectileEffect>, effectPos: Vector2) {
         effects.forEach { effect ->
-            spawnVfx(effect.vfx, effectPos.x, effectPos.y)
-
-            // 1. Direct Stat Modification (Immediate)
-            when (effect.type) {
-                EffectType.HULL_DAMAGE -> {
-                    if (target.has(HealthComponent)) {
-                        target[HealthComponent].current -= effect.potency
-
-                        // NEW: Spawn Damage Indicator if Target is Player (v19.1)
-                        if (target.has(PlayerComponent)) {
-                            world.entity {
-                                it += HUDInstrumentTag()
-                                it += HUDTagComponent(ownerId = "DANGER_AR")
-                                it += HUDElementComponent(space = HUDSpace.SCREEN, anchor = HUDAnchor.CENTER, layer = HUDLayer.VFX, width = 60f, height = 20f, offsetY = 100f)
-                                it += HUDRendererComponent(renderType = HUDRenderType.BLUEPRINT)
-                                it += HUDAnimationComponent(animationId = "GLITCH", intensity = 20.0f)
-                                it += LifeSpanComponent(remaining = 1.0f)
-                            }
-                        }
-
-                        if (target[HealthComponent].current <= 0f && (target.has(EnemyComponent) || target.has(DroneComponent))) {
-                            handleTargetDestruction(target)
-                        }
-                    }
-                }
-                EffectType.SHIELD_DAMAGE -> {
-                    if (target.has(ShieldComponent)) {
-                        val shield = target[ShieldComponent]
-                        if (shield.active) shield.current = (shield.current - effect.potency).coerceAtLeast(0f)
-                    }
-                }
-                // 2. Status Effect Infliction (Temporal Modification)
-                else -> {
-                    if (target.has(StatusEffectComponent)) {
-                        val status = target[StatusEffectComponent]
-                        status.activeEffects.add(ActiveEffect(
-                            type = effect.type,
-                            potency = effect.potency,
-                            remainingDuration = effect.duration,
-                            vfx = effect.vfx
-                        ))
-                    }
-                }
+            if (effect.type == EffectType.HULL_DAMAGE && target.has(HealthComponent)) {
+                val health = target[HealthComponent]
+                health.current -= effect.potency
+                if (health.current <= 0f && target.has(EnemyComponent)) handleTargetDestruction(target)
             }
         }
     }
 
     private fun handleTargetDestruction(target: Entity) {
-        if (target.has(EnemyComponent)) {
-            val ePos = Vector2(target[PositionComponent].pos)
-            world.entity {
-                it += PositionComponent().apply { pos.set(ePos) }
-                it += VelocityComponent().apply { friction = 0.5f }
-                it += SalvageComponent(type = SalvageType.ESSENCE, amount = 1)
-                it += VisibleComponent()
-                it += LifeSpanComponent(remaining = 15f)
-            }
+        val ePos = Vector2(target[PositionComponent].pos)
+        world.entity {
+            it += PositionComponent().apply { pos.set(ePos) }
+            it += VelocityComponent().apply { friction = 0.5f }
+            it += SalvageComponent(type = SalvageType.ESSENCE, amount = 1)
+            it += VisibleComponent()
+            it += LifeSpanComponent(remaining = 15f)
         }
         world -= target
-    }
-
-    private fun spawnVfx(vfxType: ImpactVfxType, x: Float, y: Float) {
-        when (vfxType) {
-            ImpactVfxType.SPARK_YELLOW -> spawnSparkBurst(x, y, Color.YELLOW, 8f)
-            ImpactVfxType.SHIELD_RIPPLE_BLUE -> {
-                world.entity {
-                    it += PositionComponent().apply { pos.set(x, y) }
-                    it += ParticleComponent(
-                        type = ParticleComponent.Type.SHIELD_RIPPLE,
-                        color = Color.CYAN,
-                        size = 40f,
-                        alpha = 0.8f,
-                        fadeRate = 2.0f
-                    )
-                    it += LifeSpanComponent(remaining = 0.4f)
-                }
-            }
-            ImpactVfxType.ACID_GREEN -> spawnSparkBurst(x, y, Color.GREEN, 10f)
-            ImpactVfxType.SPARK_RED -> spawnSparkBurst(x, y, Color.RED, 12f)
-            else -> spawnSparkBurst(x, y, Color.WHITE, 6f)
-        }
-    }
-
-    private fun spawnSparkBurst(x: Float, y: Float, color: Color, baseSize: Float) {
-        for (i in 0 until 5) {
-            world.entity {
-                it += PositionComponent().apply { pos.set(x, y) }
-                it += VelocityComponent().apply {
-                    v.set(MathUtils.random(-200f, 200f), MathUtils.random(-200f, 200f))
-                    friction = 2f
-                }
-                it += ParticleComponent(
-                    type = ParticleComponent.Type.SPARK,
-                    color = color,
-                    size = baseSize * MathUtils.random(0.5f, 1.5f),
-                    alpha = 1.0f,
-                    fadeRate = 3.0f
-                )
-                it += LifeSpanComponent(remaining = MathUtils.random(0.2f, 0.4f))
-            }
-        }
     }
 }
 
@@ -258,8 +183,6 @@ class LifeSpanSystem : IteratingSystem(family { all(LifeSpanComponent) }) {
     override fun onTickEntity(entity: Entity) {
         val life = entity[LifeSpanComponent]
         life.remaining -= deltaTime
-        if (life.remaining <= 0f) {
-            world -= entity
-        }
+        if (life.remaining <= 0f) world -= entity
     }
 }

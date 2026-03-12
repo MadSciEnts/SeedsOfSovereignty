@@ -20,12 +20,10 @@ import ktx.graphics.use
 import space.earlygrey.shapedrawer.ShapeDrawer
 
 /**
- * Diegetic HUD System (v2.5.1)
+ * Diegetic HUD System (v2.7.5)
  * ROLE: The "Gold Standard" AR Orchestrator.
- *
- * ROLLBACK (v2.5.1): Restored v2.4.8 Relative Translation math.
  * FIXES:
- * 1. [SINGULARITY] - Fixed clumping via center-offset + zoom division.
+ * 1. [GSF 0.1] - Scaled world-to-UI projection for physical units.
  */
 class DiegeticHUDSystem(
     private val batch: SpriteBatch,
@@ -111,9 +109,9 @@ class DiegeticHUDSystem(
 
                 val sPos = source[PositionComponent].pos
 
-                // RESTORED: Direct Relative Projection (v2.4.8)
-                val sx = (uiViewport.worldWidth / 2f) + (sPos.x - pPos.x) / zoom
-                val sy = (uiViewport.worldHeight / 2f) + (sPos.y - pPos.y) / zoom
+                // GSF 0.1: Multiply world delta by 10 to match UI pixel scale (1280x720)
+                val sx = (uiViewport.worldWidth / 2f) + ((sPos.x - pPos.x) * 10f) / zoom
+                val sy = (uiViewport.worldHeight / 2f) + ((sPos.y - pPos.y) * 10f) / zoom
 
                 val tHud = target[HUDElementComponent]
                 val tBase = getAnchorPosition(tHud.anchor)
@@ -137,9 +135,9 @@ class DiegeticHUDSystem(
                 val zoom = (worldViewport.camera as OrthographicCamera).zoom
                 val sPos = source[PositionComponent].pos
                 val pPos = player[PositionComponent].pos
-                // RESTORED: Relative world-unit offsets
-                hud.offsetX = (sPos.x - pPos.x) / zoom
-                hud.offsetY = (sPos.y - pPos.y) / zoom
+                // GSF 0.1: Multiply world delta by 10 for UI scale
+                hud.offsetX = ((sPos.x - pPos.x) * 10f) / zoom
+                hud.offsetY = ((sPos.y - pPos.y) * 10f) / zoom
             }
         }
 
@@ -190,6 +188,7 @@ class RadarRenderSystem(
         drawer.line(centerX, centerY, centerX + MathUtils.cos(rad) * 120f, centerY + MathUtils.sin(rad) * 120f, 2f)
         targetsFamily.forEach { target ->
             val targetPos = target[PositionComponent].pos
+            // GSF 0.1: No change needed here if sensor.radius is correctly scaled to 100f
             val rx = centerX + (targetPos.x - playerPos.x) * (120f / sensor.radius)
             val ry = centerY + (targetPos.y - playerPos.y) * (120f / sensor.radius)
             if (Vector2.dst(centerX, centerY, rx, ry) <= 120f) {

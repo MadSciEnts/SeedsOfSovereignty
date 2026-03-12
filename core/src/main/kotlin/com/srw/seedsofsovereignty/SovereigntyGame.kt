@@ -18,16 +18,16 @@ import ktx.async.KtxAsync
 import space.earlygrey.shapedrawer.ShapeDrawer
 
 /**
- * Sovereign Strategic Hub (v2.6.0).
+ * Sovereign Strategic Hub (v2.7.5).
  * ROLE: Entry point utilizing the Sovereign Vault architectures.
  *
  * FIXES:
- * 1. [SECURITY] - Migrated ECS draw order to SystemRegistry.kt for Lead Architect protection.
+ * 1. [GSF 0.1] - Scaled shipViewport to 128x72 world units per Pilot Epoch Hardening.
  */
 class SovereigntyGame : KtxGame<KtxScreen>() {
     private val batch by lazy { SpriteBatch() }
     private val shipCamera by lazy { OrthographicCamera() }
-    private val shipViewport by lazy { ExtendViewport(1280f, 720f, shipCamera) }
+    private val shipViewport by lazy { ExtendViewport(128f, 72f, shipCamera) }
     private val uiViewport by lazy { ExtendViewport(1280f, 720f) }
 
     private val whitePixel by lazy { AssetFactory.createWhitePixel() }

@@ -8,8 +8,9 @@ import com.badlogic.gdx.math.Vector2
 enum class DroneCategory { ATTACK, DEFEND, REPAIR }
 
 /**
- * The swappable hardware module for drones.
- * v0.4.0: Updated to use InputChannel for bidirectional instrumentation.
+ * The swappable hardware module for drones (v2.7.5).
+ * FIXES:
+ * 1. [GSF 0.1] - Scaled orbit logic to 0.1 factor.
  */
 data class DroneModuleComponent(
     var name: String = "Guardian D1",
@@ -46,7 +47,7 @@ data class DroneLauncherComponent(
 data class FleetCommandComponent(
     var controlMode: ControlMode = ControlMode.ATTACK_DIRECTION,
     var selectedSlotIndex: Int = 0,
-    val slotFocusPoints: Array<Vector2> = Array(4) { Vector2(0f, 150f) },
+    val slotFocusPoints: Array<Vector2> = Array(4) { Vector2(0f, 15f) }, // GSF 0.1: 150 -> 15
     val slotFocusAngles: FloatArray = FloatArray(4) { 1.57f },
     var command: Command = Command.DEFEND,
 
@@ -70,7 +71,7 @@ data class FleetCommandComponent(
 data class DroneComponent(
     val owner: Entity,
     var slotIndex: Int = 0,
-    var orbitRadius: Float = 80f,
+    var orbitRadius: Float = 8f, // GSF 0.1: 80 -> 8
     var currentOrbitAngle: Float = 0f
 ) : Component<DroneComponent> {
     override fun type() = DroneComponent

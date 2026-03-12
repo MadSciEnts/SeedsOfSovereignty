@@ -20,9 +20,10 @@ enum class HUDLineStyle { SOLID, DASHED, PULSING }
 enum class HUDLayer { FLIGHT, MARKET, MAP, SYSTEM, VFX }
 
 /**
- * Technical Specification: HUDComponents (v1.3.0)
+ * Technical Specification: HUDComponents (v1.4.0)
  * v1.2.0: Added HUDTagComponent for dynamic lifecycle management.
  * v1.3.0: Added HUDInstrumentTag for specific instrument cleanup.
+ * v1.4.0: Added ReticleLayerComponent and TargetCategory (Phase 23.1).
  */
 data class HUDElementComponent(
     var space: HUDSpace = HUDSpace.SCREEN,
@@ -117,4 +118,20 @@ data class HUDMenuComponent(
 ) : Component<HUDMenuComponent> {
     override fun type() = HUDMenuComponent
     companion object : ComponentType<HUDMenuComponent>()
+}
+
+data class ReticleLayerComponent(
+    var category: TargetCategory = TargetCategory.HOSTILE,
+    var priority: Int = 0,
+    var isVisible: Boolean = true
+) : Component<ReticleLayerComponent> {
+    override fun type() = ReticleLayerComponent
+    companion object : ComponentType<ReticleLayerComponent>()
+}
+
+enum class TargetCategory(val bitmask: Long) {
+    HOSTILE(1L shl 0),   // Bit 0: Enemy ships, turrets
+    NEUTRAL(1L shl 1),   // Bit 1: Debris, salvage, asteroids
+    FRIENDLY(1L shl 2),  // Bit 2: Drones, wingmen
+    OBJECTIVE(1L shl 3)  // Bit 3: Stations, mission targets
 }

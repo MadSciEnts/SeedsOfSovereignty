@@ -12,17 +12,11 @@ import com.srw.seedsofsovereignty.system.*
 import space.earlygrey.shapedrawer.ShapeDrawer
 
 /**
- * ARCHITECTURAL WARNING: LEAD ARCHITECT MANDATE (v2.6.0)
+ * ARCHITECTURAL WARNING: LEAD ARCHITECT MANDATE (v3.0.2)
  * ROLE: The Immutable ECS Execution Registry.
  *
- * This file defines the strictly ordered execution pipeline.
- * DO NOT REORDER OR ALTER without T1 HIGH TABLE CONSENSUS.
- *
- * DRAW ORDER RATIONALE:
- * 1. Logic/Physics (Movement, Combat)
- * 2. Layer 0: Physical Fleet (Ship Viewport)
- * 3. Layer 1: VFX/Bullets (Ship Viewport)
- * 4. Layer 2: AR Overlay (UI Viewport)
+ * FIXES:
+ * 1. [RIBBONS] - Integrated RibbonRenderSystem for movement trails.
  */
 object SystemRegistry {
 
@@ -46,6 +40,7 @@ object SystemRegistry {
             // --- INPUT & AI ---
             add(PlayerInputSystem(shipViewport))
             add(EnemyAISystem(shipCamera))
+            add(SteeringSystem())
 
             // --- FLEET LOGIC ---
             add(DroneRegenSystem())
@@ -74,7 +69,8 @@ object SystemRegistry {
             // --- LAYER 0: PHYSICAL FLEET (World Space) ---
             add(EntityRenderSystem(batch, drawer, shipViewport, skin))
 
-            // --- LAYER 1: BULLETS/VFX (World Space) ---
+            // --- LAYER 1: BULLETS/VFX/TRAILS (World Space) ---
+            add(RibbonRenderSystem(batch, drawer, shipViewport))
             add(RenderSystem(batch, drawer, shipViewport, skin))
 
             // --- INTERFACE PASS ---

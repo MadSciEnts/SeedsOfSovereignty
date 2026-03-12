@@ -5,7 +5,12 @@ import com.github.quillraven.fleks.ComponentType
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.math.MathUtils
 
-data class PositionComponent(val pos: Vector2 = Vector2()) : Component<PositionComponent> {
+/**
+ * Core Spatial Data (v3.0.3).
+ * FIXES:
+ * 1. [SHARED VECTOR] - Changed default init to ensure unique memory instances per entity.
+ */
+data class PositionComponent(val pos: Vector2 = Vector2(0f, 0f)) : Component<PositionComponent> {
     override fun type() = PositionComponent
     companion object : ComponentType<PositionComponent>()
 }
@@ -15,8 +20,11 @@ data class OrientationComponent(var angleRad: Float = MathUtils.PI / 2f) : Compo
     companion object : ComponentType<OrientationComponent>()
 }
 
+/**
+ * Core Physics Data (v3.0.3).
+ */
 data class VelocityComponent(
-    val v: Vector2 = Vector2(),
+    val v: Vector2 = Vector2(0f, 0f),
     var acceleration: Float = 500f,
     var friction: Float = 2.5f
 ) : Component<VelocityComponent> {

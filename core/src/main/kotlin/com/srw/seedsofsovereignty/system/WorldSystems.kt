@@ -14,12 +14,11 @@ import com.github.quillraven.fleks.World.Companion.family
 import com.srw.seedsofsovereignty.component.*
 import com.srw.seedsofsovereignty.manager.SectorManager
 import com.srw.seedsofsovereignty.util.ModuleGenerator
+import com.srw.seedsofsovereignty.util.ProceduralShipDrawer
 import ktx.graphics.use
 
 class ClearScreenSystem : IntervalSystem() {
-    override fun onTick() {
-        ScreenUtils.clear(0.02f, 0.02f, 0.05f, 1f)
-    }
+    override fun onTick() { ScreenUtils.clear(0.02f, 0.02f, 0.05f, 1f) }
 }
 
 class StarfieldSystem(
@@ -34,8 +33,7 @@ class StarfieldSystem(
 
     override fun onTick() {
         if (layers.isEmpty()) return
-        val w = Gdx.graphics.width.toFloat()
-        val h = Gdx.graphics.height.toFloat()
+        val w = Gdx.graphics.width.toFloat(); val h = Gdx.graphics.height.toFloat()
         starCamera.setToOrtho2D(0f, 0f, w, h)
         val originalMatrix = batch.projectionMatrix.cpy()
         batch.projectionMatrix = starCamera
@@ -43,58 +41,32 @@ class StarfieldSystem(
             layers.forEachIndexed { index, texture ->
                 val factor = parallaxFactors.getOrElse(index) { 0.1f }
                 val zoomFactor = 1f + (camera.zoom - 1f) * zoomInfluence
-                val effectiveScale = starScale * zoomFactor
-                val uWidth = (w * effectiveScale) / texture.width
-                val vHeight = (h * effectiveScale) / texture.height
-                val uCenter = (camera.position.x * factor) / texture.width
-                val vCenter = (camera.position.y * factor) / texture.height
-                val u = uCenter - uWidth / 2f
-                val v = vCenter - vHeight / 2f
-                val u2 = uCenter + uWidth / 2f
-                val v2 = vCenter + vHeight / 2f
-                b.draw(texture, 0f, 0f, w, h, u, v, u2, v2)
+                val uWidth = (w * starScale * zoomFactor) / texture.width
+                val vHeight = (h * starScale * zoomFactor) / texture.height
+                val uCenter = (camera.position.x * factor * 10f) / texture.width
+                val vCenter = (camera.position.y * factor * 10f) / texture.height
+                b.draw(texture, 0f, 0f, w, h, uCenter - uWidth/2f, vCenter - vHeight/2f, uCenter + uWidth/2f, vCenter + vHeight/2f)
             }
         }
         batch.projectionMatrix = originalMatrix
     }
 }
 
-/**
- * Manages Station proximity and docking logic (v2.4.5).
- */
 class StationSystem : IteratingSystem(family { all(PlayerComponent, PositionComponent, DockingComponent) }) {
     private val stationFamily by lazy { world.family { all(StationComponent, PositionComponent) } }
-
     override fun onTickEntity(entity: Entity) {
         val playerPos = entity[PositionComponent].pos
         val docking = entity[DockingComponent]
-
-        if (docking.undockCooldown > 0f) {
-            docking.undockCooldown -= deltaTime
-            return
-        }
-
-        var nearest: Entity? = null
-        var minDistSq = Float.MAX_VALUE
-
+        if (docking.undockCooldown > 0f) { docking.undockCooldown -= deltaTime; return }
+        var nearest: Entity? = null; var minDistSq = Float.MAX_VALUE
         stationFamily.forEach { station ->
-            val sPos = station[PositionComponent].pos
-            val d2 = playerPos.dst2(sPos)
-            if (d2 < minDistSq) {
-                minDistSq = d2
-                nearest = station
-            }
+            val d2 = playerPos.dst2(station[PositionComponent].pos)
+            if (d2 < minDistSq) { minDistSq = d2; nearest = station }
         }
-
         docking.nearestStation = nearest
         docking.proximity = if (nearest != null) Math.sqrt(minDistSq.toDouble()).toFloat() else Float.MAX_VALUE
-
-        if (docking.proximity < 100f) {
-            docking.isDocked = true
-            entity[VelocityComponent].v.set(0f, 0f)
-        } else {
-            docking.isDocked = false
-        }
+        if (docking.proximity < 10f) { docking.isDocked = true; entity[VelocityComponent].v.set(0f, 0f) }
+        else { docking.isDocked = false }
     }
 }
 
@@ -103,59 +75,43 @@ class SectorPopulationSystem(
     private val sectorManager: SectorManager
 ) : IntervalSystem(interval = Fixed(5f)) {
     override fun onTick() {
-        val sector = sectorManager.currentSector
         val player = world.family { all(PlayerComponent, EvolutionComponent) }.firstOrNull() ?: return
-        val currentTier = player[EvolutionComponent].currentTier
+        val tier = player[EvolutionComponent].currentTier
         val enemyCount = world.family { all(EnemyComponent) }.numEntities
         val stationCount = world.family { all(StationComponent) }.numEntities
-
-        when(sector.faction) {
-            Faction.SWARM -> {
-                if (enemyCount < 8) spawnEnemy(currentTier, "Swarm")
-                if (stationCount < 1) spawnStation(currentTier, "Hive")
-            }
-            Faction.VANGUARD -> {
-                if (enemyCount < 4) spawnEnemy(currentTier, "Vanguard Guard")
-                if (stationCount < 2) spawnStation(currentTier, "Outpost")
-            }
-            Faction.ANCIENTS -> {
-                if (enemyCount < 2) spawnEnemy(currentTier, "Ancient Sentry")
-                if (stationCount < 1) spawnStation(currentTier, "Monolith")
-            }
-            Faction.NEUTRAL -> {
-                if (enemyCount < 3) spawnEnemy(currentTier, "Scavenger")
-                if (stationCount < 3) spawnStation(currentTier, "Trading Hub")
-            }
+        when(sectorManager.currentSector.faction) {
+            Faction.SWARM -> { if (enemyCount < 8) spawnEnemy(tier, "Swarm"); if (stationCount < 1) spawnStation(tier, "Hive") }
+            Faction.VANGUARD -> { if (enemyCount < 4) spawnEnemy(tier, "Vanguard Guard"); if (stationCount < 2) spawnStation(tier, "Outpost") }
+            else -> { if (enemyCount < 3) spawnEnemy(tier, "Scavenger") }
         }
     }
 
     private fun spawnEnemy(tier: Int, type: String) {
-        val spawnRadius = 800f * camera.zoom
-        val angle = MathUtils.random(0f, MathUtils.PI2)
-        val spawnX = camera.position.x + MathUtils.cos(angle) * spawnRadius
-        val spawnY = camera.position.y + MathUtils.sin(angle) * spawnRadius
+        val spawnRadius = MathUtils.random(341f, 512f); val angle = MathUtils.random(0f, MathUtils.PI2)
         world.entity {
-            it += PositionComponent().apply { pos.set(spawnX, spawnY) }
-            it += VelocityComponent().apply { acceleration = 200f + (tier * 20f); friction = 1.0f }
-            it += OrientationComponent()
-            it += HealthComponent(current = 20f * tier, max = 20f * tier)
-            it += EnemyComponent(type = type)
-            it += WeaponComponent(cooldown = 1.5f, barrels = 1)
+            it += PositionComponent().apply { pos.set(camera.position.x + MathUtils.cos(angle) * spawnRadius, camera.position.y + MathUtils.sin(angle) * spawnRadius) }
+            it += VelocityComponent().apply { acceleration = 20f + (tier * 2f); friction = 1.0f }
+            it += OrientationComponent(); it += HealthComponent(current = 20f * tier, max = 20f * tier)
+            it += EnemyComponent(type = type); it += WeaponComponent(cooldown = 1.5f, barrels = 1)
+
+            // VAST ENEMY WAKE (v3.1.5): 128 segments, width = hullSize * 0.8
+            val hullSize = ProceduralShipDrawer.getShipSize(tier, 1)
+            it += TrailComponent(color = Color.RED.cpy(), maxLength = 32, width = hullSize * 0.4f)
+
+            it += TacticalStatsComponent(attackDistance = 50f, maxSpeed = 40f + (tier * 5f), fireRateMult = if (tier == 1) 0.3f else 0.6f + (tier * 0.05f))
             it += WeaponModuleComponent(name = "$type Cannon", projectileTier = tier)
             it += VisibleComponent()
         }
     }
 
     private fun spawnStation(tier: Int, name: String) {
-        val playerPos = world.family { all(PlayerComponent) }.first()[PositionComponent].pos
-        val angle = MathUtils.random(0f, MathUtils.PI2)
-        val dist = 1500f
+        val player = world.family { all(PlayerComponent) }.firstOrNull() ?: return
+        val angle = MathUtils.random(0f, MathUtils.PI2); val dist = MathUtils.random(341f, 512f)
         world.entity {
-            it += PositionComponent().apply { pos.set(playerPos.x + MathUtils.cos(angle) * dist, playerPos.y + MathUtils.sin(angle) * dist) }
-            it += StationComponent(name = "$name ${MathUtils.random(100, 999)}", radius = 200f)
-            it += MarketComponent().apply {
-                for (i in 0 until 3) weaponOffers.add(ModuleGenerator.generateWeapon(tier))
-            }
+            it += PositionComponent().apply { pos.set(player[PositionComponent].pos.x + MathUtils.cos(angle) * dist, player[PositionComponent].pos.y + MathUtils.sin(angle) * dist) }
+            it += StationComponent(name = "$name ${MathUtils.random(100, 999)}", radius = 20f)
+            it += TacticalStatsComponent(attackDistance = 0f, engagementAlpha = 0.7f)
+            it += MarketComponent().apply { for (i in 0 until 3) weaponOffers.add(ModuleGenerator.generateWeapon(tier)) }
         }
     }
 }

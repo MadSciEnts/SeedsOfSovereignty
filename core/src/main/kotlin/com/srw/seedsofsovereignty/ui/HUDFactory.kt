@@ -14,11 +14,11 @@ import com.srw.seedsofsovereignty.component.*
 import com.srw.seedsofsovereignty.manager.SectorManager
 
 /**
- * High-fidelity HUD Factory (v2.4.5).
+ * High-fidelity HUD Factory (v2.4.6).
  * ROLE: Primary Spawner for Diegetic AR HUD Entities.
  *
  * FIXES:
- * 1. [CRASH] - Physically registered missing TouchpadStyles (aim, drone-mode).
+ * 1. [HUD] - Purged placeholder blueprint square in favor of VitalsClusterWidget.
  */
 object HUDFactory {
     fun createSkin(styleId: String = "INDUSTRIAL"): Skin {
@@ -82,12 +82,7 @@ object HUDFactory {
     }
 
     fun createPermanentHUDEntities(world: World, player: Entity) {
-        with(world) {
-            entity {
-                it += HUDElementComponent(space = HUDSpace.SCREEN, anchor = HUDAnchor.TOP_LEFT, offsetX = 100f, offsetY = -100f, width = 40f, height = 40f, zIndex = 10)
-                it += HUDRendererComponent(renderType = HUDRenderType.BLUEPRINT, styleId = "CORE_YELLOW", isVisible = true)
-            }
-        }
+        // Purged placeholder square.
     }
 
     fun createInstrumentEntities(world: World, player: Entity, schema: TacticalSchema) {

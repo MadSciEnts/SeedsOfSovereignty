@@ -1,36 +1,25 @@
-# MISSION COORDINATOR PROTOCOL (v0.8.0)
+# MISSION COORDINATOR PROTOCOL (v0.9.1)
 
 ## 1. THE PRESERVATION MANDATE (CRITICAL)
 - **DO NOT ALTER ARCHITECTURAL ANNOTATIONS.** 
-- Any comment block starting with `Technical Specification` or `ARCHITECTURAL WARNING` is a permanent Lead Architect mandate.
-
-## 2. SURGICAL WORKFLOW
-1. Formulate precise code instructions based on T1 ARCHITECT directives.
-2. Write instructions to `OB_SURGICAL_IMPLEMENTER.md`.
-3. Provide the handoff prompt to the Developer.
-4. Perform a Rule #12 audit (`read_file`) after completion.
 
 ---
 
-# CURRENT MISSION: Phase 21.0 - Diegetic Engine Stabilization (v2.3.7)
+# CURRENT MISSION: Phase 23.2 - Projectile Genesis & Material Physics (v3.0.0)
 **Status:** [ 0 / 3 : INITIALIZING ] - Consensus Reached at High Table.
 
-## STEP 1: CALIBRATE UNIT PROJECTION (PPM)
-**File:** `core/src/main/kotlin/com/srw/seedsofsovereignty/system/UISystems.kt`
-- Define `const val DIEGETIC_PPM = 12.0f`.
-- Refactor `DiegeticHUDSystem` to scale world-offsets by this constant before screen mapping.
-- Align `RadarRenderSystem` to the same scale.
+## STEP 1: IMPLEMENT MASS-BASED FIRING
+**File:** `core/src/main/kotlin/com/srw/seedsofsovereignty/system/CombatSystems.kt`
+- Update `WeaponSystem` to assign `mass` and `velocity` based on `ProjectileType`:
+    - KINETIC: [1.0, 1.0], ION: [2.0, 0.5], PHOTON: [5.0, 0.01], PLASMA: [0.4, 4.0].
+- Ensure `ProjectileComponent` is correctly initialized with the `type` from the module.
 
-## STEP 2: HARDEN SENSOR LIFECYCLE (STATE-SYNC)
-**File:** `core/src/main/kotlin/com/srw/seedsofsovereignty/system/SensorSystems.kt`
-- **STOP** the frame-by-frame clear/respawn cycle.
-- Implement a persistent `Map<Entity, Entity>` to sync world targets to their AR markers.
-- Only create/destroy markers when an entity enters/leaves sensor range.
+## STEP 2: IMPLEMENT KNOCKBACK & CCD
+**File:** `core/src/main/kotlin/com/srw/seedsofsovereignty/system/CombatSystems.kt`
+- In `resolveHit`, apply velocity impulse to targets: `target.vel += (proj.vel.nor() * (proj.mass * 2.0f))`.
+- Validate the 2-step Sub-Frame collision scan to prevent "Photon Tunneling."
 
-## STEP 3: RESTORE FLEET VISIBILITY
-**File:** `core/src/main/kotlin/com/srw/seedsofsovereignty/system/SensorSystems.kt`
-- Ensure the `VisibleComponent` is correctly attached to detected entities to allow the `EntityRenderSystem` to draw them.
-
-## STEP 4: APPLY Z-INDEX DEPTH STACK
-**Target:** All HUD creation calls in `HUDFactory` and `SensorSystems`.
-- Ships: 0, Tethers: 1, Labels: 2, Static HUD: 3.
+## STEP 3: INITIALIZE RIBBON PIPELINE
+**File:** `core/src/main/kotlin/com/srw/seedsofsovereignty/system/CombatSystems.kt`
+- Initialize `history` buffer in projectiles for future Ribbon Trail rendering.
+- Apply `LifeSpan` variants: PHOTON (0.2s), KINETIC (1.5s), PLASMA (4.0s).
