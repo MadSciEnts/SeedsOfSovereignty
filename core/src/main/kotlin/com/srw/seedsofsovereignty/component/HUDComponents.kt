@@ -20,10 +20,11 @@ enum class HUDLineStyle { SOLID, DASHED, PULSING }
 enum class HUDLayer { FLIGHT, MARKET, MAP, SYSTEM, VFX }
 
 /**
- * Technical Specification: HUDComponents (v1.4.0)
+ * Technical Specification: HUDComponents (v1.5.0)
  * v1.2.0: Added HUDTagComponent for dynamic lifecycle management.
  * v1.3.0: Added HUDInstrumentTag for specific instrument cleanup.
  * v1.4.0: Added ReticleLayerComponent and TargetCategory (Phase 23.1).
+ * v1.5.0: Verified pivot and parenting support for hierarchical UI (Phase 25.5).
  */
 data class HUDElementComponent(
     var space: HUDSpace = HUDSpace.SCREEN,

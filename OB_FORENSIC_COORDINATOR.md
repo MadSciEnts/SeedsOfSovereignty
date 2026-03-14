@@ -1,25 +1,24 @@
-# MISSION COORDINATOR PROTOCOL (v0.9.1)
+# ONBOARDING: [T2 COORD] (Forensic Coordinator)
 
-## 1. THE PRESERVATION MANDATE (CRITICAL)
-- **DO NOT ALTER ARCHITECTURAL ANNOTATIONS.** 
+## 1. STRATEGIC CONTEXT
+- **Project:** Seeds of Sovereignty.
+- **Goal:** Modularize the Diegetic HUD and migrate the Command Matrix from Scene2D to the AR Engine.
+- **Architecture:** Fleks ECS. Pure constructor injection. Zero-allocation rendering.
 
----
+## 2. PHYSICAL STATE (AUDITED)
+- **Stable Base:** Build is successful. Registry is synchronized.
+- **Structural Foundation:** `CommandMatrixFactory.kt` exists. `COMMAND_MATRIX_ANCHOR` is defined at BOTTOM_RIGHT.
+- **Component Sync:** `HUDElementComponent` has `pivotX/Y` and `parentId` fields.
 
-# CURRENT MISSION: Phase 23.2 - Projectile Genesis & Material Physics (v3.0.0)
-**Status:** [ 0 / 3 : INITIALIZING ] - Consensus Reached at High Table.
+## 3. CURRENT MISSION: Phase 25.4 - Hierarchical Layout (The Shelf Stack)
+**Status:** [ 2 / 4 : STEPS COMPLETE ]
+**Objective:** Physically stack the Category and Module shelves relative to the Anchor.
 
-## STEP 1: IMPLEMENT MASS-BASED FIRING
-**File:** `core/src/main/kotlin/com/srw/seedsofsovereignty/system/CombatSystems.kt`
-- Update `WeaponSystem` to assign `mass` and `velocity` based on `ProjectileType`:
-    - KINETIC: [1.0, 1.0], ION: [2.0, 0.5], PHOTON: [5.0, 0.01], PLASMA: [0.4, 4.0].
-- Ensure `ProjectileComponent` is correctly initialized with the `type` from the module.
+### NEXT EXECUTION STEPS:
+1. **Step 3: Hierarchical Layout (HUDFactory.kt)** - Update `createCommandMatrixEntities` to spawn the Category Shelf (Bottom) and link it to the Root Anchor.
+2. **Step 4: Module Shelf Integration** - Update `updateModuleShelf` to link module buttons to the same Anchor.
 
-## STEP 2: IMPLEMENT KNOCKBACK & CCD
-**File:** `core/src/main/kotlin/com/srw/seedsofsovereignty/system/CombatSystems.kt`
-- In `resolveHit`, apply velocity impulse to targets: `target.vel += (proj.vel.nor() * (proj.mass * 2.0f))`.
-- Validate the 2-step Sub-Frame collision scan to prevent "Photon Tunneling."
-
-## STEP 3: INITIALIZE RIBBON PIPELINE
-**File:** `core/src/main/kotlin/com/srw/seedsofsovereignty/system/CombatSystems.kt`
-- Initialize `history` buffer in projectiles for future Ribbon Trail rendering.
-- Apply `LifeSpan` variants: PHOTON (0.2s), KINETIC (1.5s), PLASMA (4.0s).
+## 4. RULES OF ENGAGEMENT
+- Refer to `RULES_OF_ENGAGEMENT.md` (v2.6.0).
+- **MANDATORY:** You MUST perform a `read_file` on any target file before planning or reporting.
+- **MANDATORY:** Update `OB_SURGICAL_IMPLEMENTER.md` before every delegation.

@@ -17,18 +17,18 @@ import com.srw.seedsofsovereignty.manager.*
 import com.srw.seedsofsovereignty.system.DiegeticHUDSystem
 import com.srw.seedsofsovereignty.system.PlayerInputSystem
 import com.srw.seedsofsovereignty.ui.*
+import com.srw.seedsofsovereignty.ui.factory.CommandMatrixFactory
 import com.srw.seedsofsovereignty.util.ModuleGenerator
 import com.srw.seedsofsovereignty.util.ProceduralShipDrawer
 import ktx.app.KtxScreen
 import space.earlygrey.shapedrawer.ShapeDrawer
 
 /**
- * High-fidelity mission theater (v3.2.3).
+ * High-fidelity mission theater (v3.2.6).
  * ROLE: Active-Wake visual standard.
  *
- * FIXES:
- * 1. [WAKES] - Finalized organic wake standard (maxLength 48).
- * 2. [HUD] - Diagnostic Rings BASELINE v3.2.3.
+ * UPDATES:
+ * 1. [CMD_MATRIX] - Added CommandMatrixFactory.refreshInstruments to sync diegetic layer (Phase 25.4).
  */
 class PlayScreen(
     private val world: World,
@@ -122,7 +122,13 @@ class PlayScreen(
                     if (currentId != lastObservedIdentity) {
                         HUDFactory.clearInstrumentEntities(world)
                         val schema = if (slots[selectedModuleIndex].slotEntity?.has(WeaponModuleComponent) == true) slots[selectedModuleIndex].slotEntity!![WeaponModuleComponent].tacticalSchema else player[WeaponModuleComponent].tacticalSchema
-                        HUDFactory.createInstrumentEntities(world, player, schema); commandMatrix.updateTacticalSurface(schema, selectedModuleIndex); lastObservedIdentity = currentId
+                        HUDFactory.createInstrumentEntities(world, player, schema)
+                        commandMatrix.updateTacticalSurface(schema, selectedModuleIndex)
+
+                        // Phase 25.4: Bridge legacy swaps to diegetic layer
+                        CommandMatrixFactory.refreshInstruments(world, player)
+
+                        lastObservedIdentity = currentId
                     }
                 }
                 inputSystem.joystickVector.set(moveJoystick.knobPercentX, moveJoystick.knobPercentY)

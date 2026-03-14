@@ -62,16 +62,6 @@ class DroneRegenSystem : IteratingSystem(family { all(DroneLauncherComponent, Dr
     }
 }
 
-/**
- * Technical Specification: DroneFormationSystem (v0.7.3)
- * ROLE: Advanced Organic Fleet Movement.
- *
- * DESIGN PRINCIPLES:
- * 1. [THE ELLIPTICAL PHALANX] - Drones transition from circular to elliptical orbits
- *    based on tactical distance (pushMag).
- * 2. [SQUISH LOGIC] - High-distance orbits favor angular coverage over radial depth.
- * 3. [DIRECTIONAL BIAS] - Squish is always perpendicular to the vector from mother ship.
- */
 class DroneFormationSystem(
     private val camera: OrthographicCamera
 ) : IteratingSystem(family {
@@ -81,6 +71,8 @@ class DroneFormationSystem(
     private val targetPos = Vector2()
     private val steerForce = Vector2()
     private val rotatedOffset = Vector2()
+    private val loiterOffset = Vector2()
+    private val combinedOffset = Vector2()
     private val orbitComponent = Vector2()
     private var globalOrbitBase = 0f
 
@@ -104,11 +96,20 @@ class DroneFormationSystem(
 
         var localizationMode = FleetCommandComponent.LocalizationMode.CAMERA
         rotatedOffset.set(0f, 0f)
+        loiterOffset.set(0f, 0f)
 
         if (owner.has(TacticalHubComponent)) {
             val hub = owner[TacticalHubComponent]
             val slotIdx = drone.slotIndex
+
             hub.vectors["DRONE_MOVE_$slotIdx"]?.let { rotatedOffset.set(it).scl(150f) }
+
+            // Phase 26.2 FIX: Use correct field 'tacticalPivots' and loiterRadius
+            val loiterRadius = 10f
+            hub.tacticalPivots["DRONE_TARGET_PAD"]?.let {
+                loiterOffset.set(it).scl(loiterRadius)
+            }
+
             val modeSignal = hub.signals["DRONE_MODE_SIGNAL_$slotIdx"]?.value ?: 0f
             localizationMode = if (modeSignal == 1f) FleetCommandComponent.LocalizationMode.SHIP else FleetCommandComponent.LocalizationMode.CAMERA
         }
@@ -118,31 +119,25 @@ class DroneFormationSystem(
             rotatedOffset.rotateRad(shipAngle - MathUtils.PI / 2f)
         }
 
-        val pushMag = rotatedOffset.len() / 150f
+        combinedOffset.set(rotatedOffset).add(loiterOffset)
+
+        val pushMag = combinedOffset.len() / 150f
         val ownerPos = owner[PositionComponent].pos
         val droneIndex = entity.id % 8
         val orbitAngle = globalOrbitBase + (droneIndex * MathUtils.PI2 / 8f)
 
-        // [ORGANIC ELLIPSE LOGIC] (v0.7.3)
-        // 1. Calculate base circular components
         orbitComponent.set(MathUtils.cos(orbitAngle), MathUtils.sin(orbitAngle))
-
-        // 2. Apply "Squish" scaling based on pushMag
-        // As pushMag -> 1.0, the X-axis (radial) is squished, while Y-axis (angular) is maintained.
-        // We rotate the orbit relative to the directive vector so the "flat" side faces the ship.
         val radialSquish = (1f - pushMag * 0.7f).coerceIn(0.3f, 1.0f)
         val angularSpread = (1f + pushMag * 0.3f).coerceIn(1.0f, 1.3f)
-
         orbitComponent.x *= radialSquish
         orbitComponent.y *= angularSpread
 
-        // 3. Align the ellipse to the direction of the command vector
-        if (rotatedOffset.len2() > 0.1f) {
-            orbitComponent.rotateRad(rotatedOffset.angleRad())
+        if (combinedOffset.len2() > 0.1f) {
+            orbitComponent.rotateRad(combinedOffset.angleRad())
         }
 
         targetPos.set(ownerPos)
-            .add(rotatedOffset)
+            .add(combinedOffset)
             .add(orbitComponent.scl(drone.orbitRadius))
 
         steerForce.set(targetPos).sub(pos).scl(5f)

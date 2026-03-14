@@ -1,0 +1,26 @@
+[T3 SURGICAL] LOG INITIALIZED.
+PHASE 25.4 - Command Matrix Structural Setup
+ACTION: Refactoring UISystems.kt for hierarchical layout. [COMPLETED]
+ACTION: Updating CommandMatrixFactory.kt with root recalibration and category shelf. [COMPLETED]
+---
+PHASE 25.4 - STEP 4: LIVE-WIRING & INTERACTION
+ACTION: Initialize Command Matrix in HUDFactory.kt [COMPLETED]
+ACTION: Implement handleTouch in UISystems.kt [COMPLETED]
+ACTION: Verify visibility in CommandMatrixFactory.kt [COMPLETED]
+---
+PHASE 25.4 - STEP 2: DYNAMIC REFRESH
+ACTION: Finalize Interaction Routing in DiegeticInteractionSystem.kt [COMPLETED]
+ACTION: Implement Refresh Logic in CommandMatrixFactory.kt [COMPLETED]
+---
+PHASE 25.4 - INITIALIZATION & SYNC
+ACTION: Populate initial state in HUDFactory.kt [COMPLETED]
+ACTION: Bridge legacy module swaps in PlayScreen.kt [COMPLETED]
+---
+PHASE 25.5 - Persistence Bridge Implementation
+ACTION: Upgrade TacticalHubComponent.kt with persistentVectors. [COMPLETED]
+ACTION: Implement Sticky Input Logic in DiegeticInteractionSystem.kt. [COMPLETED]
+---
+STATUS: VERIFIED
+TASK 1: persistentVectors added to TacticalHubComponent. reset() calibrated to preserve persistence.
+TASK 2: processDiegeticHit updated to detect STICKY_ prefix and log detection.
+VERIFICATION: analyze_current_file confirms no compilation errors in Hub or System.

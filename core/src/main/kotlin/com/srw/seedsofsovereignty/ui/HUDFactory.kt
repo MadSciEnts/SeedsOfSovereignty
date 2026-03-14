@@ -12,13 +12,16 @@ import com.badlogic.gdx.scenes.scene2d.utils.Drawable
 import com.github.quillraven.fleks.*
 import com.srw.seedsofsovereignty.component.*
 import com.srw.seedsofsovereignty.manager.SectorManager
+import com.srw.seedsofsovereignty.ui.factory.CommandMatrixFactory
 
 /**
- * High-fidelity HUD Factory (v2.4.6).
+ * High-fidelity HUD Factory (v2.7.0).
  * ROLE: Primary Spawner for Diegetic AR HUD Entities.
  *
- * FIXES:
- * 1. [HUD] - Purged placeholder blueprint square in favor of VitalsClusterWidget.
+ * UPDATES:
+ * 1. [CMD_MATRIX] - Initializing Command Matrix hierarchy in createPermanentHUDEntities.
+ * 2. [PARENTING] - Added defaultParent support to createInstrumentEntities (Phase 25.4).
+ * 3. [INITIAL_STATE] - Added refresh calls for starting loadout (Phase 25.4).
  */
 object HUDFactory {
     fun createSkin(styleId: String = "INDUSTRIAL"): Skin {
@@ -82,14 +85,19 @@ object HUDFactory {
     }
 
     fun createPermanentHUDEntities(world: World, player: Entity) {
-        // Purged placeholder square.
+        val rootAnchor = CommandMatrixFactory.createRootAnchor(world)
+        CommandMatrixFactory.createCategoryShelf(world, rootAnchor)
+
+        // Phase 25.4: Populate initial state
+        CommandMatrixFactory.refreshModuleShelf(world, player)
+        CommandMatrixFactory.refreshInstruments(world, player)
     }
 
-    fun createInstrumentEntities(world: World, player: Entity, schema: TacticalSchema) {
+    fun createInstrumentEntities(world: World, player: Entity, schema: TacticalSchema, defaultParent: Entity? = null) {
         val channelToEntity = mutableMapOf<String, Entity>()
         with(world) {
             schema.inputs.forEach { channel ->
-                val pIdLocal = channel.relativeTo?.let { channelToEntity[it] }
+                val pIdLocal = channel.relativeTo?.let { channelToEntity[it] } ?: defaultParent
 
                 val hudEntity = entity {
                     it += HUDInstrumentTag(); it += HUDTagComponent(ownerId = "TACTICAL")
