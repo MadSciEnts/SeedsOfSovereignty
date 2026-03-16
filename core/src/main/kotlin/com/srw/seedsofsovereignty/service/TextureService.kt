@@ -6,6 +6,8 @@ import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.NinePatch
 import com.badlogic.gdx.graphics.g2d.TextureRegion
+import com.badlogic.gdx.scenes.scene2d.ui.Label
+import com.badlogic.gdx.scenes.scene2d.ui.ProgressBar
 import com.badlogic.gdx.scenes.scene2d.ui.Skin
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton
 import com.badlogic.gdx.scenes.scene2d.ui.Touchpad
@@ -60,7 +62,6 @@ class TextureService : Disposable {
         val edge = 4
         val patchPixmap = Pixmap(patchSize, patchSize, Pixmap.Format.RGBA8888)
 
-        // Base Button Up (White frame, we will tint it)
         patchPixmap.setColor(0f, 0f, 0f, 0f); patchPixmap.fill()
         patchPixmap.setColor(Color(0.1f, 0.1f, 0.1f, 0.8f))
         patchPixmap.fillRectangle(1, 1, patchSize - 2, patchSize - 2)
@@ -71,7 +72,6 @@ class TextureService : Disposable {
         val upPatch = NinePatchDrawable(NinePatch(upTex, edge, edge, edge, edge))
         uiSkin.add("btn_up", upPatch, Drawable::class.java)
 
-        // Base Button Down
         patchPixmap.setColor(0f, 0f, 0f, 0f); patchPixmap.fill()
         patchPixmap.setColor(Color(0.5f, 0.5f, 0.5f, 0.9f))
         patchPixmap.fillRectangle(1, 1, patchSize - 2, patchSize - 2)
@@ -82,7 +82,6 @@ class TextureService : Disposable {
         val downPatch = NinePatchDrawable(NinePatch(downTex, edge, edge, edge, edge))
         uiSkin.add("btn_down", downPatch, Drawable::class.java)
 
-        // Panel Background
         patchPixmap.setColor(0f, 0f, 0f, 0f); patchPixmap.fill()
         patchPixmap.setColor(Color(0f, 0f, 0f, 0.6f))
         patchPixmap.fillRectangle(1, 1, patchSize - 2, patchSize - 2)
@@ -95,23 +94,27 @@ class TextureService : Disposable {
 
         patchPixmap.dispose()
 
-        // 4. Baking Styles
-        // Create a larger font (scale 2x)
-        val font = BitmapFont().apply {
-            data.setScale(2f)
-        }
-        uiSkin.add("default-font", font)
+        // 4. Baking Styles (Ensuring definitive order)
+        val mainFont = BitmapFont().apply { data.setScale(2f) }
+        val smallFont = BitmapFont().apply { data.setScale(1f) }
+        uiSkin.add("default-font", mainFont, BitmapFont::class.java)
+        uiSkin.add("small-font", smallFont, BitmapFont::class.java)
+
+        uiSkin.add("default", Label.LabelStyle(mainFont, Color.WHITE))
+        uiSkin.add("small", Label.LabelStyle(smallFont, Color.LIGHT_GRAY))
+
         uiSkin.add("default", Touchpad.TouchpadStyle(joystickBg, joystickKnob))
+        uiSkin.add("default", TextButton.TextButtonStyle(upPatch, downPatch, upPatch, mainFont))
 
-        // Default style
-        uiSkin.add("default", TextButton.TextButtonStyle(upPatch, downPatch, upPatch, font))
+        val progressBg = upPatch.tint(Color.DARK_GRAY)
+        val progressFill = upPatch.tint(Color.CYAN)
+        uiSkin.add("default-horizontal", ProgressBar.ProgressBarStyle(progressBg, progressFill))
 
-        // Category Specific Styles (Color Coded)
         ModuleCategory.entries.forEach { cat ->
             val color = getCategoryColor(cat)
             val tintedUp = upPatch.tint(color)
             val tintedDown = downPatch.tint(color)
-            uiSkin.add(cat.name.lowercase(), TextButton.TextButtonStyle(tintedUp, tintedDown, tintedUp, font))
+            uiSkin.add(cat.name.lowercase(), TextButton.TextButtonStyle(tintedUp, tintedDown, tintedUp, mainFont))
         }
     }
 

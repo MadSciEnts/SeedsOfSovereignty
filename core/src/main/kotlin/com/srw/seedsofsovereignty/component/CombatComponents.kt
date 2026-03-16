@@ -21,8 +21,57 @@ data class WeaponModuleComponent(
     companion object : ComponentType<WeaponModuleComponent>()
 }
 
-// Tag for projectiles
-class ProjectileComponent : Component<ProjectileComponent> {
+/**
+ * DATA CHANNELS: Standardizes communication between the Command Matrix (UI)
+ * and the Fleks Systems (Logic).
+ */
+
+data class InputChannelData(
+    var vector: Vector2 = Vector2(),
+    var value: Float = 0f,
+    var triggered: Boolean = false
+)
+
+data class OutputChannelData(
+    var status: Float = 0f,         // e.g., Heat, Charge, Ammo %
+    var active: Boolean = false,
+    var message: String = ""
+)
+
+data class ModuleChannelsComponent(
+    val type: ModuleType,
+    val inputs: MutableMap<String, InputChannelData> = mutableMapOf(),
+    val outputs: MutableMap<String, OutputChannelData> = mutableMapOf()
+) : Component<ModuleChannelsComponent> {
+    override fun type() = ModuleChannelsComponent
+    companion object : ComponentType<ModuleChannelsComponent>()
+}
+
+/**
+ * PAYLOADS: The "Required Data" for what a module actually produces.
+ */
+
+data class ProjectileBlueprint(
+    val type: ProjectileType,
+    val damage: Float,
+    val speed: Float,
+    val lifeTime: Float = 2f,
+    val color: com.badlogic.gdx.graphics.Color = com.badlogic.gdx.graphics.Color.WHITE
+)
+
+enum class ProjectileType { KINETIC, ENERGY, TORPEDO }
+
+data class ProjectilePayloadComponent(
+    val blueprint: ProjectileBlueprint
+) : Component<ProjectilePayloadComponent> {
+    override fun type() = ProjectilePayloadComponent
+    companion object : ComponentType<ProjectilePayloadComponent>()
+}
+
+// Tag and state for projectiles in flight
+data class ProjectileComponent(
+    var lifeTime: Float = 0f
+) : Component<ProjectileComponent> {
     override fun type() = ProjectileComponent
     companion object : ComponentType<ProjectileComponent>()
 }

@@ -1,16 +1,21 @@
 # DEVELOPMENT PROGRESS LOG
 
-## Current Milestone: Project Initialization
+## Current Milestone: Tier 1 Systems Integration
 - [x] GDX-Liftoff Setup
-- [x] Knowledge Base Created (28 files)
-- [x] Modular ECS Architecture (Fleks 2.x Patterns Codified)
-- [x] Tier 1 Pilot Movement Logic (Ready for Render)
-- [ ] Tier 1 Tactical HUD (Pending Render)
-- [ ] Tier 1 Radar System (Pending Render)
-- [ ] Procedural Starfield Shader (Pending)
+- [x] Knowledge Base Created (29 files)
+- [x] Modular ECS Architecture (Fleks 2.x)
+- [x] Starfield Parallax (Noise-based, Natural)
+- [x] Tier 1 Pilot Movement (Joystick 1/3 height)
+- [x] Tier 1 Visuals (1/100th Scale, Rotating Chassis)
+- [x] Command Matrix: Selection Shelf Logic (Modularized)
+- [x] Command Matrix: Data Bridge & Dynamic Widgets
+- [x] Sequential Firing System (Integrated)
+- [x] Projectile Lifecycle: Factory & Lifetime System
+- [x] Command Matrix: High-Fidelity Layouts & Visual Feedback
+- [ ] Command Matrix: Group Control Logic (Pending)
 
 ## Current Global Stats
 - **Active Tier:** 1/48
 - **Active Epoch:** 1/4
 - **Build Version:** 0.0.1 (Pre-Alpha)
-- **ECS Stability:** 100% (Clean Modular Build)
+- **ECS Stability:** 100% (Build Verified)
