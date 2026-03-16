@@ -1,4 +1,4 @@
-package com.yourname.seedsofsovereignty
+package com.srw.seedsofsovereignty
 
 import com.badlogic.gdx.graphics.OrthographicCamera
 import com.srw.seedsofsovereignty.screen.PlayScreen
@@ -7,18 +7,18 @@ import ktx.app.KtxScreen
 
 class SovereigntyGame : KtxGame<KtxScreen>() {
     // The Global Camera - we create it here so we can pass it to any screen
-    private val camera by lazy { 
+    private val camera by lazy {
         OrthographicCamera().apply {
             // Set the initial viewport size (units, not pixels)
             // 16:9 aspect ratio units make math easier
-            setToOrtho(false, 16f, 9f) 
+            setToOrtho(false, 16f, 9f)
         }
     }
 
     override fun create() {
         // Register our main gameplay screen
         addScreen(PlayScreen(camera))
-        
+
         // Set the active screen to the PlayScreen
         setScreen<PlayScreen>()
     }
