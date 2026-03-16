@@ -2,11 +2,15 @@
 
 ## Current Milestone: Project Initialization
 - [x] GDX-Liftoff Setup
-- [x] Knowledge Base Created (25 files)
-- [ ] Tier 1 Pilot Movement System (Pending)
+- [x] Knowledge Base Created (28 files)
+- [x] Modular ECS Architecture (Fleks 2.x Patterns Codified)
+- [x] Tier 1 Pilot Movement Logic (Ready for Render)
+- [ ] Tier 1 Tactical HUD (Pending Render)
+- [ ] Tier 1 Radar System (Pending Render)
 - [ ] Procedural Starfield Shader (Pending)
 
 ## Current Global Stats
-- **Active Tier:** 0/48
-- **Active Epoch:** 0/4
+- **Active Tier:** 1/48
+- **Active Epoch:** 1/4
 - **Build Version:** 0.0.1 (Pre-Alpha)
+- **ECS Stability:** 100% (Clean Modular Build)
