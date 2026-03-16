@@ -3,40 +3,103 @@ package com.srw.seedsofsovereignty.service
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
+import com.badlogic.gdx.graphics.g2d.BitmapFont
+import com.badlogic.gdx.graphics.g2d.NinePatch
 import com.badlogic.gdx.graphics.g2d.TextureRegion
+import com.badlogic.gdx.scenes.scene2d.ui.Skin
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton
+import com.badlogic.gdx.scenes.scene2d.ui.Touchpad
+import com.badlogic.gdx.scenes.scene2d.utils.Drawable
+import com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable
+import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable
 import com.badlogic.gdx.utils.Disposable
 
 /**
- * Service for generating and caching procedural textures.
+ * TEXTURE SERVICE: The procedural asset factory.
+ * Handles Pixmap generation, NinePatch creation, and Skin baking.
  */
 class TextureService : Disposable {
-    private val textureCache = mutableMapOf<String, TextureRegion>()
     private val texturesToDispose = mutableListOf<Texture>()
+    val uiSkin = Skin()
 
-    /**
-     * Returns a 1x1 white pixel texture region, essential for ShapeDrawer.
-     */
-    val whitePixel: TextureRegion by lazy {
-        getOrCreate("white_pixel") {
-            val pixmap = Pixmap(1, 1, Pixmap.Format.RGBA8888)
-            pixmap.setColor(Color.WHITE)
-            pixmap.fill()
-            val texture = Texture(pixmap)
-            pixmap.dispose()
-            TextureRegion(texture)
-        }
+    init {
+        bakeInitialSkin()
     }
 
-    private fun getOrCreate(key: String, factory: () -> TextureRegion): TextureRegion {
-        return textureCache.getOrPut(key) {
-            val region = factory()
-            texturesToDispose.add(region.texture)
-            region
-        }
+    private fun bakeInitialSkin() {
+        // 1. White Pixel for backgrounds
+        val whitePixmap = Pixmap(1, 1, Pixmap.Format.RGBA8888)
+        whitePixmap.setColor(Color.WHITE)
+        whitePixmap.fill()
+        val whiteTex = Texture(whitePixmap)
+        texturesToDispose.add(whiteTex)
+        uiSkin.add("white", TextureRegion(whiteTex))
+        whitePixmap.dispose()
+
+        // 2. Joystick Resources
+        val joystickPixmap = Pixmap(100, 100, Pixmap.Format.RGBA8888)
+        joystickPixmap.setColor(Color(1f, 1f, 1f, 0.15f))
+        joystickPixmap.fillCircle(50, 50, 50)
+        val bgTex = Texture(joystickPixmap)
+        texturesToDispose.add(bgTex)
+        uiSkin.add("joystick_bg", TextureRegionDrawable(TextureRegion(bgTex)), Drawable::class.java)
+
+        joystickPixmap.setColor(0f, 0f, 0f, 0f); joystickPixmap.fill()
+        joystickPixmap.setColor(Color(0.2f, 0.8f, 1f, 0.6f))
+        joystickPixmap.fillCircle(50, 50, 25)
+        val knobTex = Texture(joystickPixmap)
+        texturesToDispose.add(knobTex)
+        uiSkin.add("joystick_knob", TextureRegionDrawable(TextureRegion(knobTex)), Drawable::class.java)
+        joystickPixmap.dispose()
+
+        // 3. NinePatch Buttons (Aperture Style)
+        val patchSize = 12
+        val edge = 4
+        val patchPixmap = Pixmap(patchSize, patchSize, Pixmap.Format.RGBA8888)
+
+        // Button Up (Cyan frame)
+        patchPixmap.setColor(0f, 0f, 0f, 0f); patchPixmap.fill()
+        patchPixmap.setColor(Color(0.1f, 0.1f, 0.1f, 0.8f))
+        patchPixmap.fillRectangle(1, 1, patchSize - 2, patchSize - 2)
+        patchPixmap.setColor(Color.CYAN)
+        patchPixmap.drawRectangle(0, 0, patchSize, patchSize)
+        val upTex = Texture(patchPixmap)
+        texturesToDispose.add(upTex)
+        uiSkin.add("btn_up", NinePatchDrawable(NinePatch(upTex, edge, edge, edge, edge)), Drawable::class.java)
+
+        // Button Down (White highlight)
+        patchPixmap.setColor(0f, 0f, 0f, 0f); patchPixmap.fill()
+        patchPixmap.setColor(Color(0.3f, 0.3f, 0.3f, 0.9f))
+        patchPixmap.fillRectangle(1, 1, patchSize - 2, patchSize - 2)
+        patchPixmap.setColor(Color.WHITE)
+        patchPixmap.drawRectangle(0, 0, patchSize, patchSize)
+        val downTex = Texture(patchPixmap)
+        texturesToDispose.add(downTex)
+        uiSkin.add("btn_down", NinePatchDrawable(NinePatch(downTex, edge, edge, edge, edge)), Drawable::class.java)
+
+        // Panel Background (Grey frame)
+        patchPixmap.setColor(0f, 0f, 0f, 0f); patchPixmap.fill()
+        patchPixmap.setColor(Color(0f, 0f, 0f, 0.6f))
+        patchPixmap.fillRectangle(1, 1, patchSize - 2, patchSize - 2)
+        patchPixmap.setColor(Color.DARK_GRAY)
+        patchPixmap.drawRectangle(0, 0, patchSize, patchSize)
+        val panelTex = Texture(patchPixmap)
+        texturesToDispose.add(panelTex)
+        uiSkin.add("panel_bg", NinePatchDrawable(NinePatch(panelTex, edge, edge, edge, edge)), Drawable::class.java)
+
+        patchPixmap.dispose()
+
+        // 4. Baking Styles
+        val font = BitmapFont()
+        uiSkin.add("default-font", font)
+        uiSkin.add("default", Touchpad.TouchpadStyle(uiSkin.getDrawable("joystick_bg"), uiSkin.getDrawable("joystick_knob")))
+        uiSkin.add("default", TextButton.TextButtonStyle(uiSkin.getDrawable("btn_up"), uiSkin.getDrawable("btn_down"), uiSkin.getDrawable("btn_up"), font))
     }
+
+    val whitePixel: TextureRegion get() = uiSkin.getRegion("white")
 
     override fun dispose() {
         texturesToDispose.forEach { it.dispose() }
-        textureCache.clear()
+        uiSkin.dispose()
     }
 }

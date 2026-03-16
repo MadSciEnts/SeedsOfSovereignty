@@ -1,7 +1,6 @@
 package com.srw.seedsofsovereignty.system
 
 import com.badlogic.gdx.graphics.Color
-import com.badlogic.gdx.graphics.g2d.Batch
 import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.utils.viewport.Viewport
 import com.github.quillraven.fleks.Entity
@@ -15,7 +14,7 @@ import space.earlygrey.shapedrawer.ShapeDrawer
  * TACTICAL RENDER SYSTEM: Draws the Nautilus arcs in the top-left.
  */
 class TacticalRenderSystem(
-    private val drawer: ShapeDrawer = inject(),
+    private val drawer: ShapeDrawer = inject("drawer"),
     private val uiViewport: Viewport = inject("uiViewport")
 ) : IteratingSystem(
     family { all(PlayerComponent, ArcedDefenseComponent, PowerCoreComponent) }
@@ -69,7 +68,7 @@ class TacticalRenderSystem(
  * RADAR RENDER SYSTEM: Draws the scanning radar in the top-right.
  */
 class RadarRenderSystem(
-    private val drawer: ShapeDrawer = inject(),
+    private val drawer: ShapeDrawer = inject("drawer"),
     private val uiViewport: Viewport = inject("uiViewport")
 ) : IteratingSystem(
     family { all(RadarComponent) }
