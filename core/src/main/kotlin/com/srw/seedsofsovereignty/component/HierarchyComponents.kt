@@ -42,7 +42,18 @@ enum class ModuleCategory {
     PRIMARY, SECONDARY, TERTIARY, QUADRARY, SHIELDS, POWER, DRONES, FIGHTERS
 }
 
-// Tag for the module currently active in the Command Matrix
+/**
+ * CONTROL GROUPS: Allows multiple modules to be controlled as a single unit.
+ * Examples: All PRIMARY weapons fire together. TERTIARY grouped by Port/Starboard.
+ */
+data class ControlGroupComponent(
+    val name: String
+) : Component<ControlGroupComponent> {
+    override fun type() = ControlGroupComponent
+    companion object : ComponentType<ControlGroupComponent>()
+}
+
+// Tag for the module (or group of modules) currently active in the Command Matrix
 class SelectedModuleComponent : Component<SelectedModuleComponent> {
     override fun type() = SelectedModuleComponent
     companion object : ComponentType<SelectedModuleComponent>()

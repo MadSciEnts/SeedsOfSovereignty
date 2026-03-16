@@ -13,6 +13,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.Drawable
 import com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable
 import com.badlogic.gdx.utils.Disposable
+import com.srw.seedsofsovereignty.component.ModuleCategory
 
 /**
  * TEXTURE SERVICE: The procedural asset factory.
@@ -27,7 +28,7 @@ class TextureService : Disposable {
     }
 
     private fun bakeInitialSkin() {
-        // 1. White Pixel for backgrounds
+        // 1. Create a White 1x1 pixel for backgrounds
         val whitePixmap = Pixmap(1, 1, Pixmap.Format.RGBA8888)
         whitePixmap.setColor(Color.WHITE)
         whitePixmap.fill()
@@ -36,48 +37,52 @@ class TextureService : Disposable {
         uiSkin.add("white", TextureRegion(whiteTex))
         whitePixmap.dispose()
 
-        // 2. Joystick Resources
+        // 2. Create Joystick Textures
         val joystickPixmap = Pixmap(100, 100, Pixmap.Format.RGBA8888)
         joystickPixmap.setColor(Color(1f, 1f, 1f, 0.15f))
         joystickPixmap.fillCircle(50, 50, 50)
         val bgTex = Texture(joystickPixmap)
         texturesToDispose.add(bgTex)
-        uiSkin.add("joystick_bg", TextureRegionDrawable(TextureRegion(bgTex)), Drawable::class.java)
+        val joystickBg = TextureRegionDrawable(TextureRegion(bgTex))
+        uiSkin.add("joystick_bg", joystickBg, Drawable::class.java)
 
         joystickPixmap.setColor(0f, 0f, 0f, 0f); joystickPixmap.fill()
         joystickPixmap.setColor(Color(0.2f, 0.8f, 1f, 0.6f))
         joystickPixmap.fillCircle(50, 50, 25)
         val knobTex = Texture(joystickPixmap)
         texturesToDispose.add(knobTex)
-        uiSkin.add("joystick_knob", TextureRegionDrawable(TextureRegion(knobTex)), Drawable::class.java)
+        val joystickKnob = TextureRegionDrawable(TextureRegion(knobTex))
+        uiSkin.add("joystick_knob", joystickKnob, Drawable::class.java)
         joystickPixmap.dispose()
 
-        // 3. NinePatch Buttons (Aperture Style)
+        // 3. Create NinePatch for Buttons & Panels
         val patchSize = 12
         val edge = 4
         val patchPixmap = Pixmap(patchSize, patchSize, Pixmap.Format.RGBA8888)
 
-        // Button Up (Cyan frame)
+        // Base Button Up (White frame, we will tint it)
         patchPixmap.setColor(0f, 0f, 0f, 0f); patchPixmap.fill()
         patchPixmap.setColor(Color(0.1f, 0.1f, 0.1f, 0.8f))
         patchPixmap.fillRectangle(1, 1, patchSize - 2, patchSize - 2)
-        patchPixmap.setColor(Color.CYAN)
+        patchPixmap.setColor(Color.WHITE)
         patchPixmap.drawRectangle(0, 0, patchSize, patchSize)
         val upTex = Texture(patchPixmap)
         texturesToDispose.add(upTex)
-        uiSkin.add("btn_up", NinePatchDrawable(NinePatch(upTex, edge, edge, edge, edge)), Drawable::class.java)
+        val upPatch = NinePatchDrawable(NinePatch(upTex, edge, edge, edge, edge))
+        uiSkin.add("btn_up", upPatch, Drawable::class.java)
 
-        // Button Down (White highlight)
+        // Base Button Down
         patchPixmap.setColor(0f, 0f, 0f, 0f); patchPixmap.fill()
-        patchPixmap.setColor(Color(0.3f, 0.3f, 0.3f, 0.9f))
+        patchPixmap.setColor(Color(0.5f, 0.5f, 0.5f, 0.9f))
         patchPixmap.fillRectangle(1, 1, patchSize - 2, patchSize - 2)
         patchPixmap.setColor(Color.WHITE)
         patchPixmap.drawRectangle(0, 0, patchSize, patchSize)
         val downTex = Texture(patchPixmap)
         texturesToDispose.add(downTex)
-        uiSkin.add("btn_down", NinePatchDrawable(NinePatch(downTex, edge, edge, edge, edge)), Drawable::class.java)
+        val downPatch = NinePatchDrawable(NinePatch(downTex, edge, edge, edge, edge))
+        uiSkin.add("btn_down", downPatch, Drawable::class.java)
 
-        // Panel Background (Grey frame)
+        // Panel Background
         patchPixmap.setColor(0f, 0f, 0f, 0f); patchPixmap.fill()
         patchPixmap.setColor(Color(0f, 0f, 0f, 0.6f))
         patchPixmap.fillRectangle(1, 1, patchSize - 2, patchSize - 2)
@@ -85,15 +90,42 @@ class TextureService : Disposable {
         patchPixmap.drawRectangle(0, 0, patchSize, patchSize)
         val panelTex = Texture(patchPixmap)
         texturesToDispose.add(panelTex)
-        uiSkin.add("panel_bg", NinePatchDrawable(NinePatch(panelTex, edge, edge, edge, edge)), Drawable::class.java)
+        val panelPatch = NinePatchDrawable(NinePatch(panelTex, edge, edge, edge, edge))
+        uiSkin.add("panel_bg", panelPatch, Drawable::class.java)
 
         patchPixmap.dispose()
 
         // 4. Baking Styles
-        val font = BitmapFont()
+        // Create a larger font (scale 2x)
+        val font = BitmapFont().apply {
+            data.setScale(2f)
+        }
         uiSkin.add("default-font", font)
-        uiSkin.add("default", Touchpad.TouchpadStyle(uiSkin.getDrawable("joystick_bg"), uiSkin.getDrawable("joystick_knob")))
-        uiSkin.add("default", TextButton.TextButtonStyle(uiSkin.getDrawable("btn_up"), uiSkin.getDrawable("btn_down"), uiSkin.getDrawable("btn_up"), font))
+        uiSkin.add("default", Touchpad.TouchpadStyle(joystickBg, joystickKnob))
+
+        // Default style
+        uiSkin.add("default", TextButton.TextButtonStyle(upPatch, downPatch, upPatch, font))
+
+        // Category Specific Styles (Color Coded)
+        ModuleCategory.entries.forEach { cat ->
+            val color = getCategoryColor(cat)
+            val tintedUp = upPatch.tint(color)
+            val tintedDown = downPatch.tint(color)
+            uiSkin.add(cat.name.lowercase(), TextButton.TextButtonStyle(tintedUp, tintedDown, tintedUp, font))
+        }
+    }
+
+    private fun getCategoryColor(category: ModuleCategory): Color {
+        return when (category) {
+            ModuleCategory.PRIMARY -> Color.RED
+            ModuleCategory.SECONDARY -> Color.ORANGE
+            ModuleCategory.TERTIARY -> Color.YELLOW
+            ModuleCategory.QUADRARY -> Color.PURPLE
+            ModuleCategory.SHIELDS -> Color.BLUE
+            ModuleCategory.POWER -> Color.GREEN
+            ModuleCategory.DRONES -> Color.CYAN
+            ModuleCategory.FIGHTERS -> Color.WHITE
+        }
     }
 
     val whitePixel: TextureRegion get() = uiSkin.getRegion("white")

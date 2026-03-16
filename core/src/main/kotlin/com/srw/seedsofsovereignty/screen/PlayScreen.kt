@@ -6,11 +6,13 @@ import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.g2d.Batch
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.math.Vector2
+import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.ui.Skin
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton
 import com.badlogic.gdx.scenes.scene2d.ui.Touchpad
+import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener
 import com.badlogic.gdx.utils.viewport.ExtendViewport
 import com.badlogic.gdx.utils.viewport.ScreenViewport
 import com.badlogic.gdx.utils.viewport.Viewport
@@ -42,6 +44,8 @@ class PlayScreen(private val camera: OrthographicCamera) : KtxScreen {
     private val categoryShelf: Table
 
     private val world: World
+    private var lastCategories = setOf<ModuleCategory>()
+    private var shelfUpdateTimer = 0f
 
     init {
         Gdx.input.inputProcessor = uiStage
@@ -59,23 +63,19 @@ class PlayScreen(private val camera: OrthographicCamera) : KtxScreen {
             add(TextButton("MATRIX CONTROLS", uiSkin)).expand().fill().pad(10f)
         }
 
-        categoryShelf = Table(uiSkin).apply {
-            background = uiSkin.getDrawable("panel_bg")
-            ModuleCategory.entries.forEach { cat ->
-                val btn = TextButton(cat.name.take(1), uiSkin)
-                add(btn).expandX().fillX().pad(2f)
-            }
-        }
-
         commandMatrix = Table().apply {
             add(selectionShelf).expandX().fillX().height(60f).row()
-            add(controlArea).expand().fill().row()
-            add(categoryShelf).expandX().fillX().height(60f)
+            add(controlArea).expand().fill()
+        }
+
+        categoryShelf = Table(uiSkin).apply {
+            background = uiSkin.getDrawable("panel_bg")
         }
 
         uiStage.addActor(movementJoystick)
         uiStage.addActor(devEvolveButton)
         uiStage.addActor(commandMatrix)
+        uiStage.addActor(categoryShelf)
 
         world = configureWorld {
             injectables {
@@ -108,13 +108,64 @@ class PlayScreen(private val camera: OrthographicCamera) : KtxScreen {
             }
         }
 
-        devEvolveButton.addListener(object : com.badlogic.gdx.scenes.scene2d.utils.ChangeListener() {
-            override fun changed(event: com.badlogic.gdx.scenes.scene2d.utils.ChangeListener.ChangeEvent, actor: com.badlogic.gdx.scenes.scene2d.Actor) {
+        devEvolveButton.addListener(object : ChangeListener() {
+            override fun changed(event: ChangeEvent, actor: Actor) {
                 world.system<EvolutionSystem>().evolvePlayer()
+                updateCategoryShelf(true)
             }
         })
 
         setupInitialEntities()
+        updateCategoryShelf(true)
+    }
+
+    private fun updateCategoryShelf(force: Boolean = false) {
+        val player = world.family { all(PlayerComponent) }.firstOrNull() ?: return
+
+        val activeCategories = mutableSetOf<ModuleCategory>()
+
+        // Using world.run to access Entity extension functions (get/has)
+        world.run {
+            if (player has PowerCoreComponent) activeCategories.add(ModuleCategory.POWER)
+            if (player has ArcedDefenseComponent) activeCategories.add(ModuleCategory.SHIELDS)
+
+            world.family { all(ModuleComponent, AttachmentComponent) }.forEach { module ->
+                if (module.get(AttachmentComponent).parent == player) {
+                    activeCategories.add(module.get(ModuleComponent).category)
+                }
+            }
+        }
+
+        if (!force && activeCategories == lastCategories) return
+        lastCategories = activeCategories
+
+        categoryShelf.clearChildren()
+        ModuleCategory.entries.forEach { cat ->
+            if (cat in activeCategories) {
+                val btn = TextButton(cat.name, uiSkin, cat.name.lowercase())
+                categoryShelf.add(btn).size(180f, 80f).pad(2f)
+
+                btn.addListener(object : ChangeListener() {
+                    override fun changed(event: ChangeEvent, actor: Actor) {
+                        commandMatrix.color = getCategoryColor(cat).cpy().apply { a = 0.8f }
+                    }
+                })
+            }
+        }
+        categoryShelf.pack()
+    }
+
+    private fun getCategoryColor(category: ModuleCategory): Color {
+        return when (category) {
+            ModuleCategory.PRIMARY -> Color.RED
+            ModuleCategory.SECONDARY -> Color.ORANGE
+            ModuleCategory.TERTIARY -> Color.YELLOW
+            ModuleCategory.QUADRARY -> Color.PURPLE
+            ModuleCategory.SHIELDS -> Color.BLUE
+            ModuleCategory.POWER -> Color.GREEN
+            ModuleCategory.DRONES -> Color.CYAN
+            ModuleCategory.FIGHTERS -> Color.WHITE
+        }
     }
 
     private fun setupInitialEntities() {
@@ -142,13 +193,22 @@ class PlayScreen(private val camera: OrthographicCamera) : KtxScreen {
 
     override fun render(delta: Float) {
         val margin = 20f
+
+        shelfUpdateTimer += delta
+        if (shelfUpdateTimer >= 0.5f) {
+            shelfUpdateTimer = 0f
+            updateCategoryShelf()
+        }
+
         movementJoystick.setPosition(margin, margin)
         devEvolveButton.setPosition((uiViewport.worldWidth - devEvolveButton.width) / 2f, uiViewport.worldHeight - devEvolveButton.height - margin)
 
+        categoryShelf.setPosition(uiViewport.worldWidth - categoryShelf.width - margin, margin)
+
         val matrixWidth = movementJoystick.width * 1.5f
-        val matrixHeight = movementJoystick.height + 120f
+        val matrixHeight = 60f + movementJoystick.height
         commandMatrix.setSize(matrixWidth, matrixHeight)
-        commandMatrix.setPosition(uiViewport.worldWidth - matrixWidth - margin, margin)
+        commandMatrix.setPosition(uiViewport.worldWidth - matrixWidth - margin, margin + categoryShelf.height + 5f)
 
         gameViewport.apply()
         batch.projectionMatrix = camera.combined
