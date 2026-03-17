@@ -3,36 +3,41 @@ package com.srw.seedsofsovereignty.ui
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Interpolation
 import com.badlogic.gdx.math.MathUtils
-import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.actions.Actions
 import com.badlogic.gdx.scenes.scene2d.ui.*
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener
+import com.badlogic.gdx.utils.Align
 import com.github.quillraven.fleks.Entity
 import com.github.quillraven.fleks.World
 import com.srw.seedsofsovereignty.component.*
 
 /**
  * COMMAND MATRIX VIEW: Manages the UI components for module selection and control.
- * Decouples Scene2D layout from PlayScreen logic.
  * Adheres to Fleks 2.x patterns.
  */
 class CommandMatrixView(private val world: World, private val skin: Skin) {
 
     val root = Table()
-    private val selectionShelf = Table(skin).apply { background = skin.getDrawable("panel_bg") }
-    private val controlArea = Table(skin).apply { background = skin.getDrawable("panel_bg") }
-    val categoryShelf = Table(skin).apply { background = skin.getDrawable("panel_bg") }
+    private val selectionShelf = Table(skin)
+    private val controlArea = Table(skin)
+    val categoryShelf = Table(skin)
 
     private var currentCategory: ModuleCategory? = null
     var joystickSize: Float = 120f
 
     init {
+        val panelBg = skin.getDrawable("panel_bg")
+        selectionShelf.background = panelBg
+        controlArea.background = panelBg
+        categoryShelf.background = panelBg
+
         root.apply {
             add(selectionShelf).expandX().fillX().height(80f).row()
             add(controlArea).expand().fill()
             setTransform(true)
         }
+
         controlArea.add(TextButton("SELECT A MODULE", skin)).expand().fill().pad(10f)
     }
 
@@ -63,16 +68,26 @@ class CommandMatrixView(private val world: World, private val skin: Skin) {
             val player = family { all(PlayerComponent) }.firstOrNull() ?: return
             val targets = mutableListOf<Entity>()
 
-            if (category == ModuleCategory.POWER && player.has(PowerCoreComponent)) {
-                targets.add(player)
-            } else if (category == ModuleCategory.SHIELDS && player.has(ArcedDefenseComponent)) {
-                targets.add(player)
-            } else {
-                family { all(ModuleComponent, AttachmentComponent) }.forEach { entity ->
-                    if (entity.get(AttachmentComponent).parent == player && entity.get(ModuleComponent).category == category) {
-                        targets.add(entity)
+            when {
+                category == ModuleCategory.POWER && player.has(PowerCoreComponent) -> targets.add(player)
+                category == ModuleCategory.SHIELDS && player.has(ArcedDefenseComponent) -> targets.add(player)
+                else -> {
+                    family { all(ModuleComponent, AttachmentComponent) }.forEach { entity ->
+                        if (entity[AttachmentComponent].parent == player && entity[ModuleComponent].category == category) {
+                            targets.add(entity)
+                        }
                     }
                 }
+            }
+
+            if (targets.size > 1) {
+                val masterBtn = TextButton("MASTER", skin, "toggle")
+                selectionShelf.add(masterBtn).height(70f).pad(2f)
+                masterBtn.addListener(object : ChangeListener() {
+                    override fun changed(event: ChangeEvent, actor: Actor) {
+                        selectMaster(player, category, targets.firstOrNull())
+                    }
+                })
             }
 
             targets.forEach { entity ->
@@ -86,6 +101,28 @@ class CommandMatrixView(private val world: World, private val skin: Skin) {
                     }
                 })
             }
+        }
+    }
+
+    private fun selectMaster(player: Entity, category: ModuleCategory, representative: Entity?) {
+        world.run {
+            var master = family { all(GroupMasterComponent) }.firstOrNull {
+                it[GroupMasterComponent].category == category && it.getOrNull(AttachmentComponent)?.parent == player
+            }
+
+            if (master == null && representative != null && representative.has(ModuleChannelsComponent)) {
+                val repChannels = representative[ModuleChannelsComponent]
+                master = world.entity {
+                    it += GroupMasterComponent(category)
+                    it += AttachmentComponent(parent = player)
+
+                    val newInputs = mutableMapOf<String, InputChannelData>()
+                    repChannels.inputs.keys.forEach { key -> newInputs[key] = InputChannelData() }
+                    it += ModuleChannelsComponent(type = repChannels.type, inputs = newInputs)
+                }
+            }
+
+            master?.let { selectModule(it) }
         }
     }
 
@@ -104,7 +141,7 @@ class CommandMatrixView(private val world: World, private val skin: Skin) {
     private fun applyApertureTransition() {
         controlArea.clearActions()
         controlArea.setScale(1f, 0f)
-        controlArea.setOrigin(com.badlogic.gdx.utils.Align.center)
+        controlArea.setOrigin(Align.center)
         controlArea.setTransform(true)
         controlArea.addAction(Actions.scaleTo(1f, 1f, 0.25f, Interpolation.exp5Out))
     }
@@ -134,7 +171,7 @@ class CommandMatrixView(private val world: World, private val skin: Skin) {
 
         world.run {
             if (entity.has(ModuleChannelsComponent)) {
-                val channels = entity.get(ModuleChannelsComponent)
+                val channels = entity[ModuleChannelsComponent]
                 val definition = ModuleRegistry.get(channels.type)
 
                 val stack = Stack()
@@ -169,6 +206,13 @@ class CommandMatrixView(private val world: World, private val skin: Skin) {
                 stack.add(layoutTable)
                 stack.add(overlayTable)
                 controlArea.add(stack).expand().fill()
+
+                if (entity.has(GroupMasterComponent)) {
+                    val group = entity[GroupMasterComponent]
+                    val header = Label("MASTER CONTROL: ${group.category}", s).apply { color = Color.GOLD }
+                    controlArea.addActor(header)
+                    header.setPosition(10f, 10f)
+                }
 
             } else {
                 val labelText = when {
@@ -219,16 +263,17 @@ class CommandMatrixView(private val world: World, private val skin: Skin) {
     }
 
     private fun getAlign(x: Float, y: Float): Int {
-        var align = 0
-        if (y > 0.66f) align = align or com.badlogic.gdx.utils.Align.top
-        else if (y < 0.33f) align = align or com.badlogic.gdx.utils.Align.bottom
-        else align = align or com.badlogic.gdx.utils.Align.center
-
-        if (x > 0.66f) align = align or com.badlogic.gdx.utils.Align.right
-        else if (x < 0.33f) align = align or com.badlogic.gdx.utils.Align.left
-        else align = align or com.badlogic.gdx.utils.Align.center
-
-        return align
+        val vertical = when {
+            y > 0.66f -> Align.top
+            y < 0.33f -> Align.bottom
+            else -> Align.center
+        }
+        val horizontal = when {
+            x > 0.66f -> Align.right
+            x < 0.33f -> Align.left
+            else -> Align.center
+        }
+        return vertical or horizontal
     }
 
     private fun getCategoryColor(category: ModuleCategory): Color {

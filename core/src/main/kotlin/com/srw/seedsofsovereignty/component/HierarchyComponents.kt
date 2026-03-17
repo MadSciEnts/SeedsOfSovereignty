@@ -43,6 +43,16 @@ enum class ModuleCategory {
 }
 
 /**
+ * GROUP MASTER: A virtual entity used to control multiple modules of the same category simultaneously.
+ */
+data class GroupMasterComponent(
+    val category: ModuleCategory
+) : Component<GroupMasterComponent> {
+    override fun type() = GroupMasterComponent
+    companion object : ComponentType<GroupMasterComponent>()
+}
+
+/**
  * CONTROL GROUPS: Allows multiple modules to be controlled as a single unit.
  * Examples: All PRIMARY weapons fire together. TERTIARY grouped by Port/Starboard.
  */

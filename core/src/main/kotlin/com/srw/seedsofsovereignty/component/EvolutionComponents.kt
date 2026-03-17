@@ -15,5 +15,5 @@ data class EvolutionComponent(
     companion object : ComponentType<EvolutionComponent>()
 }
 
-// Moving SubTier here so it's globally accessible for all components
-enum class SubTier { A, B, C, D }
+// Adjusted to 3 sub-tiers per requirement (A, B, C)
+enum class SubTier { A, B, C }

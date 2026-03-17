@@ -1,6 +1,8 @@
 package com.srw.seedsofsovereignty.system
 
+import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.g2d.Batch
+import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Vector2
 import com.github.quillraven.fleks.Entity
 import com.github.quillraven.fleks.IteratingSystem
@@ -13,62 +15,123 @@ class WorldRenderSystem(
     private val batch: Batch = inject("batch"),
     private val drawer: ShapeDrawer = inject("drawer")
 ) : IteratingSystem(
-    family { all(PositionComponent, ShapeComponent) }
+    family { any(PositionComponent, TextureRegionComponent, CompositeVisualComponent) }
 ) {
-    private val tempVec = Vector2()
+    private val barrelVec = Vector2()
+    private var totalTime = 0f
+
+    override fun onTick() {
+        totalTime += deltaTime
+        super.onTick()
+    }
 
     override fun onTickEntity(entity: Entity) {
+        if (!entity.has(PositionComponent)) return
         val pos = entity[PositionComponent].pos
-        val shape = entity[ShapeComponent]
 
-        // Face direction of motion
-        if (entity has VelocityComponent) {
-            val vel = entity[VelocityComponent].v
-            if (vel.len2() > 0.1f) {
-                shape.rotation = vel.angleDeg() - 90f // Base triangle faces UP
+        // 1. Draw CompositeVisualComponent (LAYERED RENDERING)
+        if (entity.has(CompositeVisualComponent)) {
+            val composite = entity[CompositeVisualComponent]
+            val baseScale = if (entity.has(TextureRegionComponent)) entity[TextureRegionComponent].scale else 1f
+            val baseRotation = if (entity.has(TextureRegionComponent)) entity[TextureRegionComponent].rotation else 0f
+
+            // Sort layers by zIndex before drawing
+            composite.layers.sortBy { it.zIndex }
+
+            composite.layers.forEach { layer ->
+                val region = layer.region
+                val pixelWidth = region.regionWidth.toFloat()
+                val pixelHeight = region.regionHeight.toFloat()
+
+                val worldWidth = baseScale * layer.offsetScale
+                val worldHeight = (baseScale * layer.offsetScale) * (pixelHeight / pixelWidth)
+
+                // Neon Pulsing effect
+                if (layer.pulse) {
+                    val alpha = 0.6f + 0.4f * MathUtils.sin(totalTime * 5f)
+                    batch.setColor(layer.color.r, layer.color.g, layer.color.b, layer.color.a * alpha)
+                } else {
+                    batch.color = layer.color
+                }
+
+                batch.draw(
+                    region,
+                    pos.x - worldWidth / 2f,
+                    pos.y - worldHeight / 2f,
+                    worldWidth / 2f,
+                    worldHeight / 2f,
+                    worldWidth,
+                    worldHeight,
+                    1f,
+                    1f,
+                    baseRotation + layer.rotationOffset
+                )
+            }
+            batch.color = Color.WHITE // Reset batch color
+        }
+        // 2. Draw Legacy TextureRegionComponent (TRON STYLE)
+        else if (entity.has(TextureRegionComponent)) {
+            val tex = entity[TextureRegionComponent]
+            tex.region?.let { region ->
+                val pixelWidth = region.regionWidth.toFloat()
+                val pixelHeight = region.regionHeight.toFloat()
+
+                val worldWidth = tex.scale
+                val worldHeight = tex.scale * (pixelHeight / pixelWidth)
+
+                batch.color = tex.color
+                batch.draw(
+                    region,
+                    pos.x - worldWidth / 2f,
+                    pos.y - worldHeight / 2f,
+                    worldWidth / 2f,
+                    worldHeight / 2f,
+                    worldWidth,
+                    worldHeight,
+                    1f,
+                    1f,
+                    tex.rotation
+                )
+                batch.color = Color.WHITE
             }
         }
 
-        drawer.setColor(shape.color)
-
-        when (shape.type) {
-            ShapeType.TRIANGLE -> {
-                // Draw rotated triangle
-                val r = shape.size
-                val angle = shape.rotation
-
-                // Front
-                val x1 = pos.x + com.badlogic.gdx.math.MathUtils.cosDeg(angle + 90f) * r
-                val y1 = pos.y + com.badlogic.gdx.math.MathUtils.sinDeg(angle + 90f) * r
-                // Left
-                val x2 = pos.x + com.badlogic.gdx.math.MathUtils.cosDeg(angle + 220f) * r * 0.7f
-                val y2 = pos.y + com.badlogic.gdx.math.MathUtils.sinDeg(angle + 220f) * r * 0.7f
-                // Right
-                val x3 = pos.x + com.badlogic.gdx.math.MathUtils.cosDeg(angle - 40f) * r * 0.7f
-                val y3 = pos.y + com.badlogic.gdx.math.MathUtils.sinDeg(angle - 40f) * r * 0.7f
-
-                drawer.filledTriangle(x1, y1, x2, y2, x3, y3)
-            }
-            ShapeType.SQUARE -> drawer.filledRectangle(pos.x - shape.size / 2f, pos.y - shape.size / 2f, shape.size, shape.size)
-            ShapeType.CIRCLE -> drawer.filledCircle(pos.x, pos.y, shape.size / 2f)
-            ShapeType.HEXAGON -> {}
-        }
-
-        // Draw barrels rotated with ship
-        if (entity has BarrelVisualComponent && entity has WeaponModuleComponent) {
+        // 3. Draw Weapon Barrels
+        if (entity.has(BarrelVisualComponent) && entity.has(WeaponModuleComponent)) {
             val barrel = entity[BarrelVisualComponent]
             val weapon = entity[WeaponModuleComponent]
-            drawer.setColor(barrel.color)
 
+            val hullRotation = when {
+                entity.has(AttachmentComponent) -> {
+                    val parent = entity.get(AttachmentComponent).parent
+                    if (parent != Entity.NONE && parent in world) {
+                        if (parent.has(TextureRegionComponent)) parent.get(TextureRegionComponent).rotation else 0f
+                    } else 0f
+                }
+                else -> 0f
+            }
+
+            var platformRotation = hullRotation + 90f
+            if (entity.has(ModuleChannelsComponent)) {
+                val channels = entity.get(ModuleChannelsComponent)
+                val aimInput = channels.inputs["AIM"]
+                if (aimInput != null && aimInput.vector.len2() > 0.01f) {
+                    platformRotation = aimInput.vector.angleDeg()
+                    barrel.platformRotation = platformRotation
+                } else {
+                    platformRotation = barrel.platformRotation
+                }
+            }
+
+            drawer.setColor(barrel.color)
             weapon.barrelOffsets.forEach { offset ->
-                // Rotate offset based on ship rotation
-                tempVec.set(offset).rotateDeg(shape.rotation)
-                val bx = pos.x + tempVec.x
-                val by = pos.y + tempVec.y
+                barrelVec.set(offset).rotateDeg(platformRotation - 90f)
+                val bx = pos.x + barrelVec.x
+                val by = pos.y + barrelVec.y
 
                 drawer.line(bx, by,
-                    bx + com.badlogic.gdx.math.MathUtils.cosDeg(shape.rotation + 90f) * barrel.length,
-                    by + com.badlogic.gdx.math.MathUtils.sinDeg(shape.rotation + 90f) * barrel.length,
+                    bx + MathUtils.cosDeg(platformRotation) * barrel.length,
+                    by + MathUtils.sinDeg(platformRotation) * barrel.length,
                     barrel.width)
             }
         }

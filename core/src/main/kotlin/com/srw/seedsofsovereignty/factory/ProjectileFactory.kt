@@ -14,54 +14,61 @@ class ProjectileFactory {
     private val tempVec = Vector2()
 
     /**
-     * Spawns a projectile entity based on a blueprint.
-     * Note: Component instances are created here as they are unique to the entity.
-     * Math operations use a pre-allocated tempVec.
+     * Spawns a projectile entity based on a blueprint at the rotated barrel tip.
+     * Note: Math operations use a pre-allocated tempVec to maintain zero-allocation standards.
+     *
+     * @param world The Fleks World.
+     * @param blueprint The projectile's visual and physical data.
+     * @param faction The owner's faction.
+     * @param pivot The world position of the module/weapon platform.
+     * @param offset The relative offset of the barrel on the platform.
+     * @param platformRotation The current absolute rotation of the weapon platform.
      */
     fun spawn(
         world: World,
         blueprint: ProjectileBlueprint,
         faction: FactionType,
-        origin: Vector2,
+        pivot: Vector2,
         offset: Vector2,
-        angle: Float
+        platformRotation: Float
     ): Entity {
         return world.entity { entity ->
             entity += ProjectileComponent(lifeTime = blueprint.lifeTime)
             entity += FactionComponent(faction)
 
-            // Calculate position: origin + (offset rotated by angle)
-            tempVec.set(offset).rotateDeg(angle).add(origin)
+            // 1. Calculate emission point: Pivot + (BarrelOffset rotated by platform angle - 90)
+            // Normalization: Forward is 90 deg (Up), so we subtract 90 to rotate from a neutral origin.
+            tempVec.set(offset).rotateDeg(platformRotation - 90f).add(pivot)
             entity += PositionComponent(Vector2(tempVec))
 
-            // Calculate velocity: unit vector at angle * speed
-            tempVec.set(1f, 0f).setAngleDeg(angle).scl(blueprint.speed)
+            // 2. Calculate velocity: unit vector at platformRotation * speed
+            tempVec.set(1f, 0f).setAngleDeg(platformRotation).scl(blueprint.speed)
             entity += VelocityComponent(v = Vector2(tempVec), friction = 0f)
 
-            // Visuals based on ProjectileType
+            // 3. Visuals (Using restored ShapeComponent for projectiles)
             when (blueprint.type) {
                 ProjectileType.KINETIC -> {
                     entity += ShapeComponent(
                         type = ShapeType.SQUARE,
-                        color = blueprint.color,
-                        size = 0.1f,
-                        rotation = angle
+                        color = blueprint.color.cpy(),
+                        size = 0.05f, // Scaled for 1.0 world unit ship baseline
+                        rotation = platformRotation
                     )
                 }
                 ProjectileType.ENERGY -> {
                     entity += ShapeComponent(
                         type = ShapeType.CIRCLE,
-                        color = blueprint.color,
-                        size = 0.25f,
-                        rotation = angle
+                        color = blueprint.color.cpy(),
+                        size = 0.15f,
+                        rotation = platformRotation
                     )
                 }
                 ProjectileType.TORPEDO -> {
                     entity += ShapeComponent(
                         type = ShapeType.TRIANGLE,
-                        color = blueprint.color,
-                        size = 0.3f,
-                        rotation = angle
+                        color = blueprint.color.cpy(),
+                        size = 0.2f,
+                        rotation = platformRotation
                     )
                 }
             }

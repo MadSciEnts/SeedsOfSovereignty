@@ -11,6 +11,8 @@ import com.github.quillraven.fleks.World.Companion.inject
 import com.srw.seedsofsovereignty.component.PlayerComponent
 import com.srw.seedsofsovereignty.component.PositionComponent
 import com.srw.seedsofsovereignty.component.VelocityComponent
+import com.srw.seedsofsovereignty.component.ShapeComponent
+import com.srw.seedsofsovereignty.component.TextureRegionComponent
 
 /**
  * PLAYER INPUT SYSTEM: Reads from the on-screen joystick and keyboard to apply movement force.
@@ -50,6 +52,7 @@ class PlayerInputSystem(
 
 /**
  * MOVE SYSTEM: Applies velocity to position and applies friction.
+ * Also handles orientation (facing direction of motion).
  */
 class MoveSystem : IteratingSystem(
     family { all(PositionComponent, VelocityComponent) }
@@ -60,6 +63,18 @@ class MoveSystem : IteratingSystem(
 
         pos.pos.x += vel.v.x * deltaTime
         pos.pos.y += vel.v.y * deltaTime
+
+        // Update rotation to face direction of motion
+        if (vel.v.len2() > 0.1f) {
+            val angle = vel.v.angleDeg() - 90f
+
+            if (entity.has(ShapeComponent)) {
+                entity[ShapeComponent].rotation = angle
+            }
+            if (entity.has(TextureRegionComponent)) {
+                entity[TextureRegionComponent].rotation = angle
+            }
+        }
 
         // Apply friction/drag
         vel.v.scl(1f - (vel.friction * deltaTime))

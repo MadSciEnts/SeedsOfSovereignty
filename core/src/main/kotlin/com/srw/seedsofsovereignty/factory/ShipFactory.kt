@@ -5,6 +5,8 @@ import com.badlogic.gdx.math.Vector2
 import com.github.quillraven.fleks.Entity
 import com.github.quillraven.fleks.World
 import com.srw.seedsofsovereignty.component.*
+import com.srw.seedsofsovereignty.service.ShipTextureGenerator
+import com.srw.seedsofsovereignty.system.EvolutionSystem
 
 /**
  * SHIP FACTORY: Responsible for assembling ship entities and their modules.
@@ -12,6 +14,9 @@ import com.srw.seedsofsovereignty.component.*
  */
 class ShipFactory(private val world: World) {
 
+    /**
+     * WORLD SCALE: 1 unit = Size of the starting ship (Tier 1 A).
+     */
     fun createPlayerTier1(): Entity {
         val ship = world.entity { entity ->
             entity += PlayerComponent()
@@ -21,13 +26,22 @@ class ShipFactory(private val world: World) {
             entity += PowerCoreComponent()
             entity += ArcedDefenseComponent()
             entity += RadarComponent()
-            entity += ShapeComponent(type = ShapeType.TRIANGLE, color = Color.CYAN, size = 1f)
+
+            // Initialize with basic texture component for scale tracking
+            entity += TextureRegionComponent(scale = 1.0f)
+
+            // Add the new Composite Visual system
+            entity += CompositeVisualComponent()
+
             entity += TrailComponent()
             entity += FactionComponent(FactionType.PLAYER)
         }
 
-        // Initial Primary Module: Kinetic Cannon
-        createModule(ship, ModuleCategory.PRIMARY, ModuleType.KINETIC_CANNON, Vector2(0f, 0.6f))
+        // Initial Primary Module
+        createModule(ship, ModuleCategory.PRIMARY, ModuleType.KINETIC_CANNON, Vector2(0f, 0.3f))
+
+        // BOOTSTRAP: Sync visual layers and capabilities
+        world.system<EvolutionSystem>().syncCapabilities(ship)
 
         return ship
     }
@@ -40,44 +54,37 @@ class ShipFactory(private val world: World) {
             module += AttachmentComponent(parent = parent, offset = offset)
             module += ModuleComponent(category = category)
 
-            // Initialize Data Channels based on Module Type Definition
             val channels = ModuleChannelsComponent(type = moduleType)
-
-            // 1. Initialize Inputs
-            definition.controls.forEach { control ->
-                channels.inputs[control.channelKey] = InputChannelData()
-            }
-
-            // 2. Initialize Outputs (Crucial for preventing UI crashes)
-            definition.outputs.forEach { output ->
-                channels.outputs[output.channelKey] = OutputChannelData()
-            }
-
+            definition.controls.forEach { channels.inputs[it.channelKey] = InputChannelData() }
+            definition.outputs.forEach { channels.outputs[it.channelKey] = OutputChannelData() }
             module += channels
 
-            // Category & Type Specific Logic
+            // Add visual card for the module
+            module += TextureRegionComponent(
+                region = ShipTextureGenerator.generateModuleCard(12345L, Color.GRAY),
+                scale = 0.3f, // Modules are smaller than the hull
+                zIndex = 5    // Always on top of the hull layers
+            )
+
             when (moduleType) {
                 ModuleType.KINETIC_CANNON -> {
                     module += WeaponModuleComponent(
                         evolution = SubTier.A,
                         barrelOffsets = mutableListOf(Vector2(0f, 0f)),
-                        fireRate = 0.2f
+                        fireRate = 0.5f
                     )
-                    module += BarrelVisualComponent(color = Color.WHITE, length = 0.4f, width = 0.1f)
+                    module += BarrelVisualComponent(color = Color.WHITE, length = 0.3f, width = 0.05f)
 
-                    // Attach the required Payload Data
                     module += ProjectilePayloadComponent(
                         blueprint = ProjectileBlueprint(
                             type = ProjectileType.KINETIC,
                             damage = 10f,
-                            speed = 15f,
+                            speed = 10f,
                             color = Color.YELLOW
                         )
                     )
                 }
-                else -> {
-                    // Logic for other module types
-                }
+                else -> {}
             }
         }
     }

@@ -23,12 +23,12 @@ class ModuleActionSystem(
         val payload = entity[ProjectilePayloadComponent]
         val pos = entity[PositionComponent].pos
 
-        // Update cooldown
+        // 1. Update cooldown
         if (weapon.currentCooldown > 0) {
             weapon.currentCooldown -= deltaTime
         }
 
-        // Handle Input per defined Logic
+        // 2. Handle Input per defined Logic
         when (channels.type) {
             ModuleType.KINETIC_CANNON -> handleKineticCannon(entity, channels, weapon, payload, pos)
             else -> {}
@@ -44,14 +44,14 @@ class ModuleActionSystem(
     ) {
         val aimInput = channels.inputs["AIM"] ?: return
 
-        // 1. Check for Trigger (from Joystick or Button)
+        // 1. Check for Trigger
         if (aimInput.triggered && weapon.currentCooldown <= 0) {
 
-            // 2. Determine Fire Vector (Default to "Forward" if no vector provided)
-            val fireAngle = if (aimInput.vector.len2() > 0.1f) {
+            // 2. Determine Fire Angle (Platform Rotation)
+            val fireAngle = if (aimInput.vector.len2() > 0.01f) {
                 aimInput.vector.angleDeg()
             } else {
-                // Look for parent ship's rotation (stored in its Velocity vector angle)
+                // Default to ship's rotation
                 val attach = entity.getOrNull(AttachmentComponent)
                 if (attach != null && attach.parent != Entity.NONE && attach.parent in world) {
                     val parentVel = attach.parent.getOrNull(VelocityComponent)
@@ -59,47 +59,57 @@ class ModuleActionSystem(
                 } else 90f
             }
 
-            // 3. Determine Faction (Inherit from parent if possible)
-            val faction = entity.getOrNull(FactionComponent)?.type
-                ?: entity.getOrNull(AttachmentComponent)?.parent?.let { if (it in world) it.getOrNull(FactionComponent)?.type else FactionType.NEUTRAL }
-                ?: FactionType.NEUTRAL
-
-            // 4. Sequential Firing Logic with safety check
+            // 3. Sequential Firing Logic
             if (weapon.barrelOffsets.isEmpty()) return
 
-            // Safety: Ensure index is always within bounds (prevents IndexOutOfBoundsException)
             if (weapon.barrelIndex >= weapon.barrelOffsets.size) {
                 weapon.barrelIndex = 0
             }
 
             val barrelOffset = weapon.barrelOffsets[weapon.barrelIndex]
 
-            // Spawn Projectile via Factory
+            // Spawn Projectile
+            val faction = entity.getOrNull(FactionComponent)?.type
+                ?: entity.getOrNull(AttachmentComponent)?.parent?.let { if (it in world) it.getOrNull(FactionComponent)?.type else FactionType.NEUTRAL }
+                ?: FactionType.NEUTRAL
+
             projectileFactory.spawn(world, payload.blueprint, faction, pos, barrelOffset, fireAngle)
 
-            // Increment barrel index
+            // 4. Update Sequential Index and Cooldown
             weapon.barrelIndex = (weapon.barrelIndex + 1) % weapon.barrelOffsets.size
 
-            // Reset Cooldown
-            weapon.currentCooldown = weapon.fireRate
+            /**
+             * CUMULATIVE RATE LOGIC:
+             * Total cycle time = fireRate (e.g., 0.5s).
+             * Delay between sequential shots = fireRate / numBarrels.
+             * This ensures 3 barrels fire 3x faster than 1 barrel.
+             */
+            weapon.currentCooldown = weapon.fireRate / weapon.barrelOffsets.size
+
+            // 5. Update Output Channel (Heat)
+            val heatOutput = channels.outputs["HEAT"]
+            if (heatOutput != null) {
+                heatOutput.status = com.badlogic.gdx.math.MathUtils.clamp(heatOutput.status + 0.05f, 0f, 1f)
+            }
+        } else {
+            // Passive heat dissipation
+            val heatOutput = channels.outputs["HEAT"]
+            if (heatOutput != null && heatOutput.status > 0) {
+                heatOutput.status = com.badlogic.gdx.math.MathUtils.clamp(heatOutput.status - deltaTime * 0.2f, 0f, 1f)
+            }
         }
     }
 }
 
 /**
  * PROJECTILE SYSTEM: Manages the lifecycle of projectiles.
- * Culls entities when their lifetime expires.
  */
 class ProjectileSystem : IteratingSystem(
     family { all(ProjectileComponent) }
 ) {
     override fun onTickEntity(entity: Entity) {
         val projectile = entity[ProjectileComponent]
-
-        // Decrement lifetime
         projectile.lifeTime -= deltaTime
-
-        // Cull expired projectiles using correct Fleks 2.x syntax
         if (projectile.lifeTime <= 0f) {
             world.run { entity.remove() }
         }
