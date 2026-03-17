@@ -40,7 +40,7 @@ class PlayScreen(private val camera: OrthographicCamera) : KtxScreen {
     private val devEvolveButton: TextButton
 
     private val world: World
-    private val shipFactory: ShipFactory
+    private val shipFactory = ShipFactory()
     private val commandMatrixView: CommandMatrixView
 
     private var lastCategories = setOf<ModuleCategory>()
@@ -66,6 +66,7 @@ class PlayScreen(private val camera: OrthographicCamera) : KtxScreen {
                 add("camera", camera)
                 add("joystick", movementJoystick)
                 add(ProjectileFactory())
+                add(shipFactory)
             }
 
             systems {
@@ -81,13 +82,14 @@ class PlayScreen(private val camera: OrthographicCamera) : KtxScreen {
                 add(EvolutionSystem())
                 add(TrailSystem())
                 add(TrailRenderSystem())
+                add(EnemyAISystem()) // Handle AI before spawning/rendering
+                add(EnemySpawnSystem()) // Manage populations
                 add(WorldRenderSystem())
                 add(TacticalRenderSystem())
                 add(RadarRenderSystem())
             }
         }
 
-        shipFactory = ShipFactory(world)
         commandMatrixView = CommandMatrixView(world, uiSkin)
 
         uiStage.addActor(movementJoystick)
@@ -102,7 +104,8 @@ class PlayScreen(private val camera: OrthographicCamera) : KtxScreen {
             }
         })
 
-        shipFactory.createPlayerTier1()
+        // Create player at Tier 1 using the stateless factory
+        shipFactory.createPlayer(world, 1)
         updateCategoryShelf(true)
     }
 

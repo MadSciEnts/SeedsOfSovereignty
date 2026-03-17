@@ -4,18 +4,18 @@ import com.badlogic.gdx.math.Vector2
 
 /**
  * MODULE TYPES: Defines the unique classes of modules.
- * Multiple instances of the same type can exist with different properties.
  */
 enum class ModuleType {
     KINETIC_CANNON,
     PULSE_LASER,
     SHIELD_GEN,
     POWER_CORE_T1,
-    DRONE_HIVE
+    DRONE_HIVE,
+    FIGHTER_BAY
 }
 
 /**
- * CONTROL WIDGET TYPES: The physical UI elements in the Command Matrix.
+ * CONTROL WIDGET TYPES
  */
 enum class ControlWidgetType {
     JOYSTICK_2D,
@@ -24,29 +24,20 @@ enum class ControlWidgetType {
     SLIDER_1D
 }
 
-/**
- * CONTROL DEFINITION: Metadata for how a specific control is rendered and mapped.
- */
 data class ControlWidgetDefinition(
     val widgetType: ControlWidgetType,
-    val channelKey: String,          // Maps to Input channel map keys
-    val relativePosition: Vector2,   // 0.0 to 1.0 within the Control Area
-    val orientation: Float = 0f,     // Rotation of the widget (e.g. for sliders)
+    val channelKey: String,
+    val relativePosition: Vector2,
+    val orientation: Float = 0f,
     val label: String = ""
 )
 
-/**
- * OUTPUT DEFINITION: Metadata for rendering status bars/labels from module outputs.
- */
 data class OutputWidgetDefinition(
-    val channelKey: String,          // Maps to Output channel map keys
+    val channelKey: String,
     val relativePosition: Vector2,
     val label: String = ""
 )
 
-/**
- * MODULE TYPE DEFINITION: The static "blueprint" for a module's control scheme.
- */
 data class ModuleTypeDefinition(
     val type: ModuleType,
     val controls: List<ControlWidgetDefinition>,
@@ -60,23 +51,18 @@ object ModuleRegistry {
     private val definitions = mutableMapOf<ModuleType, ModuleTypeDefinition>()
 
     init {
-        // Define Tier 1 Kinetic Cannon: Joystick for Aiming + Heat Output
+        // Tier 1 Kinetic Cannon
         definitions[ModuleType.KINETIC_CANNON] = ModuleTypeDefinition(
             type = ModuleType.KINETIC_CANNON,
             controls = listOf(
-                ControlWidgetDefinition(
-                    ControlWidgetType.JOYSTICK_2D,
-                    "AIM",
-                    Vector2(0.5f, 0.4f),
-                    label = "AIM"
-                )
+                ControlWidgetDefinition(ControlWidgetType.JOYSTICK_2D, "AIM", Vector2(0.5f, 0.4f), label = "AIM")
             ),
             outputs = listOf(
                 OutputWidgetDefinition("HEAT", Vector2(0.5f, 0.9f), "TEMP")
             )
         )
 
-        // Define Shield Generator: 5-Way Buttons for Directional Bias + Shield Strength Output
+        // Shield Generator
         definitions[ModuleType.SHIELD_GEN] = ModuleTypeDefinition(
             type = ModuleType.SHIELD_GEN,
             controls = listOf(
@@ -91,7 +77,7 @@ object ModuleRegistry {
             )
         )
 
-        // Define Power Core: 4x Sliders for Resource Allocation
+        // Power Core
         definitions[ModuleType.POWER_CORE_T1] = ModuleTypeDefinition(
             type = ModuleType.POWER_CORE_T1,
             controls = listOf(
@@ -102,6 +88,17 @@ object ModuleRegistry {
             ),
             outputs = listOf(
                 OutputWidgetDefinition("TOTAL_LOAD", Vector2(0.5f, 0.95f), "LOAD")
+            )
+        )
+
+        // Drone Hive: Manages autonomous defense drones
+        definitions[ModuleType.DRONE_HIVE] = ModuleTypeDefinition(
+            type = ModuleType.DRONE_HIVE,
+            controls = listOf(
+                ControlWidgetDefinition(ControlWidgetType.BUTTON_DISCRETE, "LAUNCH", Vector2(0.5f, 0.5f), label = "DEPLOY")
+            ),
+            outputs = listOf(
+                OutputWidgetDefinition("COUNT", Vector2(0.5f, 0.1f), "ACTIVE")
             )
         )
     }

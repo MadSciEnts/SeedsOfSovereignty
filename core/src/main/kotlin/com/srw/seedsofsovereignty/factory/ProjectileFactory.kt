@@ -1,29 +1,20 @@
 package com.srw.seedsofsovereignty.factory
 
+import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Vector2
 import com.github.quillraven.fleks.Entity
 import com.github.quillraven.fleks.World
 import com.srw.seedsofsovereignty.component.*
+import com.srw.seedsofsovereignty.service.ShipTextureGenerator
 
 /**
- * PROJECTILE FACTORY: Centralizes the creation of all physical projectiles.
- * Handles different ProjectileTypes and their initial physical states.
+ * PROJECTILE FACTORY: Centralizes modular projectile creation.
+ * Implements "Visually Pleasing" primitives with steady energy glows for the swarm aesthetic.
  */
 class ProjectileFactory {
 
     private val tempVec = Vector2()
 
-    /**
-     * Spawns a projectile entity based on a blueprint at the rotated barrel tip.
-     * Note: Math operations use a pre-allocated tempVec to maintain zero-allocation standards.
-     *
-     * @param world The Fleks World.
-     * @param blueprint The projectile's visual and physical data.
-     * @param faction The owner's faction.
-     * @param pivot The world position of the module/weapon platform.
-     * @param offset The relative offset of the barrel on the platform.
-     * @param platformRotation The current absolute rotation of the weapon platform.
-     */
     fun spawn(
         world: World,
         blueprint: ProjectileBlueprint,
@@ -36,41 +27,50 @@ class ProjectileFactory {
             entity += ProjectileComponent(lifeTime = blueprint.lifeTime)
             entity += FactionComponent(faction)
 
-            // 1. Calculate emission point: Pivot + (BarrelOffset rotated by platform angle - 90)
-            // Normalization: Forward is 90 deg (Up), so we subtract 90 to rotate from a neutral origin.
+            // 1. Position: Pivot + (Offset rotated by platform - 90)
             tempVec.set(offset).rotateDeg(platformRotation - 90f).add(pivot)
             entity += PositionComponent(Vector2(tempVec))
 
-            // 2. Calculate velocity: unit vector at platformRotation * speed
+            // 2. Velocity: Unit vector at platformRotation * speed
             tempVec.set(1f, 0f).setAngleDeg(platformRotation).scl(blueprint.speed)
             entity += VelocityComponent(v = Vector2(tempVec), friction = 0f)
 
-            // 3. Visuals (Using restored ShapeComponent for projectiles)
-            when (blueprint.type) {
-                ProjectileType.KINETIC -> {
-                    entity += ShapeComponent(
-                        type = ShapeType.SQUARE,
-                        color = blueprint.color.cpy(),
-                        size = 0.05f, // Scaled for 1.0 world unit ship baseline
-                        rotation = platformRotation
+            // 3. Core Visual (The physical core)
+            val shapeType = when (blueprint.type) {
+                ProjectileType.KINETIC -> ShapeType.SQUARE
+                ProjectileType.ENERGY -> ShapeType.CIRCLE
+                ProjectileType.TORPEDO -> ShapeType.TRIANGLE
+                else -> ShapeType.SQUARE
+            }
+
+            entity += ShapeComponent(
+                type = shapeType,
+                color = Color.WHITE, // Bright Inner Core
+                size = 0.05f * (1f + blueprint.tier * 0.1f),
+                rotation = platformRotation
+            )
+
+            // 4. Aura Visual (STEADY Energy Glow)
+            // Note: pulse is set to false to avoid distracting synchronized pulsing
+            entity += CompositeVisualComponent(
+                layers = mutableListOf(
+                    VisualLayer(
+                        region = ShipTextureGenerator.getProjectileGlow(shapeType, blueprint.color),
+                        color = blueprint.color.cpy().apply { a = 0.5f },
+                        pulse = false,
+                        zIndex = -1,
+                        offsetScale = 3.0f // Significant energy aura relative to core
                     )
-                }
-                ProjectileType.ENERGY -> {
-                    entity += ShapeComponent(
-                        type = ShapeType.CIRCLE,
-                        color = blueprint.color.cpy(),
-                        size = 0.15f,
-                        rotation = platformRotation
-                    )
-                }
-                ProjectileType.TORPEDO -> {
-                    entity += ShapeComponent(
-                        type = ShapeType.TRIANGLE,
-                        color = blueprint.color.cpy(),
-                        size = 0.2f,
-                        rotation = platformRotation
-                    )
-                }
+                )
+            )
+
+            // 5. Status Effects
+            if (blueprint.damageType == DamageType.ACID) {
+                entity += StatusEffectComponent(
+                    type = DamageType.ACID,
+                    duration = 3f,
+                    intensity = blueprint.baseDamage * 0.2f
+                )
             }
         }
     }

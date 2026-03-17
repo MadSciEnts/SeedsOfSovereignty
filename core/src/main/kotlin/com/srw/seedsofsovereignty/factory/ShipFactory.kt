@@ -9,44 +9,77 @@ import com.srw.seedsofsovereignty.service.ShipTextureGenerator
 import com.srw.seedsofsovereignty.system.EvolutionSystem
 
 /**
- * SHIP FACTORY: Responsible for assembling ship entities and their modules.
- * Centralizes "Ship DNA" for the 48-tier evolution.
+ * SHIP FACTORY: Responsible for assembling entities based on Faction and Tier.
+ * Stateless factory: Takes World as a parameter to avoid circular dependencies.
  */
-class ShipFactory(private val world: World) {
+class ShipFactory {
 
     /**
-     * WORLD SCALE: 1 unit = Size of the starting ship (Tier 1 A).
+     * Creates the Player Ship.
      */
-    fun createPlayerTier1(): Entity {
+    fun createPlayer(world: World, tier: Int = 1): Entity {
         val ship = world.entity { entity ->
             entity += PlayerComponent()
-            entity += EvolutionComponent(tier = 1, subTier = SubTier.A)
+            entity += EvolutionComponent(tier = tier, subTier = SubTier.A)
             entity += PositionComponent(Vector2(0f, 0f))
             entity += VelocityComponent(acceleration = 15f, friction = 1.5f)
             entity += PowerCoreComponent()
             entity += ArcedDefenseComponent()
             entity += RadarComponent()
-
-            // Initialize with basic texture component for scale tracking
             entity += TextureRegionComponent(scale = 1.0f)
-
-            // Add the new Composite Visual system
             entity += CompositeVisualComponent()
-
             entity += TrailComponent()
             entity += FactionComponent(FactionType.PLAYER)
         }
 
-        // Initial Primary Module
-        createModule(ship, ModuleCategory.PRIMARY, ModuleType.KINETIC_CANNON, Vector2(0f, 0.3f))
+        // Default Primary Module
+        createModule(world, ship, ModuleCategory.PRIMARY, ModuleType.KINETIC_CANNON, Vector2(0f, 0.3f), FactionType.PLAYER)
 
-        // BOOTSTRAP: Sync visual layers and capabilities
         world.system<EvolutionSystem>().syncCapabilities(ship)
-
         return ship
     }
 
-    fun createModule(parent: Entity, category: ModuleCategory, moduleType: ModuleType, offset: Vector2): Entity {
+    /**
+     * Creates an Enemy Ship with handicapped combat stats.
+     */
+    fun createEnemy(world: World, playerTier: Int, isBoss: Boolean = false): Entity {
+        val enemyTier = if (isBoss) playerTier + 2 else playerTier
+
+        val ship = world.entity { entity ->
+            entity += EvolutionComponent(tier = enemyTier, subTier = SubTier.A)
+            entity += PositionComponent(Vector2(5f, 5f))
+            entity += VelocityComponent(acceleration = 10f, friction = 1.2f)
+            entity += PowerCoreComponent()
+            entity += TextureRegionComponent(scale = 1.0f)
+            entity += CompositeVisualComponent()
+            entity += FactionComponent(FactionType.ENEMY)
+
+            if (isBoss) entity += RadarComponent()
+        }
+
+        createModule(world, ship, ModuleCategory.PRIMARY, ModuleType.KINETIC_CANNON, Vector2(0f, 0.3f), FactionType.ENEMY)
+
+        world.system<EvolutionSystem>().syncCapabilities(ship)
+        return ship
+    }
+
+    /**
+     * Creates a Neutral Station or Ship.
+     */
+    fun createNeutral(world: World, tier: Int): Entity {
+        val ship = world.entity { entity ->
+            entity += EvolutionComponent(tier = tier, subTier = SubTier.A)
+            entity += PositionComponent(Vector2(-10f, -10f))
+            entity += VelocityComponent(acceleration = 0f, friction = 2.0f)
+            entity += TextureRegionComponent(scale = 2.0f)
+            entity += CompositeVisualComponent()
+            entity += FactionComponent(FactionType.NEUTRAL)
+        }
+        world.system<EvolutionSystem>().syncCapabilities(ship)
+        return ship
+    }
+
+    fun createModule(world: World, parent: Entity, category: ModuleCategory, moduleType: ModuleType, offset: Vector2, faction: FactionType): Entity {
         val definition = ModuleRegistry.get(moduleType)
 
         return world.entity { module ->
@@ -59,29 +92,36 @@ class ShipFactory(private val world: World) {
             definition.outputs.forEach { channels.outputs[it.channelKey] = OutputChannelData() }
             module += channels
 
-            // Add visual card for the module
             module += TextureRegionComponent(
-                region = ShipTextureGenerator.generateModuleCard(12345L, Color.GRAY),
-                scale = 0.3f, // Modules are smaller than the hull
-                zIndex = 5    // Always on top of the hull layers
+                region = ShipTextureGenerator.generateModuleCard(12345L, if (faction == FactionType.ENEMY) Color.RED else Color.GRAY),
+                scale = 0.3f,
+                zIndex = 5
             )
 
             when (moduleType) {
                 ModuleType.KINETIC_CANNON -> {
-                    module += WeaponModuleComponent(
-                        evolution = SubTier.A,
-                        barrelOffsets = mutableListOf(Vector2(0f, 0f)),
-                        fireRate = 0.5f
+                    val baseRate = 0.5f
+                    val rate = if (faction == FactionType.ENEMY) baseRate * 10f else baseRate
+
+                    module += WeaponLauncherComponent(
+                        fireRate = rate,
+                        barrelOffsets = mutableListOf(Vector2(0f, 0f))
                     )
-                    module += BarrelVisualComponent(color = Color.WHITE, length = 0.3f, width = 0.05f)
 
                     module += ProjectilePayloadComponent(
                         blueprint = ProjectileBlueprint(
                             type = ProjectileType.KINETIC,
-                            damage = 10f,
-                            speed = 10f,
-                            color = Color.YELLOW
+                            damageType = DamageType.PHYSICAL,
+                            baseDamage = 10f,
+                            speed = 8f,
+                            color = if (faction == FactionType.ENEMY) Color.ORANGE else Color.YELLOW,
+                            tier = 1
                         )
+                    )
+
+                    module += BarrelVisualComponent(
+                        color = if (faction == FactionType.ENEMY) Color.RED else Color.WHITE,
+                        length = 0.3f, width = 0.05f
                     )
                 }
                 else -> {}

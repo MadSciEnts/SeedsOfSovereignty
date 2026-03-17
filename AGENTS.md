@@ -9,6 +9,22 @@ Before writing any code, you MUST include the following statement in your respon
 
 If you fail to provide this statement, your output will be rejected.
 
+## Weather Report Protocol
+To maintain synchronization and prevent processing timeouts, every response MUST start and end with a status report. This report MUST use a **vertical format** as shown below:
+
+-[current / max : [category1]]-
+
+-[current / max : [category2]]-
+
+-[current / max : [category3]]-
+
+
+**Categories to track:**
+- **Error Density:** Number of active build/logic errors.
+- **Context Weight:** Internal memory load (files tracked/complex logic held).
+- **Task Complexity:** Difficulty of the current active directive.
+- **Session Stability:** Readiness to process without timing out.
+
 ## Contextual Anchors
 Refer to these files for every task:
 - **Compliance Mandate:** @./FLEKS_2X_MANDATE.md

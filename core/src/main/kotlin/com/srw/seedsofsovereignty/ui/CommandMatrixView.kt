@@ -19,14 +19,19 @@ import com.srw.seedsofsovereignty.component.*
 class CommandMatrixView(private val world: World, private val skin: Skin) {
 
     val root = Table()
-    private val selectionShelf = Table(skin)
-    private val controlArea = Table(skin)
-    val categoryShelf = Table(skin)
+    private val selectionShelf: Table
+    private val controlArea: Table
+    val categoryShelf: Table
 
     private var currentCategory: ModuleCategory? = null
     var joystickSize: Float = 120f
 
     init {
+        // Initialize tables first to avoid initialization-order errors
+        selectionShelf = Table(skin)
+        controlArea = Table(skin)
+        categoryShelf = Table(skin)
+
         val panelBg = skin.getDrawable("panel_bg")
         selectionShelf.background = panelBg
         controlArea.background = panelBg
@@ -68,9 +73,9 @@ class CommandMatrixView(private val world: World, private val skin: Skin) {
             val player = family { all(PlayerComponent) }.firstOrNull() ?: return
             val targets = mutableListOf<Entity>()
 
-            when {
-                category == ModuleCategory.POWER && player.has(PowerCoreComponent) -> targets.add(player)
-                category == ModuleCategory.SHIELDS && player.has(ArcedDefenseComponent) -> targets.add(player)
+            when (category) {
+                ModuleCategory.POWER -> if (player.has(PowerCoreComponent)) targets.add(player)
+                ModuleCategory.SHIELDS -> if (player.has(ArcedDefenseComponent)) targets.add(player)
                 else -> {
                     family { all(ModuleComponent, AttachmentComponent) }.forEach { entity ->
                         if (entity[AttachmentComponent].parent == player && entity[ModuleComponent].category == category) {
@@ -263,17 +268,17 @@ class CommandMatrixView(private val world: World, private val skin: Skin) {
     }
 
     private fun getAlign(x: Float, y: Float): Int {
-        val vertical = when {
-            y > 0.66f -> Align.top
-            y < 0.33f -> Align.bottom
-            else -> Align.center
-        }
-        val horizontal = when {
-            x > 0.66f -> Align.right
-            x < 0.33f -> Align.left
-            else -> Align.center
-        }
-        return vertical or horizontal
+        var align = 0
+
+        if (y > 0.66f) align = align or Align.top
+        else if (y < 0.33f) align = align or Align.bottom
+        else align = align or Align.center
+
+        if (x > 0.66f) align = align or Align.right
+        else if (x < 0.33f) align = align or Align.left
+        else align = align or Align.center
+
+        return align
     }
 
     private fun getCategoryColor(category: ModuleCategory): Color {

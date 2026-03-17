@@ -3,29 +3,86 @@ package com.srw.seedsofsovereignty.component
 import com.github.quillraven.fleks.Component
 import com.github.quillraven.fleks.ComponentType
 import com.badlogic.gdx.math.Vector2
+import com.badlogic.gdx.graphics.Color
 
 /**
  * COMBAT & WEAPONRY
  */
 
-data class WeaponModuleComponent(
-    var evolution: SubTier = SubTier.A,
-    var fireRate: Float = 0.5f,      // Time between individual barrel shots
-    var currentCooldown: Float = 0f,
-    var barrelIndex: Int = 0,
-    val barrelOffsets: MutableList<Vector2> = mutableListOf(Vector2(0f, 0f)),
-    var damage: Float = 10f,
-    var projectileSpeed: Float = 500f
-) : Component<WeaponModuleComponent> {
-    override fun type() = WeaponModuleComponent
-    companion object : ComponentType<WeaponModuleComponent>()
+enum class DamageType {
+    PHYSICAL,   // Balanced
+    ENERGY,     // Bonus vs Shields
+    PIERCING,   // Ignores/Penetrates Shields, less Hull damage
+    ACID        // Lingering DOT (Damage Over Time)
 }
 
 /**
- * DATA CHANNELS: Standardizes communication between the Command Matrix (UI)
- * and the Fleks Systems (Logic).
+ * WEAPON LAUNCHER: The "How" of firing.
  */
+data class WeaponLauncherComponent(
+    var fireRate: Float = 0.5f,
+    var currentCooldown: Float = 0f,
+    var burstCount: Int = 1,
+    var currentBurst: Int = 0,
+    var burstInterval: Float = 0.1f,
+    var barrelIndex: Int = 0,
+    val barrelOffsets: MutableList<Vector2> = mutableListOf(Vector2(0f, 0f))
+) : Component<WeaponLauncherComponent> {
+    override fun type() = WeaponLauncherComponent
+    companion object : ComponentType<WeaponLauncherComponent>()
+}
 
+/**
+ * PROJECTILE BLUEPRINT: The "What" of firing.
+ */
+data class ProjectileBlueprint(
+    val type: ProjectileType,
+    val damageType: DamageType = DamageType.PHYSICAL,
+    val baseDamage: Float,
+    val shieldMultiplier: Float = 1.0f,
+    val speed: Float,
+    val lifeTime: Float = 2f,
+    val color: Color = Color.WHITE,
+    val tier: Int = 1
+)
+
+enum class ProjectileType { KINETIC, ENERGY, TORPEDO, DRONE, FIGHTER }
+
+data class ProjectilePayloadComponent(
+    var blueprint: ProjectileBlueprint
+) : Component<ProjectilePayloadComponent> {
+    override fun type() = ProjectilePayloadComponent
+    companion object : ComponentType<ProjectilePayloadComponent>()
+}
+
+/**
+ * DAMAGE COMPONENT: Attached to projectiles to store active combat data.
+ */
+data class DamageComponent(
+    var amount: Float = 0f,
+    var type: DamageType = DamageType.PHYSICAL,
+    var shieldMultiplier: Float = 1.0f
+) : Component<DamageComponent> {
+    override fun type() = DamageComponent
+    companion object : ComponentType<DamageComponent>()
+}
+
+/**
+ * STATUS EFFECTS: Components for lingering logic.
+ */
+data class StatusEffectComponent(
+    var type: DamageType,
+    var duration: Float,
+    var intensity: Float,
+    var timer: Float = 0f
+) : Component<StatusEffectComponent> {
+    override fun type() = StatusEffectComponent
+    companion object : ComponentType<StatusEffectComponent>()
+}
+
+/**
+ * DATA CHANNELS
+ */
 data class InputChannelData(
     var vector: Vector2 = Vector2(),
     var value: Float = 0f,
@@ -33,7 +90,7 @@ data class InputChannelData(
 )
 
 data class OutputChannelData(
-    var status: Float = 0f,         // e.g., Heat, Charge, Ammo %
+    var status: Float = 0f,
     var active: Boolean = false,
     var message: String = ""
 )
@@ -48,27 +105,8 @@ data class ModuleChannelsComponent(
 }
 
 /**
- * PAYLOADS: The "Required Data" for what a module actually produces.
+ * LIFECYCLE TAGS
  */
-
-data class ProjectileBlueprint(
-    val type: ProjectileType,
-    val damage: Float,
-    val speed: Float,
-    val lifeTime: Float = 2f,
-    val color: com.badlogic.gdx.graphics.Color = com.badlogic.gdx.graphics.Color.WHITE
-)
-
-enum class ProjectileType { KINETIC, ENERGY, TORPEDO }
-
-data class ProjectilePayloadComponent(
-    val blueprint: ProjectileBlueprint
-) : Component<ProjectilePayloadComponent> {
-    override fun type() = ProjectilePayloadComponent
-    companion object : ComponentType<ProjectilePayloadComponent>()
-}
-
-// Tag and state for projectiles in flight
 data class ProjectileComponent(
     var lifeTime: Float = 0f
 ) : Component<ProjectileComponent> {
@@ -76,7 +114,6 @@ data class ProjectileComponent(
     companion object : ComponentType<ProjectileComponent>()
 }
 
-// Stores info about who fired it to avoid self-collision
 data class FactionComponent(
     val type: FactionType
 ) : Component<FactionComponent> {
