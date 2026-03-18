@@ -12,6 +12,8 @@
 - [x] Sequential Firing System (Integrated)
 - [x] Projectile Lifecycle: Factory & Lifetime System
 - [x] Command Matrix: High-Fidelity Layouts & Visual Feedback
+- [x] ARCHITECTURE REFACTOR: AI-Friendly Modularization (Completed)
+- [x] COMBAT LOGIC: Directional Damage, Penetration & Status Effects (Completed)
 - [ ] Command Matrix: Group Control Logic (Pending)
 
 ## Current Global Stats
@@ -19,3 +21,4 @@
 - **Active Epoch:** 1/4
 - **Build Version:** 0.0.1 (Pre-Alpha)
 - **ECS Stability:** 100% (Build Verified)
+- **Code Cleanliness:** HIGH (Modularized)

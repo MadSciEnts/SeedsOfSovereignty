@@ -4,14 +4,14 @@ import com.github.quillraven.fleks.Component
 import com.github.quillraven.fleks.ComponentType
 
 data class ArcedDefenseComponent(
-    val shieldFore: Float = 100f,
-    val shieldAft: Float = 100f,
-    val shieldPort: Float = 100f,
-    val shieldStbd: Float = 100f,
-    val hullFore: Float = 100f,
-    val hullAft: Float = 100f,
-    val hullPort: Float = 100f,
-    val hullStbd: Float = 100f
+    var shieldFore: Float = 100f,
+    var shieldAft: Float = 100f,
+    var shieldPort: Float = 100f,
+    var shieldStbd: Float = 100f,
+    var hullFore: Float = 100f,
+    var hullAft: Float = 100f,
+    var hullPort: Float = 100f,
+    var hullStbd: Float = 100f
 ) : Component<ArcedDefenseComponent> {
     override fun type() = ArcedDefenseComponent
     companion object : ComponentType<ArcedDefenseComponent>()

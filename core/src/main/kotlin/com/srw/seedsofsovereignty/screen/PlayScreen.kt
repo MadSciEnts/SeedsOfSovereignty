@@ -13,18 +13,24 @@ import com.badlogic.gdx.scenes.scene2d.ui.Touchpad
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener
 import com.badlogic.gdx.utils.viewport.ExtendViewport
 import com.badlogic.gdx.utils.viewport.ScreenViewport
-import com.badlogic.gdx.utils.viewport.Viewport
 import com.github.quillraven.fleks.World
 import com.github.quillraven.fleks.configureWorld
-import com.srw.seedsofsovereignty.component.*
+import com.srw.seedsofsovereignty.component.FactionType
 import com.srw.seedsofsovereignty.factory.ProjectileFactory
 import com.srw.seedsofsovereignty.factory.ShipFactory
 import com.srw.seedsofsovereignty.service.TextureService
-import com.srw.seedsofsovereignty.system.*
+import com.srw.seedsofsovereignty.system.EvolutionSystem
 import com.srw.seedsofsovereignty.ui.CommandMatrixView
+import com.srw.seedsofsovereignty.world.GameContext
+import com.srw.seedsofsovereignty.world.WorldModules.registerContext
+import com.srw.seedsofsovereignty.world.WorldModules.registerSystems
 import ktx.app.KtxScreen
 import space.earlygrey.shapedrawer.ShapeDrawer
 
+/**
+ * PLAY SCREEN: The primary gameplay entry point.
+ * Refactored for AI-friendliness using modular World Configuration.
+ */
 class PlayScreen(private val camera: OrthographicCamera) : KtxScreen {
 
     private val batch: Batch = SpriteBatch()
@@ -36,122 +42,69 @@ class PlayScreen(private val camera: OrthographicCamera) : KtxScreen {
     private val uiStage = Stage(uiViewport, batch)
 
     private val drawer = ShapeDrawer(batch, textureService.whitePixel)
-
-    private val movementJoystick: Touchpad
-    private val devEvolveButton: TextButton
+    private val movementJoystick = Touchpad(10f, uiSkin)
+    private val devEvolveButton = TextButton("DEV EVOLVE", uiSkin)
 
     private val world: World
     private val shipFactory = ShipFactory()
-    private val commandMatrixView: CommandMatrixView
+    private val commandMatrix = CommandMatrixView(uiSkin)
 
-    private var lastCategories = setOf<ModuleCategory>()
-    private var shelfUpdateTimer = 0f
     private val margin = 20f
 
     init {
         Gdx.input.inputProcessor = uiStage
 
-        movementJoystick = Touchpad(10f, uiSkin)
-        devEvolveButton = TextButton("DEV EVOLVE", uiSkin)
+        // 1. Build the Game Context
+        val context = GameContext(
+            batch = batch,
+            drawer = drawer,
+            textureService = textureService,
+            gameViewport = gameViewport,
+            uiViewport = uiViewport,
+            camera = camera,
+            joystick = movementJoystick,
+            shipFactory = shipFactory,
+            projectileFactory = ProjectileFactory(),
+            commandMatrix = commandMatrix
+        )
 
+        // 2. Configure the World via Modules
         world = configureWorld {
-            injectables {
-                add<Batch>(batch)
-                add("batch", batch)
-                add(drawer)
-                add("drawer", drawer)
-                add(textureService)
-                add<Viewport>("gameViewport", gameViewport)
-                add<Viewport>("uiViewport", uiViewport)
-                add(camera)
-                add("camera", camera)
-                add("joystick", movementJoystick)
-                add(ProjectileFactory())
-                add(shipFactory)
-            }
-
-            systems {
-                add(StarfieldRenderSystem())
-                add(PlayerInputSystem())
-                add(EnginePropulsionSystem()) // FIXED: Register propulsion
-                add(MoveSystem())
-                add(CameraFollowSystem())
-                add(ModuleAttachmentSystem())
-                add(ModuleActionSystem())
-                add(ProjectileSystem())
-                add(CollisionSystem())
-                add(PowerThrottlingSystem())
-                add(RadarSensorSystem())
-                add(EvolutionSystem())
-                add(TrailSystem())
-                add(TrailRenderSystem())
-                add(StationSystem())
-                add(EnemyAISystem())
-                add(EnemySpawnSystem())
-                add(WorldRenderSystem())
-                add(TacticalRenderSystem())
-                add(RadarRenderSystem())
-            }
+            registerContext(context)
+            registerSystems()
         }
 
-        commandMatrixView = CommandMatrixView(world, uiSkin)
+        // 3. Wire the UI-ECS Bridge
+        commandMatrix.attachWorld(world)
 
+        // 4. Build Scene2D Layout
         uiStage.addActor(movementJoystick)
         uiStage.addActor(devEvolveButton)
-        uiStage.addActor(commandMatrixView.root)
-        uiStage.addActor(commandMatrixView.categoryShelf)
+        uiStage.addActor(commandMatrix.root) // categoryShelf is now a child of commandMatrix.root
 
+        // 5. Global Event Handlers
         devEvolveButton.addListener(object : ChangeListener() {
             override fun changed(event: ChangeEvent, actor: Actor) {
                 world.system<EvolutionSystem>().evolvePlayer()
-                updateCategoryShelf(true)
             }
         })
 
+        // 6. Initial Spawn Logic
         shipFactory.createPlayer(world, 1)
         shipFactory.createStation(world, FactionType.PLAYER, tier = 1, pos = Vector2(0f, 0f))
         shipFactory.createStation(world, FactionType.ENEMY, tier = 1, pos = Vector2(100f, 100f))
 
-        updateCategoryShelf(true)
+        layoutUI()
     }
 
-    private fun updateCategoryShelf(force: Boolean = false) {
-        val player = world.family { all(PlayerComponent) }.firstOrNull() ?: return
-        val activeCategories = mutableSetOf<ModuleCategory>()
-
-        with(world) {
-            if (player.has(PowerCoreComponent)) activeCategories.add(ModuleCategory.POWER)
-            if (player.has(ArcedDefenseComponent)) activeCategories.add(ModuleCategory.SHIELDS)
-
-            family { all(ModuleComponent, AttachmentComponent) }.forEach { entity ->
-                if (entity.get(AttachmentComponent).parent == player) {
-                    activeCategories.add(entity.get(ModuleComponent).category)
-                }
-            }
-        }
-
-        if (!force && activeCategories == lastCategories) return
-        lastCategories = activeCategories
-        commandMatrixView.updateCategories(activeCategories)
-        layoutCommandMatrix()
-    }
-
-    private fun layoutCommandMatrix() {
-        commandMatrixView.categoryShelf.setPosition(uiViewport.worldWidth - commandMatrixView.categoryShelf.width - margin, margin)
-
+    private fun layoutUI() {
         val matrixWidth = movementJoystick.width * 1.5f
-        val matrixHeight = 80f + movementJoystick.height
-        commandMatrixView.root.setSize(matrixWidth, matrixHeight)
-        commandMatrixView.root.setPosition(uiViewport.worldWidth - matrixWidth - margin, margin + commandMatrixView.categoryShelf.height + 5f)
+        val matrixHeight = 150f + movementJoystick.height
+        commandMatrix.root.setSize(matrixWidth, matrixHeight)
+        commandMatrix.root.setPosition(uiViewport.worldWidth - matrixWidth - margin, margin)
     }
 
     override fun render(delta: Float) {
-        shelfUpdateTimer += delta
-        if (shelfUpdateTimer >= 0.5f) {
-            shelfUpdateTimer = 0f
-            updateCategoryShelf()
-        }
-
         gameViewport.apply()
         batch.projectionMatrix = camera.combined
         batch.begin()
@@ -171,14 +124,10 @@ class PlayScreen(private val camera: OrthographicCamera) : KtxScreen {
         movementJoystick.setSize(joystickSize, joystickSize)
         movementJoystick.setPosition(margin, margin)
 
-        commandMatrixView.joystickSize = joystickSize
-        world.family { all(SelectedModuleComponent) }.firstOrNull()?.let {
-            commandMatrixView.updateControlArea(it)
-        }
-
+        commandMatrix.joystickSize = joystickSize
         devEvolveButton.setPosition((uiViewport.worldWidth - devEvolveButton.width) / 2f, uiViewport.worldHeight - devEvolveButton.height - margin)
 
-        layoutCommandMatrix()
+        layoutUI()
     }
 
     override fun dispose() {

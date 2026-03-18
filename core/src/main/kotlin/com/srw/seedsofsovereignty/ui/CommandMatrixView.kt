@@ -14,20 +14,20 @@ import com.srw.seedsofsovereignty.component.*
 
 /**
  * COMMAND MATRIX VIEW: Manages the UI components for module selection and control.
- * Adheres to Fleks 2.x patterns.
+ * Refactored to include the Category Shelf in the main root for stable layout.
  */
-class CommandMatrixView(private val world: World, private val skin: Skin) {
+class CommandMatrixView(private val skin: Skin) {
 
+    private var world: World? = null
     val root = Table()
     private val selectionShelf: Table
     private val controlArea: Table
-    val categoryShelf: Table
+    private val categoryShelf: Table
 
     private var currentCategory: ModuleCategory? = null
     var joystickSize: Float = 120f
 
     init {
-        // Initialize tables first to avoid initialization-order errors
         selectionShelf = Table(skin)
         controlArea = Table(skin)
         categoryShelf = Table(skin)
@@ -37,13 +37,22 @@ class CommandMatrixView(private val world: World, private val skin: Skin) {
         controlArea.background = panelBg
         categoryShelf.background = panelBg
 
+        // Build the unified layout - Reordered for categoryShelf at bottom
         root.apply {
-            add(selectionShelf).expandX().fillX().height(80f).row()
-            add(controlArea).expand().fill()
+            add(selectionShelf).expandX().fillX().height(70f).padBottom(5f).row()
+            add(controlArea).expand().fill().row()
+            add(categoryShelf).expandX().fillX().height(60f).padTop(5f)
             setTransform(true)
         }
 
         controlArea.add(TextButton("SELECT A MODULE", skin)).expand().fill().pad(10f)
+    }
+
+    /**
+     * Attaches the ECS world to this view. Must be called before user interaction.
+     */
+    fun attachWorld(world: World) {
+        this.world = world
     }
 
     fun updateCategories(activeCategories: Set<ModuleCategory>) {
@@ -51,7 +60,7 @@ class CommandMatrixView(private val world: World, private val skin: Skin) {
         ModuleCategory.entries.forEach { cat ->
             if (cat in activeCategories) {
                 val btn = TextButton(cat.name, skin, cat.name.lowercase())
-                categoryShelf.add(btn).size(180f, 80f).pad(2f)
+                categoryShelf.add(btn).expandX().fill().pad(1f)
 
                 btn.addListener(object : ChangeListener() {
                     override fun changed(event: ChangeEvent, actor: Actor) {
@@ -63,13 +72,13 @@ class CommandMatrixView(private val world: World, private val skin: Skin) {
                 })
             }
         }
-        categoryShelf.pack()
     }
 
     private fun populateSelectionShelf(category: ModuleCategory) {
+        val w = world ?: return
         selectionShelf.clearChildren()
 
-        world.run {
+        w.run {
             val player = family { all(PlayerComponent) }.firstOrNull() ?: return
             val targets = mutableListOf<Entity>()
 
@@ -87,7 +96,7 @@ class CommandMatrixView(private val world: World, private val skin: Skin) {
 
             if (targets.size > 1) {
                 val masterBtn = TextButton("MASTER", skin, "toggle")
-                selectionShelf.add(masterBtn).height(70f).pad(2f)
+                selectionShelf.add(masterBtn).height(60f).pad(2f)
                 masterBtn.addListener(object : ChangeListener() {
                     override fun changed(event: ChangeEvent, actor: Actor) {
                         selectMaster(player, category, targets.firstOrNull())
@@ -98,7 +107,7 @@ class CommandMatrixView(private val world: World, private val skin: Skin) {
             targets.forEach { entity ->
                 val label = if (entity == player) category.name else "MOD-${entity.id}"
                 val btn = TextButton(label, skin)
-                selectionShelf.add(btn).height(70f).pad(2f)
+                selectionShelf.add(btn).height(60f).pad(2f)
 
                 btn.addListener(object : ChangeListener() {
                     override fun changed(event: ChangeEvent, actor: Actor) {
@@ -110,14 +119,15 @@ class CommandMatrixView(private val world: World, private val skin: Skin) {
     }
 
     private fun selectMaster(player: Entity, category: ModuleCategory, representative: Entity?) {
-        world.run {
+        val w = world ?: return
+        w.run {
             var master = family { all(GroupMasterComponent) }.firstOrNull {
                 it[GroupMasterComponent].category == category && it.getOrNull(AttachmentComponent)?.parent == player
             }
 
             if (master == null && representative != null && representative.has(ModuleChannelsComponent)) {
                 val repChannels = representative[ModuleChannelsComponent]
-                master = world.entity {
+                master = w.entity {
                     it += GroupMasterComponent(category)
                     it += AttachmentComponent(parent = player)
 
@@ -132,7 +142,8 @@ class CommandMatrixView(private val world: World, private val skin: Skin) {
     }
 
     private fun selectModule(target: Entity) {
-        world.run {
+        val w = world ?: return
+        w.run {
             family { all(SelectedModuleComponent) }.forEach { entity ->
                 entity.configure { it -= SelectedModuleComponent }
             }
@@ -171,10 +182,11 @@ class CommandMatrixView(private val world: World, private val skin: Skin) {
     }
 
     fun updateControlArea(entity: Entity) {
+        val w = world ?: return
         val s = skin
         controlArea.clearChildren()
 
-        world.run {
+        w.run {
             if (entity.has(ModuleChannelsComponent)) {
                 val channels = entity[ModuleChannelsComponent]
                 val definition = ModuleRegistry.get(channels.type)
@@ -269,7 +281,6 @@ class CommandMatrixView(private val world: World, private val skin: Skin) {
 
     private fun getAlign(x: Float, y: Float): Int {
         var align = 0
-
         if (y > 0.66f) align = align or Align.top
         else if (y < 0.33f) align = align or Align.bottom
         else align = align or Align.center
@@ -277,7 +288,6 @@ class CommandMatrixView(private val world: World, private val skin: Skin) {
         if (x > 0.66f) align = align or Align.right
         else if (x < 0.33f) align = align or Align.left
         else align = align or Align.center
-
         return align
     }
 

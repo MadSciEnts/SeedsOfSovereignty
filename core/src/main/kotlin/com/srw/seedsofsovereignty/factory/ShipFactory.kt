@@ -24,11 +24,15 @@ class ShipFactory {
             entity += TextureRegionComponent(scale = 1.0f)
             entity += CompositeVisualComponent()
             entity += FactionComponent(FactionType.PLAYER)
+
+            // HUD Summary Components: Added to ensure TacticalRenderSystem (Nautilus) works
+            entity += ArcedDefenseComponent()
+            entity += PowerCoreComponent()
         }
 
         createModule(world, ship, ModuleCategory.POWER, ModuleType.POWER_CORE_T1, Vector2(0f, 0f), FactionType.PLAYER)
-        createModule(world, ship, ModuleCategory.POWER, ModuleType.HULL_COMPOSITE_T1, Vector2(0f, 0f), FactionType.PLAYER)
-        createModule(world, ship, ModuleCategory.POWER, ModuleType.SHIELD_GEN_T1, Vector2(0f, 0f), FactionType.PLAYER)
+        createModule(world, ship, ModuleCategory.SECONDARY, ModuleType.HULL_COMPOSITE_T1, Vector2(0f, 0f), FactionType.PLAYER)
+        createModule(world, ship, ModuleCategory.SHIELDS, ModuleType.SHIELD_GEN_T1, Vector2(0f, 0f), FactionType.PLAYER)
         createModule(world, ship, ModuleCategory.POWER, ModuleType.ENGINE_IMPULSE_T1, Vector2(0f, -0.3f), FactionType.PLAYER)
         createModule(world, ship, ModuleCategory.PRIMARY, ModuleType.KINETIC_CANNON, Vector2(0f, 0.3f), FactionType.PLAYER)
 
@@ -113,9 +117,21 @@ class ShipFactory {
                     val rate = if (faction == FactionType.ENEMY) baseRate * 10f else baseRate
                     m += WeaponLauncherComponent(fireRate = rate, barrelOffsets = mutableListOf(Vector2(0f, 0f)))
                     m += ProjectilePayloadComponent(blueprint = ProjectileBlueprint(
-                        type = ProjectileType.KINETIC, baseDamage = 10f, speed = 8f,
+                        type = ProjectileType.KINETIC, baseDamage = 10f, speed = 16f,
                         color = if (faction == FactionType.ENEMY) Color.ORANGE else Color.YELLOW, tier = 1))
                     m += BarrelVisualComponent(color = if (faction == FactionType.ENEMY) Color.RED else Color.WHITE, length = 0.3f, width = 0.05f)
+                }
+                ModuleType.SHIELD_GEN_T1 -> {
+                    m += ArcedDefenseComponent(
+                        shieldFore = 50f, shieldAft = 50f, shieldPort = 50f, shieldStbd = 50f,
+                        hullFore = 0f, hullAft = 0f, hullPort = 0f, hullStbd = 0f
+                    )
+                }
+                ModuleType.HULL_COMPOSITE_T1 -> {
+                    m += ArcedDefenseComponent(
+                        shieldFore = 0f, shieldAft = 0f, shieldPort = 0f, shieldStbd = 0f,
+                        hullFore = 100f, hullAft = 100f, hullPort = 100f, hullStbd = 100f
+                    )
                 }
                 else -> {}
             }

@@ -2,6 +2,7 @@ package com.srw.seedsofsovereignty.component
 
 import com.github.quillraven.fleks.Component
 import com.github.quillraven.fleks.ComponentType
+import com.github.quillraven.fleks.Entity
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.graphics.Color
 
@@ -13,12 +14,14 @@ enum class DamageType {
     PHYSICAL,   // Balanced
     ENERGY,     // Bonus vs Shields
     PIERCING,   // Ignores/Penetrates Shields
-    ACID        // Lingering DOT
+    ACID,       // Lingering DOT
+    ELECTRICAL  // Disruptive / Lingering
 }
 
 enum class ProjectileStyle { KINETIC, ION, PLASMA }
 enum class ImpactTarget { SHIELD, HULL, CORE, ENVIRONMENT }
 enum class ImpactFXType { SPARK, FLARE, DETONATION, SIZZLE, GLITCH, NONE }
+enum class ImpactQuadrant { FORE, AFT, PORT, STBD }
 
 /**
  * WEAPON LAUNCHER: The "How" of firing.
@@ -74,6 +77,29 @@ data class DamageComponent(
 }
 
 /**
+ * IMPACT COMPONENT: Signal Entity data for damage resolution.
+ */
+data class ImpactComponent(
+    val target: Entity,
+    val projectileDamage: DamageComponent,
+    val impactPos: Vector2,
+    val relativeImpact: Vector2
+) : Component<ImpactComponent> {
+    override fun type() = ImpactComponent
+    companion object : ComponentType<ImpactComponent>()
+}
+
+/**
+ * RESOLVED IMPACT: Enrichment for ballistics logic.
+ */
+data class ResolvedImpactComponent(
+    var quadrant: ImpactQuadrant = ImpactQuadrant.FORE
+) : Component<ResolvedImpactComponent> {
+    override fun type() = ResolvedImpactComponent
+    companion object : ComponentType<ResolvedImpactComponent>()
+}
+
+/**
  * DATA CHANNELS
  */
 data class InputChannelData(
@@ -104,7 +130,8 @@ data class StatusEffectComponent(
     var type: DamageType,
     var duration: Float,
     var intensity: Float,
-    var timer: Float = 0f
+    var timer: Float = 0f,
+    var lastQuadrant: ImpactQuadrant = ImpactQuadrant.FORE
 ) : Component<StatusEffectComponent> {
     override fun type() = StatusEffectComponent
     companion object : ComponentType<StatusEffectComponent>()
