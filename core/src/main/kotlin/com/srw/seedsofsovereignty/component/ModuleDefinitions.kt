@@ -8,10 +8,12 @@ import com.badlogic.gdx.math.Vector2
 enum class ModuleType {
     KINETIC_CANNON,
     PULSE_LASER,
-    SHIELD_GEN,
+    SHIELD_GEN_T1,
     POWER_CORE_T1,
     DRONE_HIVE,
-    FIGHTER_BAY
+    FIGHTER_BAY,
+    ENGINE_IMPULSE_T1,
+    HULL_COMPOSITE_T1
 }
 
 /**
@@ -51,33 +53,32 @@ object ModuleRegistry {
     private val definitions = mutableMapOf<ModuleType, ModuleTypeDefinition>()
 
     init {
-        // Tier 1 Kinetic Cannon
+        // --- WEAPONS ---
         definitions[ModuleType.KINETIC_CANNON] = ModuleTypeDefinition(
             type = ModuleType.KINETIC_CANNON,
-            controls = listOf(
-                ControlWidgetDefinition(ControlWidgetType.JOYSTICK_2D, "AIM", Vector2(0.5f, 0.4f), label = "AIM")
-            ),
-            outputs = listOf(
-                OutputWidgetDefinition("HEAT", Vector2(0.5f, 0.9f), "TEMP")
-            )
+            controls = listOf(ControlWidgetDefinition(ControlWidgetType.JOYSTICK_2D, "AIM", Vector2(0.5f, 0.4f), label = "AIM")),
+            outputs = listOf(OutputWidgetDefinition("HEAT", Vector2(0.5f, 0.9f), "TEMP"))
         )
 
-        // Shield Generator
-        definitions[ModuleType.SHIELD_GEN] = ModuleTypeDefinition(
-            type = ModuleType.SHIELD_GEN,
+        // --- DEFENSES ---
+        definitions[ModuleType.SHIELD_GEN_T1] = ModuleTypeDefinition(
+            type = ModuleType.SHIELD_GEN_T1,
             controls = listOf(
                 ControlWidgetDefinition(ControlWidgetType.BUTTON_DISCRETE, "FORE", Vector2(0.5f, 0.8f), label = "FORE"),
                 ControlWidgetDefinition(ControlWidgetType.BUTTON_DISCRETE, "AFT", Vector2(0.5f, 0.2f), label = "AFT"),
                 ControlWidgetDefinition(ControlWidgetType.BUTTON_DISCRETE, "PORT", Vector2(0.2f, 0.5f), label = "PORT"),
-                ControlWidgetDefinition(ControlWidgetType.BUTTON_DISCRETE, "STBD", Vector2(0.8f, 0.5f), label = "STBD"),
-                ControlWidgetDefinition(ControlWidgetType.BUTTON_DISCRETE, "CENTER", Vector2(0.5f, 0.5f), label = "BAL")
+                ControlWidgetDefinition(ControlWidgetType.BUTTON_DISCRETE, "STBD", Vector2(0.8f, 0.5f), label = "STBD")
             ),
-            outputs = listOf(
-                OutputWidgetDefinition("CHARGE", Vector2(0.5f, 0.05f), "SHIELD")
-            )
+            outputs = listOf(OutputWidgetDefinition("CHARGE", Vector2(0.5f, 0.05f), "SHIELD"))
         )
 
-        // Power Core
+        definitions[ModuleType.HULL_COMPOSITE_T1] = ModuleTypeDefinition(
+            type = ModuleType.HULL_COMPOSITE_T1,
+            controls = emptyList(), // Passive structural module
+            outputs = listOf(OutputWidgetDefinition("INTEGRITY", Vector2(0.5f, 0.5f), "HULL"))
+        )
+
+        // --- CORE & POWER ---
         definitions[ModuleType.POWER_CORE_T1] = ModuleTypeDefinition(
             type = ModuleType.POWER_CORE_T1,
             controls = listOf(
@@ -86,20 +87,21 @@ object ModuleRegistry {
                 ControlWidgetDefinition(ControlWidgetType.SLIDER_1D, "ENGINE", Vector2(0.6f, 0.5f), orientation = 90f, label = "ENG"),
                 ControlWidgetDefinition(ControlWidgetType.SLIDER_1D, "UTILITY", Vector2(0.8f, 0.5f), orientation = 90f, label = "UTL")
             ),
-            outputs = listOf(
-                OutputWidgetDefinition("TOTAL_LOAD", Vector2(0.5f, 0.95f), "LOAD")
-            )
+            outputs = listOf(OutputWidgetDefinition("TOTAL_LOAD", Vector2(0.5f, 0.95f), "LOAD"))
         )
 
-        // Drone Hive: Manages autonomous defense drones
+        // --- PROPULSION ---
+        definitions[ModuleType.ENGINE_IMPULSE_T1] = ModuleTypeDefinition(
+            type = ModuleType.ENGINE_IMPULSE_T1,
+            controls = listOf(ControlWidgetDefinition(ControlWidgetType.JOYSTICK_2D, "MOVE", Vector2(0.5f, 0.5f), label = "THRUST")),
+            outputs = listOf(OutputWidgetDefinition("HEAT", Vector2(0.5f, 0.1f), "ENGINE"))
+        )
+
+        // --- UTILITIES ---
         definitions[ModuleType.DRONE_HIVE] = ModuleTypeDefinition(
             type = ModuleType.DRONE_HIVE,
-            controls = listOf(
-                ControlWidgetDefinition(ControlWidgetType.BUTTON_DISCRETE, "LAUNCH", Vector2(0.5f, 0.5f), label = "DEPLOY")
-            ),
-            outputs = listOf(
-                OutputWidgetDefinition("COUNT", Vector2(0.5f, 0.1f), "ACTIVE")
-            )
+            controls = listOf(ControlWidgetDefinition(ControlWidgetType.BUTTON_DISCRETE, "LAUNCH", Vector2(0.5f, 0.5f), label = "DEPLOY")),
+            outputs = listOf(OutputWidgetDefinition("COUNT", Vector2(0.5f, 0.1f), "ACTIVE"))
         )
     }
 

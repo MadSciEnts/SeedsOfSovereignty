@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.g2d.Batch
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
+import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.ui.Skin
@@ -72,18 +73,21 @@ class PlayScreen(private val camera: OrthographicCamera) : KtxScreen {
             systems {
                 add(StarfieldRenderSystem())
                 add(PlayerInputSystem())
+                add(EnginePropulsionSystem()) // FIXED: Register propulsion
                 add(MoveSystem())
                 add(CameraFollowSystem())
                 add(ModuleAttachmentSystem())
                 add(ModuleActionSystem())
                 add(ProjectileSystem())
+                add(CollisionSystem())
                 add(PowerThrottlingSystem())
                 add(RadarSensorSystem())
                 add(EvolutionSystem())
                 add(TrailSystem())
                 add(TrailRenderSystem())
-                add(EnemyAISystem()) // Handle AI before spawning/rendering
-                add(EnemySpawnSystem()) // Manage populations
+                add(StationSystem())
+                add(EnemyAISystem())
+                add(EnemySpawnSystem())
                 add(WorldRenderSystem())
                 add(TacticalRenderSystem())
                 add(RadarRenderSystem())
@@ -104,8 +108,10 @@ class PlayScreen(private val camera: OrthographicCamera) : KtxScreen {
             }
         })
 
-        // Create player at Tier 1 using the stateless factory
         shipFactory.createPlayer(world, 1)
+        shipFactory.createStation(world, FactionType.PLAYER, tier = 1, pos = Vector2(0f, 0f))
+        shipFactory.createStation(world, FactionType.ENEMY, tier = 1, pos = Vector2(100f, 100f))
+
         updateCategoryShelf(true)
     }
 

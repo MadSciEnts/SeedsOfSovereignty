@@ -18,12 +18,12 @@ data class TrailComponent(
     var nextIndex: Int = 0,
 
     var dropTimer: Float = 0f,
-    var dropInterval: Float = 0.01f, // How often to drop a point
-    var pointLifetime: Float = 1.8f, // How long a point stays visible
+    var dropInterval: Float = 0.03f, // How often to drop a point
+    var pointLifetime: Float = 1.0f, // How long a point stays visible
 
     val color: Color = Color(0.2f, 0.6f, 1f, 0.8f),
     var width: Float = 0.4f,
-    var turbulenceIntensity: Float = 0.15f
+    var turbulenceIntensity: Float = 0.25f
 ) : Component<TrailComponent> {
     override fun type() = TrailComponent
     companion object : ComponentType<TrailComponent>()

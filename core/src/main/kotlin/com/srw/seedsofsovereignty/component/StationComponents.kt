@@ -11,7 +11,10 @@ import com.github.quillraven.fleks.Entity
 data class StationComponent(
     val name: String = "Outpost",
     val dockingRange: Float = 5f,
-    var isPlayerDocked: Boolean = false
+    var isPlayerDocked: Boolean = false,
+    var maxDefenders: Int = 6,
+    var spawnInterval: Float = 5f,
+    var spawnTimer: Float = 0f
 ) : Component<StationComponent> {
     override fun type() = StationComponent
     companion object : ComponentType<StationComponent>()
@@ -19,7 +22,7 @@ data class StationComponent(
 
 data class ShopComponent(
     val categories: MutableList<ModuleCategory> = mutableListOf(),
-    val inventory: MutableList<Entity> = mutableListOf() // Entities representing module templates
+    val inventory: MutableList<Entity> = mutableListOf()
 ) : Component<ShopComponent> {
     override fun type() = ShopComponent
     companion object : ComponentType<ShopComponent>()

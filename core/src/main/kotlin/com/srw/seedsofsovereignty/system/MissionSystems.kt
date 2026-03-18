@@ -9,8 +9,8 @@ import com.srw.seedsofsovereignty.component.*
 import com.srw.seedsofsovereignty.factory.ShipFactory
 
 /**
- * ENEMY SPAWN SYSTEM: Maintains a population of enemies based on Sector difficulty and distance.
- * Spawns enemies outside radar range (400 units).
+ * ENEMY SPAWN SYSTEM: Maintains a population of enemies based on Sector difficulty.
+ * Targets areas just outside the 400-unit radar range.
  */
 class EnemySpawnSystem(
     private val shipFactory: ShipFactory = inject(),
@@ -18,50 +18,42 @@ class EnemySpawnSystem(
 ) : IntervalSystem(interval = Fixed(3f)) {
 
     private val radarRange = 400f
-    private val spawnBuffer = 50f // Spawn slightly outside radar
+    private val spawnBuffer = 50f
 
     override fun onTick() {
         val player = world.family { all(PlayerComponent, EvolutionComponent, PositionComponent) }.firstOrNull() ?: return
         val playerPos = player[PositionComponent].pos
         val playerTier = player[EvolutionComponent].tier
 
-        // 1. Calculate dynamic max population based on distance from sector origin
         val distFromOrigin = playerPos.len()
-
-        // Scale population from origin (min) to sector limit (max)
-        val maxEnemies = (maxEnemiesAtOrigin + (distFromOrigin / 1000f) * 10).toInt().coerceAtMost(30)
+        val maxEnemies = (maxEnemiesAtOrigin + (distFromOrigin / 1000f) * 3).toInt().coerceAtMost(30)
 
         val currentEnemies = world.family { all(FactionComponent) }.filter {
             it[FactionComponent].type == FactionType.ENEMY
         }.size
 
         if (currentEnemies < maxEnemies) {
-            val sectorBaseTier = 1 // Future: Pull from SectorComponent
-            val tieredDifficulty = (sectorBaseTier + (distFromOrigin / 500f).toInt()).coerceAtMost(playerTier + 2)
-
-            // Random position just outside radar range
+            val tieredDifficulty = (1 + (distFromOrigin / 500f).toInt()).coerceAtMost(playerTier + 2)
             val angle = MathUtils.random(0f, 360f)
             val dist = radarRange + spawnBuffer
 
-            val spawnX = playerPos.x + MathUtils.cosDeg(angle) * dist
-            val spawnY = playerPos.y + MathUtils.sinDeg(angle) * dist
-
             shipFactory.createEnemy(world, tieredDifficulty, isBoss = MathUtils.randomBoolean(0.05f))
                 .configure {
-                    it[PositionComponent].pos.set(spawnX, spawnY)
+                    it[PositionComponent].pos.set(playerPos.x + MathUtils.cosDeg(angle) * dist, playerPos.y + MathUtils.sinDeg(angle) * dist)
                 }
         }
     }
 }
 
 /**
- * ENEMY AI: Implementation of the "Goldilocks Zone" and Dynamic Orbiting.
+ * ENEMY AI: Implementation of the "Naval Rhythmic Cycle."
+ * Approach -> Orbit -> Pause -> Broadside.
  */
 class EnemyAISystem : IteratingSystem(
-    family { all(FactionComponent, VelocityComponent, PositionComponent, ModuleChannelsComponent).none(PlayerComponent) }
+    family { all(FactionComponent, PositionComponent).none(PlayerComponent, StationComponent) }
 ) {
     private val tempVec = Vector2()
-    private val orbitVec = Vector2()
+    private val steerVec = Vector2()
     private var stateTimer = 0f
 
     override fun onTick() {
@@ -73,40 +65,47 @@ class EnemyAISystem : IteratingSystem(
         if (entity[FactionComponent].type != FactionType.ENEMY) return
 
         val myPos = entity[PositionComponent].pos
-        val vel = entity[VelocityComponent]
-        val channels = entity[ModuleChannelsComponent]
-
-        // Find Target (Player)
         val player = world.family { all(PlayerComponent, PositionComponent) }.firstOrNull() ?: return
         val playerPos = player[PositionComponent].pos
 
-        // Vector to player
+        // Calculate Vector to Player
         tempVec.set(playerPos).sub(myPos)
         val dist = tempVec.len()
 
-        // 1. Goldilocks Movement (Maintain 5-10 units)
-        // Adjust orbit direction every 5 seconds or based on ID
-        val orbitDir = if (((entity.id + stateTimer.toInt() / 5) % 2) == 0) 1 else -1
+        // Dynamic Cycle State: 0-4s Closing/Orbit, 4-6s Firing Pause
+        val cycleTime = (stateTimer + entity.id) % 6f
+        val isFiringPhase = cycleTime > 4f
 
-        when {
-            dist > 15f -> { // Pursuit: Close the gap
-                tempVec.nor().scl(vel.acceleration * deltaTime)
-                vel.v.add(tempVec)
-            }
-            dist < 6f -> { // Flee: Back off
-                tempVec.nor().scl(-vel.acceleration * deltaTime)
-                vel.v.add(tempVec)
-            }
-            else -> { // Orbit: Circle the player
-                orbitVec.set(tempVec).rotate90(orbitDir).nor().scl(vel.acceleration * 0.6f * deltaTime)
-                vel.v.add(orbitVec)
+        // Calculate Tactical Vectors
+        val orbitDir = if (((entity.id + (stateTimer / 8f).toInt()) % 2) == 0) 1 else -1
+
+        steerVec.set(0f, 0f)
+        if (!isFiringPhase) {
+            when {
+                dist > 10f -> steerVec.set(tempVec).nor() // Approach
+                dist < 5f -> steerVec.set(tempVec).nor().scl(-1f) // Back off
+                else -> steerVec.set(tempVec).rotate90(orbitDir).nor().scl(0.5f) // Orbit slowly
             }
         }
 
-        // 2. Aggressive Firing: Trigger weapons if within 12 units
-        channels.inputs["AIM"]?.let { input ->
-            input.vector.set(tempVec).nor()
-            input.triggered = dist < 12f
+        // Bridge to Modules
+        world.family { all(AttachmentComponent, ModuleChannelsComponent) }.forEach { module ->
+            if (module[AttachmentComponent].parent == entity) {
+                val channels = module[ModuleChannelsComponent]
+
+                // 1. Move via Engine Module
+                if (channels.type == ModuleType.ENGINE_IMPULSE_T1) {
+                    channels.inputs["MOVE"]?.let { it.vector.set(steerVec) }
+                }
+
+                // 2. Fire via Weapon Module
+                if (channels.inputs.containsKey("AIM")) {
+                    channels.inputs["AIM"]?.let {
+                        it.vector.set(tempVec).nor()
+                        it.triggered = isFiringPhase && dist < 15f
+                    }
+                }
+            }
         }
     }
 }

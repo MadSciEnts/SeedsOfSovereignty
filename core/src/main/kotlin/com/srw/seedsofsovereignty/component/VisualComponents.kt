@@ -9,6 +9,13 @@ import com.github.quillraven.fleks.ComponentType
  * VISUAL REPRESENTATION
  */
 
+enum class RenderEffect {
+    STATIC,   // Solid hull/frame
+    PULSE,    // Breathing glow (Power systems)
+    FLICKER,  // Rapid nervous energy (Aggressive accents/Damage)
+    GLOW      // High-intensity emissive
+}
+
 // Legacy/Primitive shapes for projectiles and UI markers
 data class ShapeComponent(
     var type: ShapeType = ShapeType.SQUARE,
@@ -43,7 +50,7 @@ data class VisualLayer(
     var offsetScale: Float = 1f,
     var rotationOffset: Float = 0f,
     var zIndex: Int = 0,
-    var pulse: Boolean = false
+    var effect: RenderEffect = RenderEffect.STATIC
 )
 
 data class CompositeVisualComponent(

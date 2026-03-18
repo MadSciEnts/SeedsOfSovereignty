@@ -9,7 +9,7 @@ import com.srw.seedsofsovereignty.service.ShipTextureGenerator
 
 /**
  * PROJECTILE FACTORY: Centralizes modular projectile creation.
- * Implements "Visually Pleasing" primitives with steady energy glows for the swarm aesthetic.
+ * Implements KINETIC, ION, and PLASMA archetypes with dynamic scaling.
  */
 class ProjectileFactory {
 
@@ -24,7 +24,11 @@ class ProjectileFactory {
         platformRotation: Float
     ): Entity {
         return world.entity { entity ->
-            entity += ProjectileComponent(lifeTime = blueprint.lifeTime)
+            entity += ProjectileComponent(
+                lifeTime = blueprint.lifeTime,
+                style = blueprint.style,
+                minWidthPixels = blueprint.minWidthPixels
+            )
             entity += FactionComponent(faction)
 
             // 1. Position: Pivot + (Offset rotated by platform - 90)
@@ -35,12 +39,11 @@ class ProjectileFactory {
             tempVec.set(1f, 0f).setAngleDeg(platformRotation).scl(blueprint.speed)
             entity += VelocityComponent(v = Vector2(tempVec), friction = 0f)
 
-            // 3. Core Visual (The physical core)
-            val shapeType = when (blueprint.type) {
-                ProjectileType.KINETIC -> ShapeType.SQUARE
-                ProjectileType.ENERGY -> ShapeType.CIRCLE
-                ProjectileType.TORPEDO -> ShapeType.TRIANGLE
-                else -> ShapeType.SQUARE
+            // 3. Assemble Visual DNA based on Type
+            val shapeType = when (blueprint.style) {
+                ProjectileStyle.KINETIC -> ShapeType.SQUARE // Elongated in renderer
+                ProjectileStyle.ION -> ShapeType.CIRCLE
+                ProjectileStyle.PLASMA -> ShapeType.CIRCLE
             }
 
             entity += ShapeComponent(
@@ -50,21 +53,34 @@ class ProjectileFactory {
                 rotation = platformRotation
             )
 
-            // 4. Aura Visual (STEADY Energy Glow)
-            // Note: pulse is set to false to avoid distracting synchronized pulsing
+            // 4. Aura Visuals based on Archetype
+            val auraEffect = when (blueprint.style) {
+                ProjectileStyle.ION -> RenderEffect.PULSE
+                ProjectileStyle.PLASMA -> RenderEffect.FLICKER
+                else -> RenderEffect.STATIC
+            }
+
             entity += CompositeVisualComponent(
                 layers = mutableListOf(
                     VisualLayer(
                         region = ShipTextureGenerator.getProjectileGlow(shapeType, blueprint.color),
-                        color = blueprint.color.cpy().apply { a = 0.5f },
-                        pulse = false,
+                        color = blueprint.color.cpy().apply { a = 0.6f },
+                        effect = auraEffect,
                         zIndex = -1,
-                        offsetScale = 3.0f // Significant energy aura relative to core
+                        offsetScale = if (blueprint.style == ProjectileStyle.PLASMA) 4.0f else 2.5f
                     )
                 )
             )
 
-            // 5. Status Effects
+            // 5. Combat Data & Impact Pools
+            entity += DamageComponent(
+                amount = blueprint.baseDamage,
+                type = blueprint.damageType,
+                shieldMultiplier = blueprint.shieldMultiplier,
+                impactFX = blueprint.impactFX
+            )
+
+            // 6. Status Effects (Special Attributes)
             if (blueprint.damageType == DamageType.ACID) {
                 entity += StatusEffectComponent(
                     type = DamageType.ACID,
