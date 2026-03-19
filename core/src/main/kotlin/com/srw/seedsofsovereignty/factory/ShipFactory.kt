@@ -30,10 +30,10 @@ class ShipFactory {
             entity += PowerCoreComponent()
         }
 
-        createModule(world, ship, ModuleCategory.POWER, ModuleType.POWER_CORE_T1, Vector2(0f, 0f), FactionType.PLAYER)
-        createModule(world, ship, ModuleCategory.SECONDARY, ModuleType.HULL_COMPOSITE_T1, Vector2(0f, 0f), FactionType.PLAYER)
-        createModule(world, ship, ModuleCategory.SHIELDS, ModuleType.SHIELD_GEN_T1, Vector2(0f, 0f), FactionType.PLAYER)
-        createModule(world, ship, ModuleCategory.POWER, ModuleType.ENGINE_IMPULSE_T1, Vector2(0f, -0.3f), FactionType.PLAYER)
+        createModule(world, ship, ModuleCategory.POWER, ModuleType.POWER_CORE, Vector2(0f, 0f), FactionType.PLAYER)
+        createModule(world, ship, ModuleCategory.SECONDARY, ModuleType.HULL_PLATE, Vector2(0f, 0f), FactionType.PLAYER)
+        createModule(world, ship, ModuleCategory.SHIELDS, ModuleType.SHIELD_GEN, Vector2(0f, 0f), FactionType.PLAYER)
+        createModule(world, ship, ModuleCategory.POWER, ModuleType.ENGINE_IMPULSE, Vector2(0f, -0.3f), FactionType.PLAYER)
         createModule(world, ship, ModuleCategory.PRIMARY, ModuleType.KINETIC_CANNON, Vector2(0f, 0.3f), FactionType.PLAYER)
 
         world.system<EvolutionSystem>().syncCapabilities(ship)
@@ -53,8 +53,8 @@ class ShipFactory {
             entity += FactionComponent(FactionType.ENEMY)
         }
 
-        createModule(world, ship, ModuleCategory.POWER, ModuleType.POWER_CORE_T1, Vector2(0f, 0f), FactionType.ENEMY)
-        createModule(world, ship, ModuleCategory.POWER, ModuleType.ENGINE_IMPULSE_T1, Vector2(0f, -0.3f), FactionType.ENEMY)
+        createModule(world, ship, ModuleCategory.POWER, ModuleType.POWER_CORE, Vector2(0f, 0f), FactionType.ENEMY)
+        createModule(world, ship, ModuleCategory.POWER, ModuleType.ENGINE_IMPULSE, Vector2(0f, -0.3f), FactionType.ENEMY)
         createModule(world, ship, ModuleCategory.PRIMARY, ModuleType.KINETIC_CANNON, Vector2(0f, 0.3f), FactionType.ENEMY)
 
         world.system<EvolutionSystem>().syncCapabilities(ship)
@@ -73,7 +73,7 @@ class ShipFactory {
             entity += StationComponent(maxDefenders = 6, spawnInterval = 5f)
         }
 
-        createModule(world, station, ModuleCategory.POWER, ModuleType.POWER_CORE_T1, Vector2(0f, 0f), faction)
+        createModule(world, station, ModuleCategory.POWER, ModuleType.POWER_CORE, Vector2(0f, 0f), faction)
         createModule(world, station, ModuleCategory.PRIMARY, ModuleType.KINETIC_CANNON, Vector2(0.5f, 0.5f), faction)
         createModule(world, station, ModuleCategory.PRIMARY, ModuleType.KINETIC_CANNON, Vector2(-0.5f, -0.5f), faction)
 
@@ -101,7 +101,7 @@ class ShipFactory {
             )
 
             when (moduleType) {
-                ModuleType.ENGINE_IMPULSE_T1 -> {
+                ModuleType.ENGINE_IMPULSE -> {
                     val isEnemy = faction == FactionType.ENEMY
                     val trailColor = if (isEnemy) Color(1f, 0.3f, 0.1f, 0.8f) else Color(0.2f, 0.6f, 1f, 0.8f)
 
@@ -121,13 +121,13 @@ class ShipFactory {
                         color = if (faction == FactionType.ENEMY) Color.ORANGE else Color.YELLOW, tier = 1))
                     m += BarrelVisualComponent(color = if (faction == FactionType.ENEMY) Color.RED else Color.WHITE, length = 0.3f, width = 0.05f)
                 }
-                ModuleType.SHIELD_GEN_T1 -> {
+                ModuleType.SHIELD_GEN -> {
                     m += ArcedDefenseComponent(
                         shieldFore = 50f, shieldAft = 50f, shieldPort = 50f, shieldStbd = 50f,
                         hullFore = 0f, hullAft = 0f, hullPort = 0f, hullStbd = 0f
                     )
                 }
-                ModuleType.HULL_COMPOSITE_T1 -> {
+                ModuleType.HULL_PLATE -> {
                     m += ArcedDefenseComponent(
                         shieldFore = 0f, shieldAft = 0f, shieldPort = 0f, shieldStbd = 0f,
                         hullFore = 100f, hullAft = 100f, hullPort = 100f, hullStbd = 100f

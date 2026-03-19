@@ -15,9 +15,11 @@ import com.badlogic.gdx.utils.viewport.ExtendViewport
 import com.badlogic.gdx.utils.viewport.ScreenViewport
 import com.github.quillraven.fleks.World
 import com.github.quillraven.fleks.configureWorld
+import com.srw.seedsofsovereignty.blueprint.BlueprintRegistry
 import com.srw.seedsofsovereignty.component.FactionType
 import com.srw.seedsofsovereignty.factory.ProjectileFactory
 import com.srw.seedsofsovereignty.factory.ShipFactory
+import com.srw.seedsofsovereignty.factory.UniversalFactory
 import com.srw.seedsofsovereignty.service.TextureService
 import com.srw.seedsofsovereignty.system.EvolutionSystem
 import com.srw.seedsofsovereignty.ui.CommandMatrixView
@@ -29,7 +31,7 @@ import space.earlygrey.shapedrawer.ShapeDrawer
 
 /**
  * PLAY SCREEN: The primary gameplay entry point.
- * Refactored for AI-friendliness using modular World Configuration.
+ * Refactored to utilize the Universal DNA Factory.
  */
 class PlayScreen(private val camera: OrthographicCamera) : KtxScreen {
 
@@ -46,7 +48,7 @@ class PlayScreen(private val camera: OrthographicCamera) : KtxScreen {
     private val devEvolveButton = TextButton("DEV EVOLVE", uiSkin)
 
     private val world: World
-    private val shipFactory = ShipFactory()
+    private val shipFactory = ShipFactory() // Legacy - to be removed
     private val commandMatrix = CommandMatrixView(uiSkin)
 
     private val margin = 20f
@@ -80,7 +82,7 @@ class PlayScreen(private val camera: OrthographicCamera) : KtxScreen {
         // 4. Build Scene2D Layout
         uiStage.addActor(movementJoystick)
         uiStage.addActor(devEvolveButton)
-        uiStage.addActor(commandMatrix.root) // categoryShelf is now a child of commandMatrix.root
+        uiStage.addActor(commandMatrix.root)
 
         // 5. Global Event Handlers
         devEvolveButton.addListener(object : ChangeListener() {
@@ -89,10 +91,15 @@ class PlayScreen(private val camera: OrthographicCamera) : KtxScreen {
             }
         })
 
-        // 6. Initial Spawn Logic
-        shipFactory.createPlayer(world, 1)
-        shipFactory.createStation(world, FactionType.PLAYER, tier = 1, pos = Vector2(0f, 0f))
-        shipFactory.createStation(world, FactionType.ENEMY, tier = 1, pos = Vector2(100f, 100f))
+        // 6. INITIAL SPAWN LOGIC: Using the Universal DNA Factory
+        val playerDNA = BlueprintRegistry.getUnit(1)
+        UniversalFactory.spawnUnit(world, playerDNA, FactionType.PLAYER, Vector2(0f, 0f))
+
+        // Spawn some T1A test enemies
+        val enemyDNA = BlueprintRegistry.getUnit(1)
+        repeat(3) { i ->
+            UniversalFactory.spawnUnit(world, enemyDNA, FactionType.ENEMY, Vector2(5f + i, 5f + i))
+        }
 
         layoutUI()
     }

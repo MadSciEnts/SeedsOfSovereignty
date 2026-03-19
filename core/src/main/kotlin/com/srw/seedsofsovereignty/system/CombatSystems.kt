@@ -2,8 +2,7 @@ package com.srw.seedsofsovereignty.system
 
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.math.MathUtils
-import com.github.quillraven.fleks.Entity
-import com.github.quillraven.fleks.IteratingSystem
+import com.github.quillraven.fleks.*
 import com.github.quillraven.fleks.World.Companion.family
 import com.github.quillraven.fleks.World.Companion.inject
 import com.srw.seedsofsovereignty.component.*
@@ -13,6 +12,7 @@ import kotlin.math.min
 
 /**
  * MODULE ACTION SYSTEM: Bridges User Input (Channels) to physical module actions.
+ * Standardized: Movement is handled by TARGET, Firing is handled by TRIGGER.
  */
 class ModuleActionSystem(
     private val projectileFactory: ProjectileFactory = inject()
@@ -32,9 +32,16 @@ class ModuleActionSystem(
             heatOutput.status = MathUtils.clamp(heatOutput.status - deltaTime * 0.15f, 0f, 1f)
         }
 
-        val aimInput = channels.inputs["AIM"] ?: return
-        if (aimInput.triggered && launcher.currentCooldown <= 0) {
-            fireWeapon(entity, launcher, payload, aimInput, pos, heatOutput)
+        // Standardized Channel Access
+        val targetInput = channels.inputs[StandardChannels.TARGET] ?: return
+        val triggerInput = channels.inputs[StandardChannels.TRIGGER]
+
+        // CRITICAL: Decouple firing from movement TARGET vector.
+        // Weapons only fire if TRIGGER is explicitly active.
+        val isTriggered = triggerInput?.triggered == true
+
+        if (isTriggered && launcher.currentCooldown <= 0) {
+            fireWeapon(entity, launcher, payload, targetInput, pos, heatOutput)
         }
     }
 
@@ -42,15 +49,15 @@ class ModuleActionSystem(
         entity: Entity,
         launcher: WeaponLauncherComponent,
         payload: ProjectilePayloadComponent,
-        aimInput: InputChannelData,
+        targetInput: InputChannelData,
         pos: Vector2,
         heatOutput: OutputChannelData?
     ) {
         if (launcher.barrelOffsets.isEmpty()) return
         val barrelOffset = launcher.barrelOffsets[launcher.barrelIndex]
 
-        val fireAngle = if (aimInput.vector.len2() > 0.01f) {
-            aimInput.vector.angleDeg()
+        val fireAngle = if (targetInput.vector.len2() > 0.01f) {
+            targetInput.vector.angleDeg()
         } else {
             val attach = entity.getOrNull(AttachmentComponent)
             if (attach != null && attach.parent != Entity.NONE && attach.parent in world) {
@@ -62,16 +69,7 @@ class ModuleActionSystem(
             ?: entity.getOrNull(AttachmentComponent)?.parent?.let { if (it in world) world.run { it.getOrNull(FactionComponent)?.type } else FactionType.NEUTRAL }
             ?: FactionType.NEUTRAL
 
-        val proj = projectileFactory.spawn(world, payload.blueprint, faction, pos, barrelOffset, fireAngle)
-
-        proj.configure {
-            it += DamageComponent(
-                amount = payload.blueprint.baseDamage,
-                type = payload.blueprint.damageType,
-                shieldMultiplier = payload.blueprint.shieldMultiplier,
-                impactFX = payload.blueprint.impactFX
-            )
-        }
+        projectileFactory.spawn(world, payload.blueprint, faction, pos, barrelOffset, fireAngle)
 
         launcher.barrelIndex = (launcher.barrelIndex + 1) % launcher.barrelOffsets.size
         launcher.currentCooldown = launcher.fireRate / launcher.barrelOffsets.size
@@ -136,7 +134,7 @@ class GeometrySystem : IteratingSystem(
             else -> ImpactQuadrant.PORT
         }
 
-        entity.configure { it += ResolvedImpactComponent(quadrant) }
+        entity.configure { ctx -> ctx += ResolvedImpactComponent(quadrant) }
     }
 }
 
@@ -200,16 +198,16 @@ class BallisticsSystem : IteratingSystem(
             core.integrity = MathUtils.clamp(core.integrity - (remainingDamage / 100f), 0f, 1.0f)
         }
 
-        // 4. Status Effects (Acid/Electrical Lingering)
+        // 4. Status Effects
         if (damageComp.type == DamageType.ACID || damageComp.type == DamageType.ELECTRICAL) {
             val existing = entity.getOrNull(StatusEffectComponent)
             if (existing != null) {
-                existing.duration = 5f // Refresh
+                existing.duration = 5f
                 existing.intensity = max(existing.intensity, damageComp.amount * 0.15f)
                 existing.lastQuadrant = quadrant
             } else {
-                entity.configure {
-                    it += StatusEffectComponent(
+                entity.configure { ctx ->
+                    ctx += StatusEffectComponent(
                         type = damageComp.type,
                         duration = 5f,
                         intensity = damageComp.amount * 0.15f,
@@ -220,9 +218,9 @@ class BallisticsSystem : IteratingSystem(
         }
 
         // CLEANUP
-        entity.configure {
-            it -= ImpactComponent
-            it -= ResolvedImpactComponent
+        entity.configure { ctx ->
+            ctx -= ImpactComponent
+            ctx -= ResolvedImpactComponent
         }
     }
 
@@ -245,15 +243,15 @@ class BallisticsSystem : IteratingSystem(
     }
 
     private fun spawnImpactFX(pos: Vector2, type: ImpactFXType) {
-        world.entity {
-            it += PositionComponent(Vector2(pos))
-            it += ImpactFXComponent(type = type)
+        world.entity { ctx ->
+            ctx += PositionComponent(Vector2(pos))
+            ctx += ImpactFXComponent(type = type)
         }
     }
 }
 
 /**
- * STATUS EFFECT SYSTEM: Processes lingering damage over time.
+ * STATUS EFFECT SYSTEM: Processes lingering damage.
  */
 class StatusEffectSystem : IteratingSystem(
     family { all(StatusEffectComponent, ArcedDefenseComponent, PowerCoreComponent) }
@@ -272,7 +270,7 @@ class StatusEffectSystem : IteratingSystem(
         }
 
         if (effect.duration <= 0f) {
-            entity.configure { it -= StatusEffectComponent }
+            entity.configure { ctx -> ctx -= StatusEffectComponent }
         }
     }
 

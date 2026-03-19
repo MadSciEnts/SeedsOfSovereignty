@@ -8,12 +8,14 @@ import com.badlogic.gdx.math.Vector2
 enum class ModuleType {
     KINETIC_CANNON,
     PULSE_LASER,
-    SHIELD_GEN_T1,
-    POWER_CORE_T1,
+    SHIELD_GEN,
+    POWER_CORE,
     DRONE_HIVE,
     FIGHTER_BAY,
-    ENGINE_IMPULSE_T1,
-    HULL_COMPOSITE_T1
+    ENGINE_IMPULSE,
+    ENGINE_NAV,
+    ENGINE_WARP,
+    HULL_PLATE
 }
 
 /**
@@ -56,13 +58,16 @@ object ModuleRegistry {
         // --- WEAPONS ---
         definitions[ModuleType.KINETIC_CANNON] = ModuleTypeDefinition(
             type = ModuleType.KINETIC_CANNON,
-            controls = listOf(ControlWidgetDefinition(ControlWidgetType.JOYSTICK_2D, "AIM", Vector2(0.5f, 0.4f), label = "AIM")),
+            controls = listOf(
+                ControlWidgetDefinition(ControlWidgetType.JOYSTICK_2D, StandardChannels.TARGET, Vector2(0.5f, 0.4f), label = "AIM"),
+                ControlWidgetDefinition(ControlWidgetType.BUTTON_DISCRETE, StandardChannels.TRIGGER, Vector2(0.5f, 0.1f), label = "FIRE")
+            ),
             outputs = listOf(OutputWidgetDefinition("HEAT", Vector2(0.5f, 0.9f), "TEMP"))
         )
 
         // --- DEFENSES ---
-        definitions[ModuleType.SHIELD_GEN_T1] = ModuleTypeDefinition(
-            type = ModuleType.SHIELD_GEN_T1,
+        definitions[ModuleType.SHIELD_GEN] = ModuleTypeDefinition(
+            type = ModuleType.SHIELD_GEN,
             controls = listOf(
                 ControlWidgetDefinition(ControlWidgetType.BUTTON_DISCRETE, "FORE", Vector2(0.5f, 0.8f), label = "FORE"),
                 ControlWidgetDefinition(ControlWidgetType.BUTTON_DISCRETE, "AFT", Vector2(0.5f, 0.2f), label = "AFT"),
@@ -72,15 +77,15 @@ object ModuleRegistry {
             outputs = listOf(OutputWidgetDefinition("CHARGE", Vector2(0.5f, 0.05f), "SHIELD"))
         )
 
-        definitions[ModuleType.HULL_COMPOSITE_T1] = ModuleTypeDefinition(
-            type = ModuleType.HULL_COMPOSITE_T1,
-            controls = emptyList(), // Passive structural module
+        definitions[ModuleType.HULL_PLATE] = ModuleTypeDefinition(
+            type = ModuleType.HULL_PLATE,
+            controls = emptyList(),
             outputs = listOf(OutputWidgetDefinition("INTEGRITY", Vector2(0.5f, 0.5f), "HULL"))
         )
 
         // --- CORE & POWER ---
-        definitions[ModuleType.POWER_CORE_T1] = ModuleTypeDefinition(
-            type = ModuleType.POWER_CORE_T1,
+        definitions[ModuleType.POWER_CORE] = ModuleTypeDefinition(
+            type = ModuleType.POWER_CORE,
             controls = listOf(
                 ControlWidgetDefinition(ControlWidgetType.SLIDER_1D, "WEAPON", Vector2(0.2f, 0.5f), orientation = 90f, label = "WPN"),
                 ControlWidgetDefinition(ControlWidgetType.SLIDER_1D, "SHIELD", Vector2(0.4f, 0.5f), orientation = 90f, label = "SHD"),
@@ -91,9 +96,9 @@ object ModuleRegistry {
         )
 
         // --- PROPULSION ---
-        definitions[ModuleType.ENGINE_IMPULSE_T1] = ModuleTypeDefinition(
-            type = ModuleType.ENGINE_IMPULSE_T1,
-            controls = listOf(ControlWidgetDefinition(ControlWidgetType.JOYSTICK_2D, "MOVE", Vector2(0.5f, 0.5f), label = "THRUST")),
+        definitions[ModuleType.ENGINE_IMPULSE] = ModuleTypeDefinition(
+            type = ModuleType.ENGINE_IMPULSE,
+            controls = listOf(ControlWidgetDefinition(ControlWidgetType.JOYSTICK_2D, StandardChannels.TARGET, Vector2(0.5f, 0.5f), label = "THRUST")),
             outputs = listOf(OutputWidgetDefinition("HEAT", Vector2(0.5f, 0.1f), "ENGINE"))
         )
 

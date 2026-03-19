@@ -13,8 +13,9 @@ data class PositionComponent(val pos: Vector2 = Vector2()) : Component<PositionC
 // Speed, direction, and physical constraints
 data class VelocityComponent(
     val v: Vector2 = Vector2(),
-    val acceleration: Float = 500f,
-    val friction: Float = 2.5f
+    var acceleration: Float = 0f,
+    var friction: Float = 2.0f,
+    var maxSpeed: Float = 15f
 ) : Component<VelocityComponent> {
     override fun type() = VelocityComponent
     companion object : ComponentType<VelocityComponent>()

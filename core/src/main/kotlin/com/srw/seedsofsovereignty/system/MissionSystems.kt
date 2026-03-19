@@ -5,15 +5,15 @@ import com.badlogic.gdx.math.Vector2
 import com.github.quillraven.fleks.*
 import com.github.quillraven.fleks.World.Companion.family
 import com.github.quillraven.fleks.World.Companion.inject
+import com.srw.seedsofsovereignty.blueprint.BlueprintRegistry
 import com.srw.seedsofsovereignty.component.*
-import com.srw.seedsofsovereignty.factory.ShipFactory
+import com.srw.seedsofsovereignty.factory.UniversalFactory
 
 /**
  * ENEMY SPAWN SYSTEM: Maintains a population of enemies based on Sector difficulty.
- * Targets areas just outside the 400-unit radar range.
+ * Updated to use the Universal DNA Factory.
  */
 class EnemySpawnSystem(
-    private val shipFactory: ShipFactory = inject(),
     private val maxEnemiesAtOrigin: Int = 3
 ) : IntervalSystem(interval = Fixed(3f)) {
 
@@ -37,17 +37,18 @@ class EnemySpawnSystem(
             val angle = MathUtils.random(0f, 360f)
             val dist = radarRange + spawnBuffer
 
-            shipFactory.createEnemy(world, tieredDifficulty, isBoss = MathUtils.randomBoolean(0.05f))
-                .configure {
-                    it[PositionComponent].pos.set(playerPos.x + MathUtils.cosDeg(angle) * dist, playerPos.y + MathUtils.sinDeg(angle) * dist)
-                }
+            val spawnPos = Vector2(playerPos.x + MathUtils.cosDeg(angle) * dist, playerPos.y + MathUtils.sinDeg(angle) * dist)
+
+            // Spawn using DNA
+            val enemyDNA = BlueprintRegistry.getUnit(tieredDifficulty)
+            UniversalFactory.spawnUnit(world, enemyDNA, FactionType.ENEMY, spawnPos)
         }
     }
 }
 
 /**
- * ENEMY AI: Implementation of the "Naval Rhythmic Cycle."
- * Approach -> Orbit -> Pause -> Broadside.
+ * ENEMY AI: Standardized Logic Bridge.
+ * Approaches player and fires via StandardChannels.
  */
 class EnemyAISystem : IteratingSystem(
     family { all(FactionComponent, PositionComponent).none(PlayerComponent, StationComponent) }
@@ -88,22 +89,19 @@ class EnemyAISystem : IteratingSystem(
             }
         }
 
-        // Bridge to Modules
+        // Bridge to Modules via StandardChannels
         world.family { all(AttachmentComponent, ModuleChannelsComponent) }.forEach { module ->
             if (module[AttachmentComponent].parent == entity) {
                 val channels = module[ModuleChannelsComponent]
 
-                // 1. Move via Engine Module
-                if (channels.type == ModuleType.ENGINE_IMPULSE_T1) {
-                    channels.inputs["MOVE"]?.let { it.vector.set(steerVec) }
+                // 1. Move via Target Input
+                channels.inputs[StandardChannels.TARGET]?.let {
+                    it.vector.set(steerVec)
                 }
 
-                // 2. Fire via Weapon Module
-                if (channels.inputs.containsKey("AIM")) {
-                    channels.inputs["AIM"]?.let {
-                        it.vector.set(tempVec).nor()
-                        it.triggered = isFiringPhase && dist < 15f
-                    }
+                // 2. Fire via Trigger Input
+                channels.inputs[StandardChannels.TRIGGER]?.let {
+                    it.triggered = isFiringPhase && dist < 15f
                 }
             }
         }

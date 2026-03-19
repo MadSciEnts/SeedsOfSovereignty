@@ -67,7 +67,7 @@ class WorldRenderSystem(
             else -> 0f
         }
 
-        // 3. Draw CompositeVisualComponent (AURAS)
+        // 3. Draw CompositeVisualComponent (AURAS / LAYERS)
         if (entity.has(CompositeVisualComponent)) {
             val composite = entity[CompositeVisualComponent]
             composite.layers.sortBy { it.zIndex }
@@ -94,6 +94,15 @@ class WorldRenderSystem(
                 batch.draw(region, pos.x - worldWidth / 2f, pos.y - worldHeight / 2f, worldWidth / 2f, worldHeight / 2f, worldWidth, worldHeight, 1f, 1f, baseRotation + layer.rotationOffset)
             }
             batch.color = Color.WHITE
+        } else if (entity.has(TextureRegionComponent)) {
+            // Fallback for simple sprites (modules, etc)
+            val tr = entity[TextureRegionComponent]
+            tr.region?.let { region ->
+                val w = baseScale; val h = w * (region.regionHeight.toFloat() / region.regionWidth.toFloat())
+                batch.color = tr.color
+                batch.draw(region, pos.x - w / 2f, pos.y - h / 2f, w / 2f, h / 2f, w, h, 1f, 1f, baseRotation)
+                batch.color = Color.WHITE
+            }
         }
 
         // 4. Draw ShapeComponent (ROTATED CORE)
@@ -103,10 +112,8 @@ class WorldRenderSystem(
 
             when (shape.type) {
                 ShapeType.SQUARE -> {
-                    // Use drawer.line for rotated and elongated kinetic tracers
                     val length = if (entity.has(ProjectileComponent) && entity[ProjectileComponent].style == ProjectileStyle.KINETIC) baseScale * 4f else baseScale
                     val thickness = baseScale
-
                     rotationVec.set(0f, length).rotateDeg(baseRotation)
                     drawer.line(pos.x - rotationVec.x/2f, pos.y - rotationVec.y/2f, pos.x + rotationVec.x/2f, pos.y + rotationVec.y/2f, thickness)
                 }
@@ -139,9 +146,10 @@ class WorldRenderSystem(
             var platformRotation = hullRotation + 90f
             if (entity.has(ModuleChannelsComponent)) {
                 val channels = entity.get(ModuleChannelsComponent)
-                val aimInput = channels.inputs["AIM"]
-                if (aimInput != null && aimInput.vector.len2() > 0.01f) {
-                    platformRotation = aimInput.vector.angleDeg()
+                // Standardized TARGET channel for aiming
+                val targetInput = channels.inputs[StandardChannels.TARGET]
+                if (targetInput != null && targetInput.vector.len2() > 0.01f) {
+                    platformRotation = targetInput.vector.angleDeg()
                     barrel.platformRotation = platformRotation
                 } else { platformRotation = barrel.platformRotation }
             }

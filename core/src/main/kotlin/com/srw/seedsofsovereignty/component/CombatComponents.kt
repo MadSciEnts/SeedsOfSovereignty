@@ -24,6 +24,16 @@ enum class ImpactFXType { SPARK, FLARE, DETONATION, SIZZLE, GLITCH, NONE }
 enum class ImpactQuadrant { FORE, AFT, PORT, STBD }
 
 /**
+ * STANDARD CHANNELS: Universal keys for AI and UI interaction.
+ */
+object StandardChannels {
+    const val TARGET = "TARGET"     // Vector2: Aim, Patrol, Move
+    const val TRIGGER = "TRIGGER"   // Boolean: Fire, Launch, Deploy
+    const val VALUE = "VALUE"       // Float: Power, Throttle, Intensity
+    const val MODE = "MODE"         // Float/Int: Toggle, Selection, State
+}
+
+/**
  * WEAPON LAUNCHER: The "How" of firing.
  */
 data class WeaponLauncherComponent(
@@ -100,12 +110,12 @@ data class ResolvedImpactComponent(
 }
 
 /**
- * DATA CHANNELS
+ * DATA CHANNELS: The "Mailbox" for recursive logic and AI.
  */
 data class InputChannelData(
-    var vector: Vector2 = Vector2(),
-    var value: Float = 0f,
-    var triggered: Boolean = false
+    val vector: Vector2 = Vector2(), // For Targets/Positions
+    var value: Float = 0f,           // For Sliders/Throttles
+    var triggered: Boolean = false   // For Buttons/Discrete Actions
 )
 
 data class OutputChannelData(
