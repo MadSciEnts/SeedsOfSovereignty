@@ -14,6 +14,7 @@
 - [x] Command Matrix: High-Fidelity Layouts & Visual Feedback
 - [x] ARCHITECTURE REFACTOR: AI-Friendly Modularization (Completed)
 - [x] COMBAT LOGIC: Directional Damage, Penetration & Status Effects (Completed)
+- [x] TACTICAL SQUAD LAYER: Squad & Order Components, EnemyAISystem Refactor (Completed)
 - [ ] Command Matrix: Group Control Logic (Pending)
 
 ## Current Global Stats

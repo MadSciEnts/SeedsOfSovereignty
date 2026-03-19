@@ -23,7 +23,7 @@ class ModuleAttachmentSystem : IteratingSystem(
             world.run {
                 val parentPos = attach.parent.get(PositionComponent).pos
 
-                // Read rotation from the parent's visual components (the Hull's orientation)
+                // Read rotation from the parent's visual components
                 val parentRotation = when {
                     attach.parent.has(ShapeComponent) -> attach.parent.get(ShapeComponent).rotation
                     attach.parent.has(TextureRegionComponent) -> attach.parent.get(TextureRegionComponent).rotation
@@ -39,17 +39,5 @@ class ModuleAttachmentSystem : IteratingSystem(
 }
 
 /**
- * POWER THROTTLING SYSTEM: Applies penalty if core is damaged.
+ * DECOMMISSIONED: Power Throttling is now handled by ShipExecutionSystem efficiency scaling.
  */
-class PowerThrottlingSystem : IteratingSystem(
-    family { all(PowerCoreComponent) }
-) {
-    override fun onTickEntity(entity: Entity) {
-        val core = entity[PowerCoreComponent]
-        val availablePower = core.baseOutput * core.integrity
-        val requestedPower = core.weaponPower + core.shieldPower + core.enginePower + core.utilityPower
-
-        // Proportional throttle if overdrawing
-        core.throttle = if (requestedPower > availablePower) availablePower / requestedPower else 1.0f
-    }
-}

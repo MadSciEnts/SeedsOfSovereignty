@@ -14,7 +14,6 @@ import space.earlygrey.shapedrawer.ShapeDrawer
 
 /**
  * GAME CONTEXT: Container for non-ECS dependencies.
- * Grouping these makes injection cleaner and easier for AI to trace.
  */
 data class GameContext(
     val batch: Batch,
@@ -26,12 +25,12 @@ data class GameContext(
     val joystick: Touchpad,
     val shipFactory: ShipFactory,
     val projectileFactory: ProjectileFactory,
-    val commandMatrix: CommandMatrixView
+    val navMatrix: CommandMatrixView,
+    val tacticalMatrix: CommandMatrixView
 )
 
 /**
  * WORLD MODULES: Modular registration of systems and injectables.
- * This structure helps AI agents isolate specific game layers.
  */
 object WorldModules {
 
@@ -49,34 +48,29 @@ object WorldModules {
             add("joystick", ctx.joystick)
             add(ctx.projectileFactory)
             add(ctx.shipFactory)
-            add(ctx.commandMatrix)
+            add("navMatrix", ctx.navMatrix)
+            add("tacticalMatrix", ctx.tacticalMatrix)
             add(ctx)
         }
     }
 
     fun WorldConfiguration.registerSystems() {
         systems {
-            // LOGIC LAYER
-            add(PlayerInputSystem())
-            add(EnginePropulsionSystem())
+            add(ShipExecutionSystem())
+            add(PowerDistributionSystem()) // HW BUS: PHASE 3
             add(MoveSystem())
-            add(CollisionSystem())
-            add(GeometrySystem())       // Process impact angles
-            add(BallisticsSystem())     // Resolve damage & apply status
-            add(StatusEffectSystem())   // Lingering DOT logic
             add(ModuleAttachmentSystem())
-            add(ModuleActionSystem())
             add(ProjectileSystem())
-            add(ImpactFXSystem())       // Transient visuals
-            add(PowerThrottlingSystem())
+            add(ImpactFXSystem())
             add(RadarSensorSystem())
             add(EvolutionSystem())
-            add(StatSyncSystem())
             add(StationSystem())
+
+            // TACTICAL LAYER: Order Sync before AI Interpretation
+            add(SquadCommandSystem())
             add(EnemyAISystem())
             add(EnemySpawnSystem())
 
-            // RENDER LAYER
             add(StarfieldRenderSystem())
             add(TrailSystem())
             add(TrailRenderSystem())
@@ -85,7 +79,6 @@ object WorldModules {
             add(RadarRenderSystem())
             add(CameraFollowSystem())
 
-            // UI BRIDGE LAYER
             add(UIBridgeSystem())
         }
     }

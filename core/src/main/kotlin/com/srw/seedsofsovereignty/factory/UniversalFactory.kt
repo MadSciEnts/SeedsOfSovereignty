@@ -9,27 +9,27 @@ import com.srw.seedsofsovereignty.service.ShipTextureGenerator
 
 /**
  * UNIVERSAL FACTORY: The recursive engine for expressing DNA as ECS Entities.
+ * Updated: Implements Direct Manifest registration and correct Categorization.
  */
 object UniversalFactory {
 
-    /**
-     * Spawns a Unit (Ship, Drone, Fighter) from its DNA.
-     */
     fun spawnUnit(world: World, dna: UnitDNA, faction: FactionType, position: Vector2 = Vector2()): Entity {
         val multiplier = if (faction == FactionType.PLAYER) 5f else 1f
 
         val unit = world.entity { entity ->
             entity += PositionComponent(Vector2(position))
-            // Base Chassis: Damping/Weight. Performance provided by Engine modules.
-            entity += VelocityComponent(v = Vector2(), acceleration = 0f, friction = 2.5f, maxSpeed = 5f)
+            // Performance provided by Engine modules during manifest registration
+            entity += VelocityComponent(v = Vector2(), acceleration = 0f, friction = 2.5f, maxSpeed = 15f)
             entity += FactionComponent(faction)
+            entity += ShipManifestComponent()
+            entity += ShipStateBusComponent()
+            entity += ShipPowerPriorityComponent() // HW BUS: PHASE 3
 
             val baseHp = dna.hp * multiplier
             entity += ArcedDefenseComponent(
                 hullFore = baseHp, hullAft = baseHp, hullPort = baseHp, hullStbd = baseHp
             )
 
-            // Visual DNA
             val factionColor = if (faction == FactionType.PLAYER) Color.CYAN else Color.RED
             val visual = CompositeVisualComponent()
             ShipTextureGenerator.generateLayered(dna.texture.hashCode().toLong(), dna.tier, factionColor, faction).forEach { layer ->
@@ -41,10 +41,8 @@ object UniversalFactory {
             if (faction == FactionType.PLAYER) entity += PlayerComponent()
         }
 
-        // --- RECURSIVE SLOT ASSEMBLY ---
         dna.slots.forEach { slotDef ->
             world.entity { slotEntity ->
-                val type = slotDef.compatibleTypes.firstOrNull() ?: ModuleType.POWER_CORE
                 slotEntity += SlotComponent(slotType = SlotType.CORE, offset = Vector2(slotDef.position))
                 slotEntity += AttachmentComponent(parent = unit)
             }
@@ -58,22 +56,28 @@ object UniversalFactory {
         return unit
     }
 
-    /**
-     * Spawns a Module and handles its recursive "Expressions".
-     */
     fun spawnModule(world: World, parent: Entity, dna: ModuleDNA, offset: Vector2, faction: FactionType, statMultiplier: Float = 1f): Entity {
-        val module = world.entity { m ->
+        val typeDef = ModuleRegistry.get(dna.type)
+
+        // DYNAMIC CATEGORY ASSIGNMENT: Ensures UI can filter modules correctly
+        val finalCategory = when(dna.type) {
+            ModuleType.ENGINE_IMPULSE, ModuleType.ENGINE_NAV -> ModuleCategory.ENGINE
+            ModuleType.ENGINE_WARP -> ModuleCategory.NAVIGATION
+            else -> dna.category
+        }
+
+        val moduleEntity = world.entity { m ->
             m += PositionComponent()
             m += AttachmentComponent(parent = parent, offset = Vector2(offset))
-            m += ModuleComponent(category = dna.category)
+            m += ModuleComponent(
+                category = finalCategory,
+                powerCategory = typeDef.defaultPowerCategory,
+                isActive = true
+            )
 
-            // Standardized Channel Initialization: Only create channels defined in the Registry
-            val typeDef = ModuleRegistry.get(dna.type)
             val channels = ModuleChannelsComponent(type = dna.type)
-
             typeDef.controls.forEach { channels.inputs[it.channelKey] = InputChannelData() }
             typeDef.outputs.forEach { channels.outputs[it.channelKey] = OutputChannelData() }
-
             m += channels
 
             m += TextureRegionComponent(
@@ -92,9 +96,8 @@ object UniversalFactory {
                 m += ArcedDefenseComponent(shieldFore = cap, shieldAft = cap, shieldPort = cap, shieldStbd = cap)
             }
 
-            // WEAPON EXPRESSION
-            val spawnDNA = dna.spawnDNA
-            if (spawnDNA is ProjectileDNA) {
+            if (dna.spawnDNA is ProjectileDNA) {
+                val spawnDNA = dna.spawnDNA as ProjectileDNA
                 m += WeaponLauncherComponent(fireRate = 0.5f, barrelOffsets = mutableListOf(Vector2(0f, 0f)))
                 m += ProjectilePayloadComponent(blueprint = ProjectileBlueprint(
                     type = ProjectileType.KINETIC, baseDamage = spawnDNA.damage, speed = spawnDNA.speed, tier = 1
@@ -102,24 +105,26 @@ object UniversalFactory {
             }
         }
 
-        // --- ENGINE SPECIALIZATION ---
-        if (dna.type == ModuleType.ENGINE_IMPULSE) {
-            world.run {
-                if (parent.has(VelocityComponent)) {
-                    val vel = parent[VelocityComponent]
-                    // Engine determines the performance profile
-                    vel.acceleration = 25f
-                    vel.maxSpeed = 10f
+        world.run {
+            if (parent != Entity.NONE && parent.has(ShipManifestComponent)) {
+                parent[ShipManifestComponent].modules.add(moduleEntity)
+
+                // --- HARDWARE INITIALIZATION ---
+                if (dna.type == ModuleType.ENGINE_IMPULSE && parent.has(VelocityComponent)) {
+                    parent[VelocityComponent].acceleration = 25f // Ensure base physics is set upon module registration
                 }
             }
-            spawnTrail(world, module, if (faction == FactionType.PLAYER) Color.CYAN else Color.ORANGE)
+        }
+
+        if (dna.type == ModuleType.ENGINE_IMPULSE) {
+            spawnTrail(world, moduleEntity, if (faction == FactionType.PLAYER) Color.CYAN else Color.ORANGE)
         }
 
         if (dna.spawnDNA is UnitDNA) {
             spawnUnit(world, dna.spawnDNA as UnitDNA, faction)
         }
 
-        return module
+        return moduleEntity
     }
 
     private fun spawnTrail(world: World, parent: Entity, color: Color) {
@@ -138,14 +143,14 @@ object UniversalFactory {
         }
     }
 
-    /**
-     * Spawns a Space Station using DNA logic.
-     */
     fun spawnStation(world: World, dna: UnitDNA, faction: FactionType, position: Vector2): Entity {
         val station = world.entity { entity ->
             entity += PositionComponent(Vector2(position))
-            entity += VelocityComponent(v = Vector2(), acceleration = 0f, friction = 10f, maxSpeed = 0f)
+            entity += VelocityComponent(v = Vector2(), friction = 10f)
             entity += FactionComponent(faction)
+            entity += ShipManifestComponent()
+            entity += ShipStateBusComponent()
+            entity += ShipPowerPriorityComponent() // HW BUS: PHASE 3
             entity += StationComponent(maxDefenders = 6, spawnInterval = 5f)
 
             val factionColor = if (faction == FactionType.PLAYER) Color.LIME else Color.ORANGE

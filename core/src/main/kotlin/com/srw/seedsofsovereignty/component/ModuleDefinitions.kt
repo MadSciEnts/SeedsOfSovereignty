@@ -3,7 +3,20 @@ package com.srw.seedsofsovereignty.component
 import com.badlogic.gdx.math.Vector2
 
 /**
- * MODULE TYPES: Defines the unique classes of modules.
+ * POWER CATEGORIES: Resource channels on the Ship State Bus.
+ */
+enum class PowerCategory {
+    WEAPON,
+    ENGINE,
+    SHIELD,
+    UTILITY,
+    AUX_1,
+    AUX_2,
+    NONE
+}
+
+/**
+ * MODULE TYPES: Unique logical identifiers for modules.
  */
 enum class ModuleType {
     KINETIC_CANNON,
@@ -45,11 +58,12 @@ data class OutputWidgetDefinition(
 data class ModuleTypeDefinition(
     val type: ModuleType,
     val controls: List<ControlWidgetDefinition>,
-    val outputs: List<OutputWidgetDefinition> = emptyList()
+    val outputs: List<OutputWidgetDefinition> = emptyList(),
+    val defaultPowerCategory: PowerCategory = PowerCategory.NONE
 )
 
 /**
- * MODULE REGISTRY: Centralized definitions for all module types.
+ * MODULE REGISTRY: Metadata for UI and Logic routing.
  */
 object ModuleRegistry {
     private val definitions = mutableMapOf<ModuleType, ModuleTypeDefinition>()
@@ -62,7 +76,8 @@ object ModuleRegistry {
                 ControlWidgetDefinition(ControlWidgetType.JOYSTICK_2D, StandardChannels.TARGET, Vector2(0.5f, 0.4f), label = "AIM"),
                 ControlWidgetDefinition(ControlWidgetType.BUTTON_DISCRETE, StandardChannels.TRIGGER, Vector2(0.5f, 0.1f), label = "FIRE")
             ),
-            outputs = listOf(OutputWidgetDefinition("HEAT", Vector2(0.5f, 0.9f), "TEMP"))
+            outputs = listOf(OutputWidgetDefinition("HEAT", Vector2(0.5f, 0.9f), "TEMP")),
+            defaultPowerCategory = PowerCategory.WEAPON
         )
 
         // --- DEFENSES ---
@@ -74,13 +89,15 @@ object ModuleRegistry {
                 ControlWidgetDefinition(ControlWidgetType.BUTTON_DISCRETE, "PORT", Vector2(0.2f, 0.5f), label = "PORT"),
                 ControlWidgetDefinition(ControlWidgetType.BUTTON_DISCRETE, "STBD", Vector2(0.8f, 0.5f), label = "STBD")
             ),
-            outputs = listOf(OutputWidgetDefinition("CHARGE", Vector2(0.5f, 0.05f), "SHIELD"))
+            outputs = listOf(OutputWidgetDefinition("CHARGE", Vector2(0.5f, 0.05f), "SHIELD")),
+            defaultPowerCategory = PowerCategory.SHIELD
         )
 
         definitions[ModuleType.HULL_PLATE] = ModuleTypeDefinition(
             type = ModuleType.HULL_PLATE,
             controls = emptyList(),
-            outputs = listOf(OutputWidgetDefinition("INTEGRITY", Vector2(0.5f, 0.5f), "HULL"))
+            outputs = listOf(OutputWidgetDefinition("INTEGRITY", Vector2(0.5f, 0.5f), "HULL")),
+            defaultPowerCategory = PowerCategory.NONE
         )
 
         // --- CORE & POWER ---
@@ -92,21 +109,24 @@ object ModuleRegistry {
                 ControlWidgetDefinition(ControlWidgetType.SLIDER_1D, "ENGINE", Vector2(0.6f, 0.5f), orientation = 90f, label = "ENG"),
                 ControlWidgetDefinition(ControlWidgetType.SLIDER_1D, "UTILITY", Vector2(0.8f, 0.5f), orientation = 90f, label = "UTL")
             ),
-            outputs = listOf(OutputWidgetDefinition("TOTAL_LOAD", Vector2(0.5f, 0.95f), "LOAD"))
+            outputs = listOf(OutputWidgetDefinition("TOTAL_LOAD", Vector2(0.5f, 0.95f), "LOAD")),
+            defaultPowerCategory = PowerCategory.NONE
         )
 
         // --- PROPULSION ---
         definitions[ModuleType.ENGINE_IMPULSE] = ModuleTypeDefinition(
             type = ModuleType.ENGINE_IMPULSE,
             controls = listOf(ControlWidgetDefinition(ControlWidgetType.JOYSTICK_2D, StandardChannels.TARGET, Vector2(0.5f, 0.5f), label = "THRUST")),
-            outputs = listOf(OutputWidgetDefinition("HEAT", Vector2(0.5f, 0.1f), "ENGINE"))
+            outputs = listOf(OutputWidgetDefinition("HEAT", Vector2(0.5f, 0.1f), "ENGINE")),
+            defaultPowerCategory = PowerCategory.ENGINE
         )
 
         // --- UTILITIES ---
         definitions[ModuleType.DRONE_HIVE] = ModuleTypeDefinition(
             type = ModuleType.DRONE_HIVE,
             controls = listOf(ControlWidgetDefinition(ControlWidgetType.BUTTON_DISCRETE, "LAUNCH", Vector2(0.5f, 0.5f), label = "DEPLOY")),
-            outputs = listOf(OutputWidgetDefinition("COUNT", Vector2(0.5f, 0.1f), "ACTIVE"))
+            outputs = listOf(OutputWidgetDefinition("COUNT", Vector2(0.5f, 0.1f), "ACTIVE")),
+            defaultPowerCategory = PowerCategory.UTILITY
         )
     }
 

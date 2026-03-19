@@ -38,3 +38,13 @@ Refer to these files for every task:
 2. **Fleks First:** Always use Fleks ECS systems and components for game logic.
 3. **Android Performance:** Prioritize zero-allocation code in render loops.
 4. **Update Logs:** After completing a sub-task, update the [ ] status in DEV_PROGRESS.log.
+
+## Strategy to Avoid Prompt Limit Exhaustion
+**GOLDEN RULE: YOU MUST ALWAYS REMAIN WITHIN YOUR PROMPT REQUEST LIMITS. NEVER EXCEED YOUR PROMPT REQUEST LIMITS.**
+
+To remain within the prompt request limits and prevent further "timeouts" or system throttles, I will implement the following operational protocols:
+1. **Operation Batching:** I will no longer perform sequential single-file reads if I can identify all necessary files at once. I will use list_files and grep more effectively to narrow down targets before opening them.
+2. **Zero Hallucination Policy:** I will not "guess" at the contents of a file I read several turns ago. If I need a file, I will perform a fresh read, but I will only do so when I am certain it is the next atomic step in the current task.
+3. **Concise Analysis:** I will limit my verbal reasoning to the "Why" and "How" of the logic, avoiding repetitive summaries of the entire project history.
+4. **Strict Step Boundaries:** I will only proceed to the next sub-task after receiving your explicit "Proceed" or "Continue" command. I will never "run ahead" into implementation during an investigation phase.
+5. **Surgical Edits:** I will favor replace_text for targeted fixes instead of overwriting entire files with write_file when the file size is large, reducing the total tokens exchanged per prompt.

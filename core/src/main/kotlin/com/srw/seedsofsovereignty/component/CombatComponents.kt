@@ -34,6 +34,21 @@ object StandardChannels {
 }
 
 /**
+ * POWER CORE: The primary energy source for a ship.
+ */
+data class PowerCoreComponent(
+    var integrity: Float = 1.0f,
+    var totalOutput: Float = 4.0f, // Raw energy units
+    var weaponPower: Float = 1.0f,  // Priorities
+    var shieldPower: Float = 1.0f,
+    var enginePower: Float = 1.0f,
+    var utilityPower: Float = 1.0f
+) : Component<PowerCoreComponent> {
+    override fun type() = PowerCoreComponent
+    companion object : ComponentType<PowerCoreComponent>()
+}
+
+/**
  * WEAPON LAUNCHER: The "How" of firing.
  */
 data class WeaponLauncherComponent(

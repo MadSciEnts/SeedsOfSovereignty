@@ -16,7 +16,7 @@ import com.badlogic.gdx.utils.viewport.ScreenViewport
 import com.github.quillraven.fleks.World
 import com.github.quillraven.fleks.configureWorld
 import com.srw.seedsofsovereignty.blueprint.BlueprintRegistry
-import com.srw.seedsofsovereignty.component.FactionType
+import com.srw.seedsofsovereignty.component.*
 import com.srw.seedsofsovereignty.factory.ProjectileFactory
 import com.srw.seedsofsovereignty.factory.ShipFactory
 import com.srw.seedsofsovereignty.factory.UniversalFactory
@@ -31,7 +31,7 @@ import space.earlygrey.shapedrawer.ShapeDrawer
 
 /**
  * PLAY SCREEN: The primary gameplay entry point.
- * Refactored to utilize the Universal DNA Factory.
+ * Refactored to utilize a Dual Command Matrix Hub (Navigation & Tactical).
  */
 class PlayScreen(private val camera: OrthographicCamera) : KtxScreen {
 
@@ -49,7 +49,10 @@ class PlayScreen(private val camera: OrthographicCamera) : KtxScreen {
 
     private val world: World
     private val shipFactory = ShipFactory() // Legacy - to be removed
-    private val commandMatrix = CommandMatrixView(uiSkin)
+
+    // DUAL COMMAND MATRICES
+    private val navMatrix = CommandMatrixView(uiSkin, setOf(ModuleCategory.NAVIGATION, ModuleCategory.ENGINE))
+    private val tacticalMatrix = CommandMatrixView(uiSkin) // Tactical (Excludes NAV/ENGINE)
 
     private val margin = 20f
 
@@ -67,7 +70,8 @@ class PlayScreen(private val camera: OrthographicCamera) : KtxScreen {
             joystick = movementJoystick,
             shipFactory = shipFactory,
             projectileFactory = ProjectileFactory(),
-            commandMatrix = commandMatrix
+            navMatrix = navMatrix,
+            tacticalMatrix = tacticalMatrix
         )
 
         // 2. Configure the World via Modules
@@ -77,12 +81,14 @@ class PlayScreen(private val camera: OrthographicCamera) : KtxScreen {
         }
 
         // 3. Wire the UI-ECS Bridge
-        commandMatrix.attachWorld(world)
+        navMatrix.attachWorld(world)
+        tacticalMatrix.attachWorld(world)
 
         // 4. Build Scene2D Layout
         uiStage.addActor(movementJoystick)
         uiStage.addActor(devEvolveButton)
-        uiStage.addActor(commandMatrix.root)
+        uiStage.addActor(navMatrix.root)
+        uiStage.addActor(tacticalMatrix.root)
 
         // 5. Global Event Handlers
         devEvolveButton.addListener(object : ChangeListener() {
@@ -95,6 +101,9 @@ class PlayScreen(private val camera: OrthographicCamera) : KtxScreen {
         val playerDNA = BlueprintRegistry.getUnit(1)
         UniversalFactory.spawnUnit(world, playerDNA, FactionType.PLAYER, Vector2(0f, 0f))
 
+        // 7. SQUAD VERIFICATION: Spawn a test squad (1 Leader, 2 Members)
+        spawnTestSquad(world, 101, Vector2(-10f, -10f))
+
         // Spawn some T1A test enemies
         val enemyDNA = BlueprintRegistry.getUnit(1)
         repeat(3) { i ->
@@ -104,11 +113,47 @@ class PlayScreen(private val camera: OrthographicCamera) : KtxScreen {
         layoutUI()
     }
 
+    private fun spawnTestSquad(world: World, squadId: Int, startPos: Vector2) {
+        val dna = BlueprintRegistry.getUnit(1)
+
+        // Spawn Leader
+        val leader = UniversalFactory.spawnUnit(world, dna, FactionType.ENEMY, startPos)
+        world.run {
+            leader.configure {
+                it += SquadComponent(squadId, SquadRole.LEADER)
+                // Zero-allocation update to the pre-existing Vector2 in OrderComponent
+                val order = OrderComponent(OrderType.MOVE_TO)
+                order.targetPos.set(0f, 0f)
+                it += order
+            }
+        }
+
+        // Spawn Members
+        repeat(2) { i ->
+            val member = UniversalFactory.spawnUnit(world, dna, FactionType.ENEMY, Vector2(startPos.x + i + 1, startPos.y))
+            world.run {
+                member.configure {
+                    it += SquadComponent(squadId, SquadRole.MEMBER)
+                    it += OrderComponent() // Will be synced by SquadCommandSystem
+                }
+            }
+        }
+    }
+
     private fun layoutUI() {
-        val matrixWidth = movementJoystick.width * 1.5f
-        val matrixHeight = 150f + movementJoystick.height
-        commandMatrix.root.setSize(matrixWidth, matrixHeight)
-        commandMatrix.root.setPosition(uiViewport.worldWidth - matrixWidth - margin, margin)
+        val widgetWidth = 300f
+        val widgetHeight = 300f
+
+        // Navigation Hub (Lower Left)
+        navMatrix.root.setSize(widgetWidth, widgetHeight)
+        navMatrix.root.setPosition(margin, margin)
+
+        // Tactical Hub (Lower Right)
+        tacticalMatrix.root.setSize(widgetWidth, widgetHeight)
+        tacticalMatrix.root.setPosition(uiViewport.worldWidth - widgetWidth - margin, margin)
+
+        // Hide movementJoystick if navMatrix handles it
+        movementJoystick.setVisible(false)
     }
 
     override fun render(delta: Float) {
@@ -131,7 +176,9 @@ class PlayScreen(private val camera: OrthographicCamera) : KtxScreen {
         movementJoystick.setSize(joystickSize, joystickSize)
         movementJoystick.setPosition(margin, margin)
 
-        commandMatrix.joystickSize = joystickSize
+        navMatrix.joystickSize = joystickSize
+        tacticalMatrix.joystickSize = joystickSize
+
         devEvolveButton.setPosition((uiViewport.worldWidth - devEvolveButton.width) / 2f, uiViewport.worldHeight - devEvolveButton.height - margin)
 
         layoutUI()

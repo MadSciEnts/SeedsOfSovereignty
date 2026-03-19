@@ -128,6 +128,8 @@ class TextureService : Disposable {
             ModuleCategory.POWER -> Color.GREEN
             ModuleCategory.DRONES -> Color.CYAN
             ModuleCategory.FIGHTERS -> Color.WHITE
+            ModuleCategory.NAVIGATION -> Color.SKY
+            ModuleCategory.ENGINE -> Color.LIME
         }
     }
 

@@ -8,10 +8,11 @@ import com.srw.seedsofsovereignty.ui.CommandMatrixView
 
 /**
  * UI BRIDGE SYSTEM: Decouples ECS state from Scene2D UI.
- * Scans for player module changes and updates the Command Matrix shelf.
+ * Scans for player module changes and updates both Command Matrix hubs.
  */
 class UIBridgeSystem(
-    private val commandMatrix: CommandMatrixView = inject()
+    private val navMatrix: CommandMatrixView = inject("navMatrix"),
+    private val tacticalMatrix: CommandMatrixView = inject("tacticalMatrix")
 ) : IntervalSystem(interval = Fixed(0.5f)) {
 
     private var lastCategories = setOf<ModuleCategory>()
@@ -33,10 +34,11 @@ class UIBridgeSystem(
             }
         }
 
-        // Only update UI if the category set has changed
+        // Update both matrices. Filtering is handled internally by the views.
         if (activeCategories != lastCategories) {
-            lastCategories = activeCategories
-            commandMatrix.updateCategories(activeCategories)
+            lastCategories = activeCategories.toSet()
+            navMatrix.updateCategories(lastCategories)
+            tacticalMatrix.updateCategories(lastCategories)
         }
     }
 }

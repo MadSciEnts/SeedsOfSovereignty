@@ -14,9 +14,13 @@ import com.srw.seedsofsovereignty.component.*
 
 /**
  * COMMAND MATRIX VIEW: Manages the UI components for module selection and control.
- * Refactored to include the Category Shelf in the main root for stable layout.
+ * Refactored to support Dual-Widget configuration (Tactical vs Navigation).
  */
-class CommandMatrixView(private val skin: Skin) {
+class CommandMatrixView(
+    private val skin: Skin,
+    private val filter: Set<ModuleCategory>? = null,
+    private val isRightAnchored: Boolean = false
+) {
 
     private var world: World? = null
     val root = Table()
@@ -37,41 +41,63 @@ class CommandMatrixView(private val skin: Skin) {
         controlArea.background = panelBg
         categoryShelf.background = panelBg
 
-        // Build the unified layout - Reordered for categoryShelf at bottom
+        // Align internal content based on screen corner
+        val alignSide = if (isRightAnchored) Align.right else Align.left
+        selectionShelf.align(alignSide)
+        categoryShelf.align(alignSide)
+
+        // Build the layout. Ensure categoryShelf is pinned to the bottom.
         root.apply {
-            add(selectionShelf).expandX().fillX().height(70f).padBottom(5f).row()
+            align(Align.bottom)
+            add(selectionShelf).expandX().fillX().height(60f).padBottom(2f).row()
             add(controlArea).expand().fill().row()
-            add(categoryShelf).expandX().fillX().height(60f).padTop(5f)
+            add(categoryShelf).expandX().fillX().height(50f).padTop(2f)
             setTransform(true)
         }
 
-        controlArea.add(TextButton("SELECT A MODULE", skin)).expand().fill().pad(10f)
+        controlArea.add(TextButton("SELECT MODULE", skin)).expand().fill().pad(10f)
     }
 
-    /**
-     * Attaches the ECS world to this view. Must be called before user interaction.
-     */
     fun attachWorld(world: World) {
         this.world = world
     }
 
     fun updateCategories(activeCategories: Set<ModuleCategory>) {
         categoryShelf.clearChildren()
-        ModuleCategory.entries.forEach { cat ->
-            if (cat in activeCategories) {
-                val btn = TextButton(cat.name, skin, cat.name.lowercase())
-                categoryShelf.add(btn).expandX().fill().pad(1f)
 
-                btn.addListener(object : ChangeListener() {
-                    override fun changed(event: ChangeEvent, actor: Actor) {
-                        currentCategory = cat
-                        applyGlitchEffect(root)
-                        root.color = getCategoryColor(cat).cpy().apply { a = 0.8f }
-                        populateSelectionShelf(cat)
-                    }
-                })
-            }
+        val filtered = if (filter != null) {
+            activeCategories.filter { it in filter }
+        } else {
+            activeCategories.filter { it != ModuleCategory.NAVIGATION && it != ModuleCategory.ENGINE }
         }
+
+        filtered.forEach { cat ->
+            val btn = TextButton(cat.name, skin, cat.name.lowercase())
+            // For right-anchored hub, add to the right side of the table
+            if (isRightAnchored) {
+                categoryShelf.add(btn).right().height(45f).pad(1f)
+            } else {
+                categoryShelf.add(btn).left().height(45f).pad(1f)
+            }
+
+            btn.addListener(object : ChangeListener() {
+                override fun changed(event: ChangeEvent, actor: Actor) {
+                    switchToCategory(cat)
+                }
+            })
+        }
+
+        // AUTO-SELECT: If only one category, switch to it
+        if (filtered.size == 1 && currentCategory == null) {
+            switchToCategory(filtered.first())
+        }
+    }
+
+    private fun switchToCategory(category: ModuleCategory) {
+        currentCategory = category
+        applyGlitchEffect(root)
+        root.color = getCategoryColor(category).cpy().apply { a = 0.8f }
+        populateSelectionShelf(category)
     }
 
     private fun populateSelectionShelf(category: ModuleCategory) {
@@ -82,32 +108,20 @@ class CommandMatrixView(private val skin: Skin) {
             val player = family { all(PlayerComponent) }.firstOrNull() ?: return
             val targets = mutableListOf<Entity>()
 
-            when (category) {
-                ModuleCategory.POWER -> if (player.has(PowerCoreComponent)) targets.add(player)
-                ModuleCategory.SHIELDS -> if (player.has(ArcedDefenseComponent)) targets.add(player)
-                else -> {
-                    family { all(ModuleComponent, AttachmentComponent) }.forEach { entity ->
-                        if (entity[AttachmentComponent].parent == player && entity[ModuleComponent].category == category) {
-                            targets.add(entity)
-                        }
-                    }
+            family { all(ModuleComponent, AttachmentComponent) }.forEach { entity ->
+                if (entity[AttachmentComponent].parent == player && entity[ModuleComponent].category == category) {
+                    targets.add(entity)
                 }
             }
 
-            if (targets.size > 1) {
-                val masterBtn = TextButton("MASTER", skin, "toggle")
-                selectionShelf.add(masterBtn).height(60f).pad(2f)
-                masterBtn.addListener(object : ChangeListener() {
-                    override fun changed(event: ChangeEvent, actor: Actor) {
-                        selectMaster(player, category, targets.firstOrNull())
-                    }
-                })
-            }
+            if (category == ModuleCategory.POWER && player.has(PowerCoreComponent)) targets.add(player)
+            if (category == ModuleCategory.SHIELDS && player.has(ArcedDefenseComponent)) targets.add(player)
 
             targets.forEach { entity ->
                 val label = if (entity == player) category.name else "MOD-${entity.id}"
                 val btn = TextButton(label, skin)
-                selectionShelf.add(btn).height(60f).pad(2f)
+                if (isRightAnchored) selectionShelf.add(btn).right().height(55f).pad(2f)
+                else selectionShelf.add(btn).left().height(55f).pad(2f)
 
                 btn.addListener(object : ChangeListener() {
                     override fun changed(event: ChangeEvent, actor: Actor) {
@@ -115,29 +129,11 @@ class CommandMatrixView(private val skin: Skin) {
                     }
                 })
             }
-        }
-    }
 
-    private fun selectMaster(player: Entity, category: ModuleCategory, representative: Entity?) {
-        val w = world ?: return
-        w.run {
-            var master = family { all(GroupMasterComponent) }.firstOrNull {
-                it[GroupMasterComponent].category == category && it.getOrNull(AttachmentComponent)?.parent == player
+            // AUTO-SELECT: If only one module, display it
+            if (targets.size == 1) {
+                selectModule(targets.first())
             }
-
-            if (master == null && representative != null && representative.has(ModuleChannelsComponent)) {
-                val repChannels = representative[ModuleChannelsComponent]
-                master = w.entity {
-                    it += GroupMasterComponent(category)
-                    it += AttachmentComponent(parent = player)
-
-                    val newInputs = mutableMapOf<String, InputChannelData>()
-                    repChannels.inputs.keys.forEach { key -> newInputs[key] = InputChannelData() }
-                    it += ModuleChannelsComponent(type = repChannels.type, inputs = newInputs)
-                }
-            }
-
-            master?.let { selectModule(it) }
         }
     }
 
@@ -164,8 +160,6 @@ class CommandMatrixView(private val skin: Skin) {
 
     private fun applyGlitchEffect(actor: Actor) {
         actor.clearActions()
-        val originalX = actor.x
-        val originalY = actor.y
         val flareColor = Color(1f, 1f, 1.2f, 1f)
         val originalColor = Color(1f, 1f, 1f, 0.8f)
 
@@ -176,7 +170,7 @@ class CommandMatrixView(private val skin: Skin) {
             ),
             Actions.parallel(
                 Actions.color(originalColor, 0.05f),
-                Actions.moveTo(originalX, originalY, 0.03f)
+                Actions.moveTo(actor.x, actor.y, 0.03f)
             )
         ))
     }
@@ -223,20 +217,6 @@ class CommandMatrixView(private val skin: Skin) {
                 stack.add(layoutTable)
                 stack.add(overlayTable)
                 controlArea.add(stack).expand().fill()
-
-                if (entity.has(GroupMasterComponent)) {
-                    val group = entity[GroupMasterComponent]
-                    val header = Label("MASTER CONTROL: ${group.category}", s).apply { color = Color.GOLD }
-                    controlArea.addActor(header)
-                    header.setPosition(10f, 10f)
-                }
-
-            } else {
-                val labelText = when {
-                    entity.has(PlayerComponent) -> if (currentCategory == ModuleCategory.POWER) "POWER CORE" else "SHIELD MATRIX"
-                    else -> "UNKNOWN MODULE"
-                }
-                controlArea.add(TextButton(labelText, s)).expand().fill().pad(10f)
             }
         }
     }
@@ -301,6 +281,8 @@ class CommandMatrixView(private val skin: Skin) {
             ModuleCategory.POWER -> Color.GREEN
             ModuleCategory.DRONES -> Color.CYAN
             ModuleCategory.FIGHTERS -> Color.WHITE
+            ModuleCategory.NAVIGATION -> Color.SKY
+            ModuleCategory.ENGINE -> Color.LIME
         }
     }
 }
