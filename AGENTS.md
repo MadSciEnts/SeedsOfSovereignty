@@ -21,13 +21,21 @@ Every agent response must begin and end with a capacity declaration to monitor c
 - **Task Complexity:** Difficulty of the immediate request.
 - **Confidence:** Agent's certainty in the proposed solution.
 
-## 4. Tech Stack Standards
+## 4. Efficiency & Rate-Limit Management
+To maintain high productivity while staying within hourly API request limits, agents must adhere to the following:
+- **Comprehensive Multi-Target Analysis:** Perform a deep analysis of all inter-system dependencies before invoking tools to prevent trial-and-error edits.
+- **Monolithic Writes:** Batch all logic corrections for a single file into a single `write_file` or `replace_text` call.
+- **Path Retention:** Memorize and reuse absolute file paths from the context to skip redundant `find_files` or `list_files` operations.
+- **Validation Checkpoints:** Complete one logical feature or complex fix and **pause** for user validation before proceeding to the next system.
+- **Concise Reporting:** Minimize explanation overhead; focus on the technical delta and the resulting system state.
+
+## 5. Tech Stack Standards
 - **Engine:** libGDX
 - **Language:** Kotlin
 - **Architecture:** Ashley ECS (Entity Component System)
 - **Platform:** Android (Primary)
 
-## 5. Coding Standards
+## 6. Coding Standards
 - Use idiomatic Kotlin.
 - Follow ECS best practices: Keep Components as pure data, and Logic within Systems.
 - Ensure resources are managed correctly according to libGDX lifecycle.

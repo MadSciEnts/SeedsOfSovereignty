@@ -26,6 +26,7 @@ The player interacts with the ship through two primary command areas at the bott
 - **Lower Right (Tactical):** Module selection, weapon operation, power balancing, and drone/fighter positioning.
 - **Module Shelf:** A filterable shelf of categories. Selecting a category reveals specific modules; selecting a module reveals its unique controls.
 - **UI Architecture:** **NO Scene2D Tables.** Use precise positioning, parenting, offsets, and anchors to prevent auto-scaling/squishing.
+- **UI Panels:** Modular system for HUD, menus, storefronts, and detail panes. Supports grouping, nesting, scrolling, and inter-panel detail synchronization.
 - **UI Interactions:** Custom components for Buttons, Toggles, Joysticks, TouchPads, and Vertical Sliders.
 - **Visuals:** Procedurally generated UI in a scifi style, categorized by Epoch/Tier. Shaders for glitch effects and high-tech details.
 - **UI Assets:** Procedurally generated NinePatch UI elements and buttons with synced UVs. Style generators to maintain visual consistency across tiers.
@@ -58,4 +59,5 @@ Every ship requires a [Power Core, Shield, Hull, Impulse Engine].
     - **Epoch 2+:** **Warp Engines** (Fuel-based free travel).
 - **Camera:** Dynamic zoom that scales out as the ship grows, maintaining a sense of relative scale while ensuring projectiles remain visible.
 - **Background:** 3-layer parallax shader-based starfield. Farthest layers retire and new ones emerge as the camera zooms.
+- **Lifecycle:** **Player-Independent Initialization.** The HUD, environmental systems, and engine must be operational before the player entity is loaded/warped into the sector.
 - **Code Style:** Pure data Components, logic-only Systems, heavy use of KTX for idiomatic Kotlin.
