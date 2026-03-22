@@ -11,7 +11,7 @@ import com.srw.seedofsov.model.DataChannel
 
 /**
  * Interactive area that maps touch coordinates to a DataChannel.
- * Truth on Disk: Implements 15% center-snap to origin for easy Guard Mode activation.
+ * Truth on Disk: Continuous sync with DataChannel state ensures UI reflects ECS changes.
  */
 class Touchpad(
     val game: SovereigntyGame,
@@ -22,11 +22,7 @@ class Touchpad(
     private val knobSize = 12f
 
     init {
-        // Map channel (-1..1) back to 0..1
-        handlePos.set(
-            (channel.valueVector2.x + 1f) / 2f,
-            (channel.valueVector2.y + 1f) / 2f
-        )
+        updateHandleFromChannel()
 
         addListener(object : ClickListener() {
             override fun touchDown(event: InputEvent?, x: Float, y: Float, pointer: Int, button: Int): Boolean {
@@ -38,6 +34,19 @@ class Touchpad(
                 updatePosition(x, y)
             }
         })
+    }
+
+    private fun updateHandleFromChannel() {
+        handlePos.set(
+            (channel.valueVector2.x + 1f) / 2f,
+            (channel.valueVector2.y + 1f) / 2f
+        )
+    }
+
+    override fun act(delta: Float) {
+        super.act(delta)
+        // Truth on Disk: Pull latest state from DataChannel every frame
+        updateHandleFromChannel()
     }
 
     private fun updatePosition(x: Float, y: Float) {

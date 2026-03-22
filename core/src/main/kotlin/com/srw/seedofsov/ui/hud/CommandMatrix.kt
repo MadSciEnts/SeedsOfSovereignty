@@ -2,6 +2,7 @@ package com.srw.seedofsov.ui.hud
 
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.InputEvent
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
 import com.srw.seedofsov.SovereigntyGame
 import com.srw.seedofsov.ecs.components.WeaponModuleComponent
@@ -12,7 +13,7 @@ import com.srw.seedofsov.ui.UiAssetListener
 
 /**
  * Reusable Command Matrix UI component.
- * Truth on Disk: Tracks active slot to sync selection state to ECS.
+ * Truth on Disk: Tracks active slot and ensures UI state mirrors module state.
  */
 class CommandMatrix(
     val game: SovereigntyGame,
@@ -125,6 +126,11 @@ class CommandMatrix(
                     controlArea.addActor(btn)
                 }
                 "CYCLE_BUTTON" -> {
+                    // Initialize channel from module state if first selection
+                    if (channel.valueEnum == null) {
+                        channel.valueEnum = module.commandSpace
+                    }
+
                     val btn = game.uiFactory.createButton("").apply {
                         setSize(sw, sh)
                         setPosition(sx, sy)
@@ -133,12 +139,24 @@ class CommandMatrix(
                                 val current = channel.valueEnum as? CoordinateSpace ?: CoordinateSpace.OBJECT
                                 val next = if (current == CoordinateSpace.OBJECT) CoordinateSpace.WORLD else CoordinateSpace.OBJECT
                                 channel.valueEnum = next
-                                setText(if (next == CoordinateSpace.OBJECT) "SHIP" else "CAMERA")
                             }
                         })
-                        val current = channel.valueEnum as? CoordinateSpace ?: CoordinateSpace.OBJECT
-                        setText(if (current == CoordinateSpace.OBJECT) "SHIP" else "CAMERA")
                     }
+
+                    // Reactive behavior: Keep button text in sync with DataChannel
+                    if (btn is TextButton) {
+                        btn.addAction(object : com.badlogic.gdx.scenes.scene2d.Action() {
+                            override fun act(delta: Float): Boolean {
+                                val current = channel.valueEnum as? CoordinateSpace ?: CoordinateSpace.OBJECT
+                                val targetText = if (current == CoordinateSpace.OBJECT) "SHIP" else "CAMERA"
+                                if (btn.text.toString() != targetText) {
+                                    btn.setText(targetText)
+                                }
+                                return false // Persistent action
+                            }
+                        })
+                    }
+
                     controlArea.addActor(btn)
                 }
             }

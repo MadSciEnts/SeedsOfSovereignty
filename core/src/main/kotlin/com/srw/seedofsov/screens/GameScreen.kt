@@ -26,7 +26,8 @@ class GameScreen(
         }
 
     private val camera = OrthographicCamera()
-    private val viewport = ExtendViewport(20f, 20f, camera)
+    // Truth on Disk: Increased from 20f to 48f to provide the requested zoomed-out perspective.
+    private val viewport = ExtendViewport(48f, 48f, camera)
     private val entityFactory = EntityFactory(game.engine)
 
     private var player: Entity? = null
@@ -55,7 +56,7 @@ class GameScreen(
         game.engine.addSystem(EffectSystem())
         game.engine.addSystem(CollisionSystem())
         game.engine.addSystem(PhysicsSystem())
-        game.engine.addSystem(TacticalSystem(hud)) // Registered new Tactical logic
+        game.engine.addSystem(TacticalSystem(hud))
         game.engine.addSystem(CameraSystem(camera))
         game.engine.addSystem(StarfieldSystem(game.batch, viewport))
         game.engine.addSystem(RenderSystem(game.batch, viewport))
@@ -116,7 +117,7 @@ class GameScreen(
         game.engine.removeSystem(game.engine.getSystem(EffectSystem::class.java))
         game.engine.removeSystem(game.engine.getSystem(CollisionSystem::class.java))
         game.engine.removeSystem(game.engine.getSystem(PhysicsSystem::class.java))
-        game.engine.removeSystem(game.engine.getSystem(TacticalSystem::class.java)) // Removed new Tactical logic
+        game.engine.removeSystem(game.engine.getSystem(TacticalSystem::class.java))
         game.engine.removeSystem(game.engine.getSystem(InterfaceSystem::class.java))
     }
 

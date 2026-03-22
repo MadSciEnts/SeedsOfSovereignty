@@ -9,7 +9,7 @@ import ktx.ashley.mapperFor
 
 /**
  * Module component for ship propulsion.
- * Truth on Disk: Implements ShipModule with unified intent properties.
+ * Truth on Disk: Defines thrust power and rotational limits for the ship.
  */
 class ImpulseEngineComponent : Component, Pool.Poolable, ShipModule {
     override val category = ModuleCategory.ENGINE
@@ -22,7 +22,14 @@ class ImpulseEngineComponent : Component, Pool.Poolable, ShipModule {
     override var orientationReality = TacticalOrientationReality.SHIP_RELATIVE
     override var worldAimAngle: Float = 90f
 
-    var thrustPower = 10f
+    var thrustPower = 15f
+
+    /**
+     * Maximum degrees per second the ship can rotate.
+     * Truth on Disk: Controls the responsiveness of the ship's orientation.
+     */
+    var maxRotationSpeed = 180f
+
     var isActive = false
 
     override fun getModuleControls(): List<ModuleControl> = listOf(
@@ -38,6 +45,7 @@ class ImpulseEngineComponent : Component, Pool.Poolable, ShipModule {
 
     override fun reset() {
         thrustPower = 15f
+        maxRotationSpeed = 180f
         isActive = false
         commandPosition.set(0f, 0f)
         commandSpace = CoordinateSpace.OBJECT
