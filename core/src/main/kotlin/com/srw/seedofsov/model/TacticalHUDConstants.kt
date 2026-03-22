@@ -14,6 +14,13 @@ object TacticalHUDConstants {
     // Visual depth for blocky segments
     const val RING_VISUAL_DEPTH = 0.15f
 
+    // --- High Fidelity / Ender's Game HUD Constants ---
+    const val TICK_RADIAL_LENGTH = 0.25f
+    const val TICK_THICKNESS = 0.05f
+    const val ROTATION_SPEED_OUTER = 15f // Degrees per second
+    const val ROTATION_SPEED_INNER = -25f
+    const val HEX_PATTERN_DENSITY = 12 // Segments for shield pattern
+
     const val INNER_START_OFFSET = 1.25f
 
     // Scale for touchpad input projection

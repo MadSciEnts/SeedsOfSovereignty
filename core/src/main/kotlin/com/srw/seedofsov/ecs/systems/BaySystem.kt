@@ -2,22 +2,21 @@ package com.srw.seedofsov.ecs.systems
 
 import com.badlogic.ashley.core.Entity
 import com.badlogic.ashley.systems.IteratingSystem
+import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Vector2
 import com.srw.seedofsov.ecs.EntityFactory
 import com.srw.seedofsov.ecs.components.*
 import ktx.ashley.allOf
 import ktx.ashley.get
-import kotlin.math.absoluteValue
-import kotlin.math.sign
 
 /**
- * Manages the deployment and advanced orbital flocking of Drones.
- * Truth on Disk: The module defines the orbit via TacticalState.
- * This system follows the lerped currentRadius and currentRotation from TacticalSystem.
+ * Manages the deployment and deterministic orbital formation of Drones.
+ * Truth on Disk: Drones follow fixed angular slots relative to the bay's logical swarmRotation.
+ * This ensures they maintain their orbit logic even when the visual ring is flat and static.
  */
 class BaySystem(private val factory: EntityFactory) : IteratingSystem(
     allOf(ShipComponent::class, TransformComponent::class).get(),
-    35 // Priority after TacticalSystem (15)
+    35 // Priority after TacticalSystem (45)
 ) {
     private val orbitVec = Vector2()
 
@@ -33,69 +32,58 @@ class BaySystem(private val factory: EntityFactory) : IteratingSystem(
         }
     }
 
-    private fun updateBay(owner: Entity, transform: TransformComponent, bay: BayModuleComponent, deltaTime: Float) {
+    private fun updateBay(owner: Entity, shipTransform: TransformComponent, bay: BayModuleComponent, deltaTime: Float) {
         // 1. Cleanup & Smart Launch
         bay.activeUnits.removeAll { it.isScheduledForRemoval }
 
         if (bay.activeUnits.size < bay.capacity) {
             bay.launchTimer -= deltaTime
             if (bay.launchTimer <= 0f && bay.isLaunchRequested) {
-                val droneEntity = factory.createDrone(transform.position.x, transform.position.y, owner)
+                val droneEntity = factory.createDrone(shipTransform.position.x, shipTransform.position.y, owner)
                 bay.activeUnits.add(droneEntity)
                 bay.launchTimer = bay.launchRate
             }
         }
 
-        // 2. Swarm Logic (Physics Driven)
-        // The Module calculates its own swarmRotation, which is then mirrored by the Tactical HUD.
+        // 2. Swarm Logic (Physical Spin)
+        // This is the logical rotation state that never stops.
         val signedControl = (bay.orbitSpeed - 0.5f) * 2f
-        val currentBaseSpeed = 90f * signedControl
+        val currentBaseSpeed = 120f * signedControl
         bay.swarmRotation += currentBaseSpeed * deltaTime
 
-        // 3. Synchronized Orbit Physics
+        // 3. Synchronized Formation Physics
         val state = bay.tacticalState
         val droneCount = bay.activeUnits.size
         if (droneCount == 0) return
 
-        val idealGap = 360f / droneCount.coerceAtLeast(1)
-        val drones = bay.activeUnits.mapNotNull { it[DroneComponent.mapper] }
+        val idealGap = 360f / droneCount
 
-        bay.activeUnits.forEach { unit ->
-            val seeking = unit[SeekingComponent.mapper] ?: return@forEach
-            val drone = unit[DroneComponent.mapper] ?: return@forEach
+        bay.activeUnits.forEachIndexed { index, unit ->
+            val seeking = unit[SeekingComponent.mapper] ?: return@forEachIndexed
+            val drone = unit[DroneComponent.mapper] ?: return@forEachIndexed
 
             seeking.ownerEntity = owner
-            drone.orbitPhase += currentBaseSpeed * deltaTime
 
-            // Flocking / Spacing logic
-            drones.forEach { other ->
-                if (other === drone) return@forEach
-                var diff = drone.orbitPhase - other.orbitPhase
-                while (diff <= -180f) diff += 360f
-                while (diff > 180f) diff -= 360f
+            // TRUTH ON DISK: Drones use the module's logical swarmRotation.
+            // This ensures they keep orbiting even when the visual HUD ring (state.currentRotation)
+            // is hard-locked to 0f for flat-state stability.
+            val targetAngle = bay.swarmRotation + (index * idealGap)
 
-                if (diff.absoluteValue < idealGap) {
-                    val overlap = 1f - (diff.absoluteValue / idealGap)
-                    val pushStrength = overlap * (80f + currentBaseSpeed.absoluteValue)
-                    drone.orbitPhase += diff.sign * pushStrength * deltaTime
-                }
-            }
+            // Matches TacticalRenderer geometry logic:
+            // 1. Position on the circle
+            orbitVec.set(0f, state.currentRadius).rotateDeg(targetAngle)
 
-            // --- TRUTH ON DISK: PERFECT ALIGNMENT ---
-            // The drone follows the EXACT lerped radius calculated in TacticalSystem.
-            // This lerp starts at the Flat Ring radius (at origin) and expands to the
-            // module's defined combat orbit (when projected).
-
-            orbitVec.set(0f, state.currentRadius).rotateDeg(drone.orbitPhase)
-
-            // Apply procedural squish (proportional to projection distance)
+            // 2. Apply squish (perspective)
             orbitVec.scl(1.0f, state.heightSquish)
 
-            // Orient the orbit towards the projection target
+            // 3. Orient to the projection axis
+            // Note: state.lastStableAwayAngle is world-locked (90f) when state is flat.
             orbitVec.rotateDeg(state.lastStableAwayAngle - 90f)
 
-            // Result: Drone is world-locked to the Projected Hub + its specific orbit offset.
+            // Result: Drone targets the logic-driven position in world space.
             seeking.targetPos.set(state.worldTargetPos).add(orbitVec)
+
+            drone.orbitPhase = targetAngle
         }
     }
 }

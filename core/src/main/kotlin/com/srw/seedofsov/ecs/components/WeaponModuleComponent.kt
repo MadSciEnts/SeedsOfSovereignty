@@ -9,7 +9,7 @@ import ktx.ashley.mapperFor
 
 /**
  * Modular Primary or Secondary Weapon.
- * Truth on Disk: The module controls the tactical projection parameters.
+ * Truth on Disk: Implements ShipModule with direct world orientation reporting.
  */
 class WeaponModuleComponent : Component, Pool.Poolable, ShipModule {
     override var category = ModuleCategory.WEAPON_PRIMARY
@@ -17,11 +17,20 @@ class WeaponModuleComponent : Component, Pool.Poolable, ShipModule {
     override val tacticalState = TacticalState()
 
     // --- ShipModule Interface: Tactical Control ---
+    override val commandPosition = Vector2()
+    override var commandSpace = CoordinateSpace.OBJECT
+    override var orientationReality = TacticalOrientationReality.WORLD_FIXED
+
+    /**
+     * Authority: The Absolute World Orientation of the weapon barrels.
+     * Calculated and stored by WeaponSystem.
+     */
+    override var worldAimAngle: Float = 90f
+
     override fun getProjectedRadius(shipRadius: Float): Float = shipRadius * 1.5f
     override fun getTacticalRotation(): Float = platformRotation
 
     var projectileName = "Standard Bolt"
-
     var damage = 25f
     var fireRate = 0.5f
     var projectileSpeed = 45f
@@ -29,16 +38,8 @@ class WeaponModuleComponent : Component, Pool.Poolable, ShipModule {
 
     var cooldownTimer = 0f
     var isSecondary = false
-
     var subtier: Subtier = Subtier.A
-
-    // Attack Platform orientation
     var platformRotation = 0f
-
-    // --- Intent Projection State ---
-    val commandPosition = Vector2()
-
-    var commandSpace = CoordinateSpace.WORLD
 
     // Visual Scales
     var barrelWidth = 0.2f
@@ -96,7 +97,10 @@ class WeaponModuleComponent : Component, Pool.Poolable, ShipModule {
         isSecondary = false
         subtier = Subtier.A
         platformRotation = 0f
+        worldAimAngle = 90f
         commandPosition.set(0f, 0f)
+        commandSpace = CoordinateSpace.OBJECT
+        orientationReality = TacticalOrientationReality.WORLD_FIXED
         projectileName = "Standard Bolt"
         category = ModuleCategory.WEAPON_PRIMARY
         name = "Weapon System"

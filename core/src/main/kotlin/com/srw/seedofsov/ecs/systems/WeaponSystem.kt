@@ -10,7 +10,7 @@ import com.srw.seedofsov.SovereigntyGame
 import com.srw.seedofsov.assets.generators.ProjectileAssetGenerator
 import com.srw.seedofsov.assets.StyleRegistry
 import com.srw.seedofsov.ecs.components.*
-import com.srw.seedofsov.model.EffectType
+import com.srw.seedofsov.model.*
 import ktx.ashley.allOf
 import ktx.ashley.get
 import ktx.ashley.entity
@@ -19,7 +19,7 @@ import ktx.ashley.with
 /**
  * Handles weapon logic and visual feedback.
  * Truth on Disk: Priority 35 ensures tactical hub moves perfectly with ship physics.
- * Stability: Aligns tactical ring orientation to physical barrel direction.
+ * Stability: Delegates tactical state management to TacticalSystem and reports direct hardware orientation.
  */
 class WeaponSystem(val game: SovereigntyGame) : IteratingSystem(
     allOf(ShipComponent::class, TransformComponent::class, PhysicsComponent::class).get(),
@@ -33,7 +33,6 @@ class WeaponSystem(val game: SovereigntyGame) : IteratingSystem(
 
     private val tempVec = Vector2()
     private val localDirection = Vector2()
-    private val intentOffset = Vector2()
 
     override fun processEntity(entity: Entity, deltaTime: Float) {
         val ship = entity[ShipComponent.mapper] ?: return
@@ -63,41 +62,32 @@ class WeaponSystem(val game: SovereigntyGame) : IteratingSystem(
             if (fireBtn && weapon.cooldownTimer <= 0) {
                 spawnSeekingProjectile(owner, shipTransform, shipPhysics, weapon, deltaTime)
                 weapon.cooldownTimer = weapon.fireRate
+                state.firePulse = 1.0f
             }
-            state.worldTargetPos.set(shipTransform.position.x, shipTransform.position.y)
-            state.heightSquish = 1f
-            state.aimTransition = 0f
+            weapon.commandPosition.set(0f, 0f)
+            weapon.commandSpace = CoordinateSpace.OBJECT
+
+            // Secondary weapons aim forward by default (Ship Relative)
+            weapon.worldAimAngle = shipTransform.rotation + 90f
+            weapon.platformRotation = shipTransform.rotation // Barrels follow ship
         } else {
             val axes = slot.getChannel("weapon_aim").valueVector2
-            val isAiming = axes.len() > 0.05f
+            weapon.commandPosition.set(axes).limit(0.8f)
 
-            // 1. Intent Tracking (Holographic Lock)
-            val targetTransition = if (isAiming) 1f else 0f
-            state.aimTransition = MathUtils.lerp(state.aimTransition, targetTransition, 10f * deltaTime)
-            state.lerpedOffset.lerp(weapon.commandPosition.set(axes).limit(0.8f), 12f * deltaTime)
+            // TRUTH ON DISK: Primary weapons use WORLD space for the joystick reticle.
+            // This ensures the HUD ring stays fixed in the world direction of aim.
+            weapon.commandSpace = CoordinateSpace.WORLD
 
-            // 2. Resolve Projection (Immediate World Lock)
-            val shipRadius = (shipTransform.size.x + shipTransform.size.y) / 4f
-            val tacticalRange = shipRadius * 5.2f
-            val pushMag = MathUtils.clamp(state.lerpedOffset.len(), 0f, 1f)
-
-            intentOffset.set(state.lerpedOffset).scl(tacticalRange)
-            state.worldTargetPos.set(shipTransform.position.x + intentOffset.x, shipTransform.position.y + intentOffset.y)
-            state.heightSquish = MathUtils.lerp(1.0f, 0.35f, pushMag)
-
-            // 3. Resolve Firing and Barrel Orientation
             if (axes.len() > 0.1f) {
-                // Correct: Platform rotation uses the raw/direct input direction
                 localDirection.set(axes).nor()
+                // platformRotation is world-relative (0 = UP)
                 weapon.platformRotation = localDirection.angleDeg() - 90f
-
-                // TRUTH ON DISK: Tactical ring orientation matches physical barrel rotation exactly.
-                state.lastStableAwayAngle = weapon.platformRotation + 90f
 
                 if (weapon.cooldownTimer <= 0) {
                     val barrels = weapon.getBarrelOffsets()
                     barrels.forEach { offset ->
-                        tempVec.set(offset).rotateDeg(weapon.platformRotation)
+                        // offset is ship-local, needs to be rotated by ship rotation
+                        tempVec.set(offset).rotateDeg(shipTransform.rotation)
                         val spawnX = shipTransform.position.x + tempVec.x
                         val spawnY = shipTransform.position.y + tempVec.y
 
@@ -105,8 +95,14 @@ class WeaponSystem(val game: SovereigntyGame) : IteratingSystem(
                         spawnMuzzleFlash(spawnX, spawnY, weapon)
                     }
                     weapon.cooldownTimer = weapon.fireRate
+                    state.firePulse = 1.0f
                 }
             }
+
+            // TRUTH ON DISK FIX: Report the absolute world orientation.
+            // Since platformRotation is already world-relative (0 = UP),
+            // and Tactical HUD expects 90 = UP, we just add 90.
+            weapon.worldAimAngle = weapon.platformRotation + 90f
         }
     }
 

@@ -16,8 +16,9 @@ data class TacticalState(
     var isSelected: Boolean = false,
     var layoutOrbitIndex: Int = 0,
     val lerpedOffset: Vector2 = Vector2(),
-    var currentRadius: Float = 0f, // The actual radius used by both Ring and Drones
-    var currentRotation: Float = 0f // The actual rotation used by both Ring and Drones
+    var currentRadius: Float = 0f,
+    var currentRotation: Float = 0f,
+    var firePulse: Float = 0f // Ender's Game kinetic feedback
 ) {
     fun reset() {
         worldTargetPos.set(0f, 0f)
@@ -31,6 +32,7 @@ data class TacticalState(
         lerpedOffset.set(0f, 0f)
         currentRadius = 0f
         currentRotation = 0f
+        firePulse = 0f
     }
 }
 
@@ -67,22 +69,35 @@ data class TacticalAttribute(
 )
 
 /**
+ * Defines how the tactical ring's orientation is derived.
+ */
+enum class TacticalOrientationReality {
+    SHIP_RELATIVE,   // Follows hull rotation
+    WORLD_FIXED,     // Independent of hull (e.g. Joystick)
+    AWAY_FROM_SHIP   // Always faces away from ship center (Spherical Projection)
+}
+
+/**
  * Interface for all ship modules.
- * Truth on Disk: The module controls the tactical projection parameters.
+ * Truth on Disk: Supports direct hardware-reporting of absolute world orientation.
  */
 interface ShipModule {
     val category: ModuleCategory
     val name: String
     val tacticalState: TacticalState
 
-    /**
-     * Defines the radius of the tactical ring/orbit when fully projected.
-     */
-    fun getProjectedRadius(shipRadius: Float): Float = shipRadius * 2.5f
+    // Intent Projection Properties
+    val commandPosition: Vector2
+    var commandSpace: CoordinateSpace
+    var orientationReality: TacticalOrientationReality
 
     /**
-     * Defines the rotation speed/angle of the tactical ring/orbit.
+     * Authority: The Absolute World Orientation of this module's functional axis.
+     * Updated by specialized systems (e.g. WeaponSystem) to ensure HUD alignment.
      */
+    var worldAimAngle: Float
+
+    fun getProjectedRadius(shipRadius: Float): Float = shipRadius * 2.5f
     fun getTacticalRotation(): Float = 0f
 
     fun getModuleControls(): List<ModuleControl>

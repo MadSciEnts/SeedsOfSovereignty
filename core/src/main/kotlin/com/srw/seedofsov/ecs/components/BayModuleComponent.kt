@@ -10,7 +10,7 @@ import ktx.ashley.mapperFor
 
 /**
  * Manages the deployment and tracking of Fighters (Epoch 2) or Drones (Epoch 1).
- * Truth on Disk: The module controls the tactical projection parameters.
+ * Truth on Disk: Implements ShipModule with direct world orientation reporting.
  */
 class BayModuleComponent : Component, Pool.Poolable, ShipModule {
     override var category = ModuleCategory.BAY
@@ -18,6 +18,14 @@ class BayModuleComponent : Component, Pool.Poolable, ShipModule {
     override val tacticalState = TacticalState()
 
     // --- ShipModule Interface: Tactical Control ---
+    override val commandPosition = Vector2()
+
+    // TRUTH ON DISK: Drones use WORLD space for the joystick reticle.
+    // This ensures the touchpad input is in CAMERA space, matching the world-locked idle ring.
+    override var commandSpace = CoordinateSpace.WORLD
+    override var orientationReality = TacticalOrientationReality.AWAY_FROM_SHIP
+    override var worldAimAngle: Float = 0f
+
     override fun getProjectedRadius(shipRadius: Float): Float = shipRadius * 2.8f
     override fun getTacticalRotation(): Float = swarmRotation
 
@@ -33,11 +41,8 @@ class BayModuleComponent : Component, Pool.Poolable, ShipModule {
     var swarmRotation = 0f
 
     // Configurable Physics
-    var orbitSpeed = 0.7f // Default start position (Moderate clockwise)
+    var orbitSpeed = 0.7f
 
-    // Command Inputs
-    val commandPosition = Vector2() // -1..1 touchpad offset
-    var commandSpace = CoordinateSpace.OBJECT
     var isLaunchRequested = false
 
     override fun getModuleControls(): List<ModuleControl> {
@@ -67,7 +72,9 @@ class BayModuleComponent : Component, Pool.Poolable, ShipModule {
         swarmRotation = 0f
         orbitSpeed = 0.7f
         commandPosition.set(0f, 0f)
-        commandSpace = CoordinateSpace.OBJECT
+        commandSpace = CoordinateSpace.WORLD
+        orientationReality = TacticalOrientationReality.AWAY_FROM_SHIP
+        worldAimAngle = 0f
         isLaunchRequested = false
 
         tacticalState.reset()
