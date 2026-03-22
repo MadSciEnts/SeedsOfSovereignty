@@ -3,14 +3,14 @@ package com.srw.seedofsov.ecs.systems
 import com.badlogic.ashley.core.Entity
 import com.badlogic.ashley.systems.IteratingSystem
 import com.srw.seedofsov.ecs.components.*
-import com.srw.seedofsov.model.CoordinateSpace
+import com.srw.seedofsov.model.*
 import com.srw.seedofsov.ui.hud.Hud
 import ktx.ashley.allOf
 import ktx.ashley.get
 
 /**
  * Synchronizes ECS ship state to the HUD display and bridges Command Matrix inputs to Modules.
- * Truth on Disk: Fixed Space Mode bridging to use Enum from UI channel.
+ * Truth on Disk: Focused strictly on HUD/Input synchronization. Tactical layout handled by TacticalSystem.
  */
 class InterfaceSystem(private val hud: Hud) : IteratingSystem(
     allOf(PlayerComponent::class, ShipStatsComponent::class, ShipComponent::class).get(),
@@ -21,7 +21,7 @@ class InterfaceSystem(private val hud: Hud) : IteratingSystem(
         val ship = entity[ShipComponent.mapper] ?: return
         val display = hud.nautilus
 
-        // 1. Sync Ship State -> HUD
+        // 1. Sync Ship State -> HUD (Nautilus)
         for (i in 0..3) {
             display.shieldPcts[i] = stats.shieldQuadrants[i] / stats.maxShieldQuadrants[i]
             display.hullPcts[i] = stats.hullQuadrants[i] / stats.maxHullQuadrants[i]
@@ -32,24 +32,20 @@ class InterfaceSystem(private val hud: Hud) : IteratingSystem(
             display.corePcts.add(current / stats.maxPowerCores[index])
         }
 
-        // 2. Sync HUD -> Modules
+        // 2. Sync HUD -> Module Input Propagation
         ship.slots.forEach { slot ->
             val module = slot.equippedModule ?: return@forEach
 
             when (module) {
                 is BayModuleComponent -> {
-                    // Position Input
-                    val posInput = slot.getChannel("target_position").valueVector2
-                    module.commandPosition.set(posInput)
-
-                    // Space Mode (Enum from UI)
+                    module.commandPosition.set(slot.getChannel("target_position").valueVector2)
                     val spaceInput = slot.getChannel("cycle_space").valueEnum
-                    if (spaceInput is CoordinateSpace) {
-                        module.commandSpace = spaceInput
-                    }
-
-                    // Launch Request
+                    if (spaceInput is CoordinateSpace) module.commandSpace = spaceInput
+                    module.orbitSpeed = slot.getChannel("orbit_speed").valueFloat
                     module.isLaunchRequested = slot.getChannel("launch_unit").valueBoolean
+                }
+                is WeaponModuleComponent -> {
+                    // Inputs handled in WeaponSystem
                 }
             }
         }

@@ -43,16 +43,19 @@ class GameScreen(
         // 20: Physics (Integration)
         // 30: Camera (Tracking)
         // 40: Starfield (Background)
+        // 45: Tactical (Procedural HUD Animations) - [NEW]
         // 50: Render (Entities)
         // 100: Interface (HUD Sync)
+
         game.engine.addSystem(ImpulseSystem())
         game.engine.addSystem(BaySystem(entityFactory))
         game.engine.addSystem(SeekingSystem())
         game.engine.addSystem(WeaponSystem(game))
-        game.engine.addSystem(DroneCombatSystem()) // Registering Drone Combat logic
+        game.engine.addSystem(DroneCombatSystem())
         game.engine.addSystem(EffectSystem())
         game.engine.addSystem(CollisionSystem())
         game.engine.addSystem(PhysicsSystem())
+        game.engine.addSystem(TacticalSystem(hud)) // Registered new Tactical logic
         game.engine.addSystem(CameraSystem(camera))
         game.engine.addSystem(StarfieldSystem(game.batch, viewport))
         game.engine.addSystem(RenderSystem(game.batch, viewport))
@@ -62,7 +65,6 @@ class GameScreen(
             hud.linkPlayer(it)
         }
 
-        // Spawn Test Targets (Training Dummies)
         spawnTestTargets()
 
         Gdx.input.inputProcessor = hud.stage
@@ -73,7 +75,6 @@ class GameScreen(
     }
 
     private fun spawnTestTargets() {
-        // Create a ring of targets around the player
         val count = 6
         val radius = 10f
         for (i in 0 until count) {
@@ -87,12 +88,10 @@ class GameScreen(
     override fun render(delta: Float) {
         ScreenUtils.clear(0.002f, 0.002f, 0.008f, 1f)
 
-        // Bridge Input
         player?.get(InputComponent.mapper)?.let { input ->
             input.impulseAxes.set(hud.navigationOutput)
         }
 
-        // Run ECS Engine Pass
         game.engine.update(delta)
 
         hud.update(delta)
@@ -117,6 +116,7 @@ class GameScreen(
         game.engine.removeSystem(game.engine.getSystem(EffectSystem::class.java))
         game.engine.removeSystem(game.engine.getSystem(CollisionSystem::class.java))
         game.engine.removeSystem(game.engine.getSystem(PhysicsSystem::class.java))
+        game.engine.removeSystem(game.engine.getSystem(TacticalSystem::class.java)) // Removed new Tactical logic
         game.engine.removeSystem(game.engine.getSystem(InterfaceSystem::class.java))
     }
 

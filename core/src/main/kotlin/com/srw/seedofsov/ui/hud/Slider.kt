@@ -13,6 +13,7 @@ import com.srw.seedofsov.model.DataChannel
 
 /**
  * A procedural vertical slider for module data control.
+ * Truth on Disk: Refreshes to current channel value during initialization.
  */
 class Slider(
     val game: SovereigntyGame,
@@ -21,7 +22,7 @@ class Slider(
     private val bgTexture: Texture
     private val knobTexture: Texture
 
-    var value: Float = 0.5f // 0 to 1
+    var value: Float = 0.5f
         set(v) {
             field = MathUtils.clamp(v, 0f, 1f)
             channel?.valueFloat = field
@@ -30,17 +31,24 @@ class Slider(
     init {
         setSize(60f, 300f)
 
-        // Procedural Background (Groove)
+        // 1. REFRESH TO CURRENT VALUE:
+        // Before creating textures or setting up listeners, check the source of truth.
+        channel?.let {
+            // We set the field directly to avoid triggering the channel write during init
+            value = it.valueFloat
+        }
+
+        // 2. Procedural Background
         val bgPixmap = Pixmap(60, 300, Pixmap.Format.RGBA8888).apply {
             setColor(0.1f, 0.1f, 0.2f, 0.8f)
-            fillRectangle(25, 10, 10, 280) // Central groove
+            fillRectangle(25, 10, 10, 280)
             setColor(game.uiFactory.style.palette.primary)
             drawRectangle(0, 0, 60, 300)
         }
         bgTexture = Texture(bgPixmap)
         bgPixmap.dispose()
 
-        // Procedural Knob
+        // 3. Procedural Knob
         val knobPixmap = Pixmap(50, 20, Pixmap.Format.RGBA8888).apply {
             setColor(game.uiFactory.style.palette.highlight)
             fill()
@@ -60,7 +68,6 @@ class Slider(
     }
 
     private fun updateValue(touchY: Float) {
-        // Map Y coordinate within height to 0-1 value
         value = (touchY - 10f) / (height - 20f)
     }
 
@@ -68,7 +75,6 @@ class Slider(
         batch.setColor(color.r, color.g, color.b, color.a * parentAlpha)
         batch.draw(bgTexture, x, y, width, height)
 
-        // Draw knob at current value position
         val knobY = y + 10f + (value * (height - 20f)) - 10f
         batch.draw(knobTexture, x + 5f, knobY, width - 10f, 20f)
     }

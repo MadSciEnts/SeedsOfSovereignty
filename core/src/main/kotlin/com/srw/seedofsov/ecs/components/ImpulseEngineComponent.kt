@@ -2,9 +2,7 @@ package com.srw.seedofsov.ecs.components
 
 import com.badlogic.ashley.core.Component
 import com.badlogic.gdx.utils.Pool
-import com.srw.seedofsov.model.ModuleCategory
-import com.srw.seedofsov.model.ModuleControl
-import com.srw.seedofsov.model.ShipModule
+import com.srw.seedofsov.model.*
 import ktx.ashley.get
 import ktx.ashley.mapperFor
 
@@ -14,6 +12,7 @@ import ktx.ashley.mapperFor
 class ImpulseEngineComponent : Component, Pool.Poolable, ShipModule {
     override val category = ModuleCategory.ENGINE
     override val name = "Impulse Engine"
+    override val tacticalState = TacticalState()
 
     var thrustPower = 10f
     var isActive = false
@@ -32,6 +31,16 @@ class ImpulseEngineComponent : Component, Pool.Poolable, ShipModule {
     override fun reset() {
         thrustPower = 15f
         isActive = false
+
+        // Reset Tactical State
+        tacticalState.worldTargetPos.set(0f, 0f)
+        tacticalState.lastStableAwayAngle = 90f
+        tacticalState.heightSquish = 1f
+        tacticalState.aimTransition = 0f
+        tacticalState.selectionAnimation = 0f
+        tacticalState.isSelected = false
+        tacticalState.layoutOrbitIndex = 0
+        tacticalState.lerpedOffset.set(0f, 0f)
     }
 
     companion object {

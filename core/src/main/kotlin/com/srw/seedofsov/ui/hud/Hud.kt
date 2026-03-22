@@ -17,18 +17,14 @@ import ktx.ashley.get
 
 /**
  * Manages the high-level HUD structure with independent Command Matrix areas.
- * Truth on Disk: Implements UiAssetListener to ensure safe asynchronous widget generation.
- * Evolution Path: Designed to transition from Single-Ship Pilot to Fleet Commander (Epoch 3).
+ * Truth on Disk: Bridges tactical selection state to ECS systems.
  */
 class Hud(val game: SovereigntyGame) : Disposable, UiAssetListener {
     val stage = Stage(ScreenViewport(), game.batch)
     val navigationOutput = Vector2()
 
-    // Command Matrices: Left for Nav/Engines, Right for Tactical/Modules
     private val navMatrix = CommandMatrix(game, isLeftAligned = true)
     private val tacticalMatrix = CommandMatrix(game, isLeftAligned = false)
-
-    // The "Shelf" holds category or ship selection buttons
     private val rightCategoryShelf = Panel()
 
     private var playerShip: ShipComponent? = null
@@ -58,34 +54,25 @@ class Hud(val game: SovereigntyGame) : Disposable, UiAssetListener {
         stage.addActor(navMatrix)
         stage.addActor(tacticalMatrix)
         stage.addActor(rightCategoryShelf)
-
-        // Register for asset readiness
         game.uiFactory.addListener(this)
     }
 
     override fun onAssetsReady() {
-        // Update background drawable once assets are generated
         rightCategoryShelf.background = game.uiFactory.skin.getDrawable("panel")
-
-        // Process any shelf population that was waiting for assets
         pendingTacticalSlots?.let { populateSlotShelf(it) }
         pendingTacticalSlots = null
     }
 
-    /**
-     * Links the HUD to a specific ship entity.
-     * In Epoch 3, this can be called repeatedly to switch 'Remote Ship Command' focus.
-     */
+    fun getTacticalActiveSlot(): ModuleSlot? = tacticalMatrix.activeSlot
+
     fun linkPlayer(player: Entity) {
         val ship = player[ShipComponent.mapper] ?: return
         playerShip = ship
 
-        // 1. Navigation Matrix: Bind to the primary engine slot
         ship.getSlot(ModuleCategory.ENGINE)?.let {
             navMatrix.selectModuleFromSlot(it)
         }
 
-        // 2. Tactical Matrix: Filter for non-nav modules
         val tacticalSlots = ship.slots.filter {
             it.category != ModuleCategory.ENGINE && it.category != ModuleCategory.NAVIGATION
         }
@@ -96,13 +83,9 @@ class Hud(val game: SovereigntyGame) : Disposable, UiAssetListener {
             pendingTacticalSlots = tacticalSlots
         }
 
-        // 3. Default to the first tactical slot
         tacticalSlots.firstOrNull()?.let { tacticalMatrix.selectModuleFromSlot(it) }
     }
 
-    /**
-     * Populates the right-hand selection shelf with buttons for each module/slot.
-     */
     private fun populateSlotShelf(slots: List<ModuleSlot>) {
         if (!game.uiFactory.isLoaded) {
             pendingTacticalSlots = slots
@@ -113,15 +96,12 @@ class Hud(val game: SovereigntyGame) : Disposable, UiAssetListener {
         val btnWidth = 220f
         val btnHeight = 80f
         val spacing = 15f
-
         val shelfWidth = (slots.size * (btnWidth + spacing)) + 20f
         rightCategoryShelf.setSize(shelfWidth, 120f)
 
-        // Populate shelf from right to left
         var currentX = rightCategoryShelf.width - btnWidth - 10f
         slots.forEach { slot ->
             val displayName = slot.equippedModule?.name ?: slot.category.displayName
-
             val btn = game.uiFactory.createButton(displayName).apply {
                 setSize(btnWidth, btnHeight)
                 setPosition(currentX, 20f)
@@ -137,32 +117,16 @@ class Hud(val game: SovereigntyGame) : Disposable, UiAssetListener {
         layout()
     }
 
-    /**
-     * Orchestrates the precise placement of UI components based on screen dimensions.
-     * Logic: Anchors elements to corners with safe-area offsets.
-     */
     private fun layout() {
         val sWidth = stage.width
         val sHeight = stage.height
-        if (sWidth <= 10f || sHeight <= 10f) return // Prevent layout on uninitialized viewport
+        if (sWidth <= 10f || sHeight <= 10f) return
 
-        // Top-Left: Nautilus (Vitals)
         nautilus.setPosition(20f, sHeight - nautilus.height - 20f)
-
-        // Top-Right: Radar
         radar.setPosition(sWidth - radar.width - 20f, sHeight - radar.height - 20f)
-
-        // Bottom-Left: Navigation Matrix
         navMatrix.setPosition(20f, 20f)
-
-        // Bottom-Right: Tactical Shelf (Selection)
         rightCategoryShelf.setPosition(sWidth - rightCategoryShelf.width - 20f, 20f)
-
-        // Above Shelf: Tactical Matrix (Controls)
-        tacticalMatrix.setPosition(
-            sWidth - tacticalMatrix.width - 20f,
-            rightCategoryShelf.y + rightCategoryShelf.height + 10f
-        )
+        tacticalMatrix.setPosition(sWidth - tacticalMatrix.width - 20f, rightCategoryShelf.y + rightCategoryShelf.height + 10f)
     }
 
     fun update(delta: Float) {
@@ -171,7 +135,6 @@ class Hud(val game: SovereigntyGame) : Disposable, UiAssetListener {
     }
 
     fun draw() {
-        // Only draw and layout if we have a valid screen area
         if (stage.width > 0 && stage.height > 0) {
             layout()
             stage.draw()

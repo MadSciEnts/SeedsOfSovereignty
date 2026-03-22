@@ -12,7 +12,7 @@ import com.srw.seedofsov.ui.UiAssetListener
 
 /**
  * Reusable Command Matrix UI component.
- * Truth on Disk: Restricted Space Mode to SHIP (Object) and CAMERA (World).
+ * Truth on Disk: Tracks active slot to sync selection state to ECS.
  */
 class CommandMatrix(
     val game: SovereigntyGame,
@@ -23,7 +23,10 @@ class CommandMatrix(
     private var activeJoystick: Joystick? = null
     private var pendingSlot: ModuleSlot? = null
 
-    // Scaling Factor
+    // Exposed for InterfaceSystem sync
+    var activeSlot: ModuleSlot? = null
+        private set
+
     private val uiScale = 1.4f
 
     init {
@@ -46,6 +49,7 @@ class CommandMatrix(
         }
 
         pendingSlot = null
+        activeSlot = slot
         val module = slot.equippedModule ?: return
         controlArea.clearChildren()
         activeJoystick = null
@@ -127,7 +131,6 @@ class CommandMatrix(
                         addListener(object : ClickListener() {
                             override fun clicked(event: InputEvent?, x: Float, y: Float) {
                                 val current = channel.valueEnum as? CoordinateSpace ?: CoordinateSpace.OBJECT
-                                // Restrict to OBJECT (SHIP) and WORLD (CAMERA)
                                 val next = if (current == CoordinateSpace.OBJECT) CoordinateSpace.WORLD else CoordinateSpace.OBJECT
                                 channel.valueEnum = next
                                 setText(if (next == CoordinateSpace.OBJECT) "SHIP" else "CAMERA")

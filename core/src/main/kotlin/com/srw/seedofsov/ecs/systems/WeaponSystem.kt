@@ -4,32 +4,36 @@ import com.badlogic.ashley.core.Entity
 import com.badlogic.ashley.systems.IteratingSystem
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.Sprite
+import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Vector2
 import com.srw.seedofsov.SovereigntyGame
 import com.srw.seedofsov.assets.generators.ProjectileAssetGenerator
 import com.srw.seedofsov.assets.StyleRegistry
 import com.srw.seedofsov.ecs.components.*
 import com.srw.seedofsov.model.EffectType
-import com.srw.seedofsov.model.ModuleCategory
 import ktx.ashley.allOf
 import ktx.ashley.get
 import ktx.ashley.entity
 import ktx.ashley.with
 
 /**
- * Handles weapon logic and visual feedback (muzzle flashes, traces).
- * Truth on Disk: Synchronized with List-based ShipComponent slots.
+ * Handles weapon logic and visual feedback.
+ * Truth on Disk: Priority 35 ensures tactical hub moves perfectly with ship physics.
+ * Stability: Aligns tactical ring orientation to physical barrel direction.
  */
 class WeaponSystem(val game: SovereigntyGame) : IteratingSystem(
     allOf(ShipComponent::class, TransformComponent::class, PhysicsComponent::class).get(),
-    15
+    35
 ) {
     private val assetGen = ProjectileAssetGenerator(StyleRegistry.EPOCH_1_STYLE)
 
-    // Cached textures
     private val boltTexture = Texture(assetGen.generateKineticBolt())
     private val missileTexture = Texture(assetGen.generateMissile())
     private val barrelTexture = Texture(assetGen.generateBarrel())
+
+    private val tempVec = Vector2()
+    private val localDirection = Vector2()
+    private val intentOffset = Vector2()
 
     override fun processEntity(entity: Entity, deltaTime: Float) {
         val ship = entity[ShipComponent.mapper] ?: return
@@ -39,7 +43,6 @@ class WeaponSystem(val game: SovereigntyGame) : IteratingSystem(
 
         platform?.let { it.barrelTexture = barrelTexture }
 
-        // Logic Change: Iterate over List<ModuleSlot>
         ship.slots.forEach { slot ->
             val module = slot.equippedModule
             if (module is WeaponModuleComponent) {
@@ -53,8 +56,7 @@ class WeaponSystem(val game: SovereigntyGame) : IteratingSystem(
             weapon.cooldownTimer -= deltaTime
         }
 
-        val tempVec = Vector2()
-        val localDirection = Vector2()
+        val state = weapon.tacticalState
 
         if (weapon.isSecondary) {
             val fireBtn = slot.getChannel("fire_button").valueBoolean
@@ -62,11 +64,35 @@ class WeaponSystem(val game: SovereigntyGame) : IteratingSystem(
                 spawnSeekingProjectile(owner, shipTransform, shipPhysics, weapon, deltaTime)
                 weapon.cooldownTimer = weapon.fireRate
             }
+            state.worldTargetPos.set(shipTransform.position.x, shipTransform.position.y)
+            state.heightSquish = 1f
+            state.aimTransition = 0f
         } else {
             val axes = slot.getChannel("weapon_aim").valueVector2
+            val isAiming = axes.len() > 0.05f
+
+            // 1. Intent Tracking (Holographic Lock)
+            val targetTransition = if (isAiming) 1f else 0f
+            state.aimTransition = MathUtils.lerp(state.aimTransition, targetTransition, 10f * deltaTime)
+            state.lerpedOffset.lerp(weapon.commandPosition.set(axes).limit(0.8f), 12f * deltaTime)
+
+            // 2. Resolve Projection (Immediate World Lock)
+            val shipRadius = (shipTransform.size.x + shipTransform.size.y) / 4f
+            val tacticalRange = shipRadius * 5.2f
+            val pushMag = MathUtils.clamp(state.lerpedOffset.len(), 0f, 1f)
+
+            intentOffset.set(state.lerpedOffset).scl(tacticalRange)
+            state.worldTargetPos.set(shipTransform.position.x + intentOffset.x, shipTransform.position.y + intentOffset.y)
+            state.heightSquish = MathUtils.lerp(1.0f, 0.35f, pushMag)
+
+            // 3. Resolve Firing and Barrel Orientation
             if (axes.len() > 0.1f) {
+                // Correct: Platform rotation uses the raw/direct input direction
                 localDirection.set(axes).nor()
                 weapon.platformRotation = localDirection.angleDeg() - 90f
+
+                // TRUTH ON DISK: Tactical ring orientation matches physical barrel rotation exactly.
+                state.lastStableAwayAngle = weapon.platformRotation + 90f
 
                 if (weapon.cooldownTimer <= 0) {
                     val barrels = weapon.getBarrelOffsets()
