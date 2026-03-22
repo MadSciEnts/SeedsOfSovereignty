@@ -7,8 +7,8 @@ import com.badlogic.gdx.math.Vector2
  * Truth on Disk: Ensures alignment between visual rings and physical drone orbits.
  */
 object TacticalHUDConstants {
-    // Increased thickness for a much bolder solid ring (0.45 -> 0.85)
-    const val RING_RADIAL_THICKNESS = 0.85f
+    // Reduced by 30% for a cleaner, more refined look (0.85 -> 0.6)
+    const val RING_RADIAL_THICKNESS = 0.6f
     const val EXTRA_RING_SPACING = 0.15f
 
     // Visual depth for blocky segments

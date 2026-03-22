@@ -9,7 +9,7 @@ import com.srw.seedofsov.model.*
 
 /**
  * Modularized renderer for Tactical Overlay elements.
- * Truth on Disk: Decouples Flat (Static) and Projected (Dynamic) ring behaviors.
+ * Truth on Disk: Decouples Flat (Indicators) and Projected (Hub) ring behaviors.
  * Solid background ring moves from ship center to projected target during transition.
  */
 class TacticalRenderer(private val batch: Batch) {
@@ -48,7 +48,7 @@ class TacticalRenderer(private val batch: Batch) {
 
             // B. Blocky Volumetric Perimeter (Projected - 16 segments)
             batch.color = baseColor.cpy().apply { a = projectionAlpha * 0.1f }
-            drawVolumetricRing(state.worldTargetPos, state.lastStableAwayAngle, projectedRadius, state.heightSquish, 360f, projectedRotation, TacticalHUDConstants.RING_VISUAL_DEPTH, 8)
+            drawVolumetricRing(state.worldTargetPos, state.lastStableAwayAngle, projectedRadius, state.heightSquish, 360f, projectedRotation, TacticalHUDConstants.RING_VISUAL_DEPTH, 16)
 
             if (attributes.any { it.label == "AIM" }) {
                 drawAimCorridor(shipPos, state.worldTargetPos, state.lastStableAwayAngle, projectedRadius, state.heightSquish, state.aimTransition, baseColor, alphaBase)
@@ -98,7 +98,12 @@ class TacticalRenderer(private val batch: Batch) {
         val arcStart = (attr.preferredQuadrant * 90f) + 5f + rotation
         val step = arcSpan / max.coerceAtLeast(1)
         for (i in 0 until max) {
-            batch.color = if (i < count) color.cpy().apply { a = alpha * 1.5f } else color.cpy().apply { a = alpha * 0.3f }
+            val isFilled = i < count
+            batch.color = if (isFilled) {
+                color.cpy().apply { a = alpha * 0.4f }
+            } else {
+                color.cpy().apply { a = alpha * 0.15f }
+            }
             drawPolygonRing(pos, angle, radius, squish, step * 0.8f, arcStart + (i * step), TacticalHUDConstants.RING_RADIAL_THICKNESS * 0.8f, 8)
         }
     }
