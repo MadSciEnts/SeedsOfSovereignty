@@ -20,6 +20,16 @@ class HudFxSystem(private val hud: Hud) : IteratingSystem(allOf(HudFxComponent::
     private val perpVec = Vector2()
     private val emitPos = Vector2()
 
+
+    //These are the shield panel colors
+    val shield_col_src = Color(0.1f, 0.5f, 1.0f, 0.95f)
+    val shield_col_dst = Color(0f, 0.9f, 0.2f, .05f)
+
+    //this is the core color
+    val core_col_src = Color(0.1f, 0.3f, 1f, 0f)
+    val core_col_dst1 = Color(0.1f, 0.3f, 0f, 1f)
+    val core_col_dst2 = Color(0.1f, 0.0f, 0f, 0f)
+
     override fun processEntity(entity: Entity, deltaTime: Float) {
         val hudFx = entity[HudFxComponent.mapper] ?: return
 
@@ -36,8 +46,6 @@ class HudFxSystem(private val hud: Hud) : IteratingSystem(allOf(HudFxComponent::
         val parentId = parent.hashCode()
         val bounds = hudFx.clipBounds
         val terminalWidth = 220f // Matches Touchpad.kt structural width
-
-
 
 
         for (i in 0..3) {
@@ -58,28 +66,28 @@ class HudFxSystem(private val hud: Hud) : IteratingSystem(allOf(HudFxComponent::
             val surgeKey = "surge_${parentId}_$i"
             val surge = hud.fxLayer.getRibbon(surgeKey) { r ->
                 r.maxSegments = 160
-                r.targetColor = Color(0.1f, 0.3f, 1.9f, .1f)
+                r.targetColor = core_col_src
             }
             surge.origin.set(hudFx.screenPosition)
             surge.clipBounds = bounds
             surge.magneticTarget = terminalPos
-            surge.magneticStrength = -1f
+            surge.magneticStrength = -.5f
             surge.dissipationRate = MathUtils.lerp(0.6f, 0.05f, overdrive)
             surge.noiseScale = MathUtils.lerp(1.5f, 4.0f, overdrive)
-            surge.color.set(Color.SKY).lerp(Color.CYAN, overdrive).apply { a = .5f }
+            surge.color.set(core_col_dst1).lerp(core_col_dst2, overdrive)//.apply { a = .4f }
 
             // 2. THE WIDE INWARD SETTLEMENT (Inverse / Collecting)
             // Emits across the entire width of the terminal bracket
             val settleKey = "settle_${parentId}_$i"
             val settle = hud.fxLayer.getRibbon(settleKey) { r ->
                 r.maxSegments = 256
-                r.targetColor = Color(0f, 0.9f, 0.2f, .0f)
-                r.color = Color(0.1f, 0.5f, 7.0f, .9f)
+                r.targetColor = shield_col_dst
+                r.color = shield_col_src
             }
             settle.clipBounds = bounds
             settle.magneticTarget = hudFx.screenPosition
-            settle.magneticStrength = 5.2f
-            settle.dissipationRate = 2.0f
+            settle.magneticStrength = 9.2f
+            settle.dissipationRate = 3.0f
             settle.noiseScale = 1.5f
 
             // Emission Logic
@@ -113,16 +121,16 @@ class HudFxSystem(private val hud: Hud) : IteratingSystem(allOf(HudFxComponent::
             val surgeKey = "interact_${parentId}"
             val ribbon = hud.fxLayer.getRibbon(surgeKey) { r ->
                 r.maxSegments = 256
-                r.dissipationRate = 1.3f
-                r.color = Color.CYAN.cpy().apply { a = 0.25f }
-                r.targetColor = Color.SKY.cpy().apply { a = 1f }
-                r.noiseScale = 4.0f
+                r.dissipationRate = .7f
+                r.color = Color.CYAN.cpy().apply { a = 0.5f }
+                r.targetColor = Color.SKY.cpy().apply { a = 0.1f }
+                r.noiseScale = 1.2f
             }
 
             ribbon.origin.set(hudFx.screenPosition)
             ribbon.clipBounds = hudFx.clipBounds
             ribbon.magneticTarget = hudFx.targetPosition
-            ribbon.magneticStrength = 9.0f
+            ribbon.magneticStrength = 3.0f
 
             repeat(4) {
                 val scatter = MathUtils.random(360f)
