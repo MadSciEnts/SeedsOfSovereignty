@@ -124,13 +124,13 @@ class HudFxSystem(private val hud: Hud) : IteratingSystem(allOf(HudFxComponent::
                 r.dissipationRate = .7f
                 r.color = Color.CYAN.cpy().apply { a = 0.5f }
                 r.targetColor = Color.SKY.cpy().apply { a = 0.1f }
-                r.noiseScale = 1.2f
+                r.noiseScale = 0.2f
             }
 
             ribbon.origin.set(hudFx.screenPosition)
             ribbon.clipBounds = hudFx.clipBounds
             ribbon.magneticTarget = hudFx.targetPosition
-            ribbon.magneticStrength = 3.0f
+            ribbon.magneticStrength = 4.0f
 
             repeat(4) {
                 val scatter = MathUtils.random(360f)

@@ -89,6 +89,13 @@ class CommandMatrix(
                 sh = 450f
                 sx = (width - sw) / 2f
                 sy = (height - sh) / 2f
+
+                // Truth on Disk: Add "Shield Balance" Title for context
+                val title = game.uiFactory.createLabel("SHIELD BALANCE").apply {
+                    setFontScale(2.2f)
+                    setPosition(sx + (sw - width) / 2f, sy + sh + 15f)
+                }
+                controlArea.addActor(title)
             }
 
             maxWidth = Math.max(maxWidth, sx + sw + 30f)
