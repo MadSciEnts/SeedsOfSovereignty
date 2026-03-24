@@ -9,38 +9,36 @@ import com.srw.seedofsov.model.*
 
 /**
  * Modularized renderer for Tactical Overlay elements.
- * Truth on Disk: Uses isolated vector members to prevent rendering distortion (Vector Collision).
- * Inspired by Ender's Game: High-fidelity detail, unified sync, and kinetic feedback.
+ * Truth on Disk: Visualizes directional shield health and cooldown/recharge states.
+ * Feature: Cardinal alignment (0: Front, 1: Left, 2: Rear, 3: Right) with hull rotation sync.
  */
 class TacticalRenderer(private val batch: Batch) {
 
     private val tempVec = Vector2()
-    private val hubPos = Vector2() // Dedicated Hub Position to prevent vertex distortion
+    private val hubPos = Vector2()
     private val layerPos = Vector2()
     private val extrusionVec = Vector2()
     private val orbitPoint = Vector2()
     private val ringVertices = FloatArray(20)
     private var stateTime = 0f
 
+    private val plasmaColors = arrayOf(Color.GOLD, Color.CYAN, Color.PURPLE, Color.WHITE)
+
     fun update(dt: Float) {
         stateTime += dt
     }
 
-    fun drawModuleHUD(module: ShipModule, shipPos: Vector2, shipRadius: Float) {
+    fun drawModuleHUD(module: ShipModule, shipPos: Vector2, shipRadius: Float, shipRotation: Float = 0f) {
         val state = module.tacticalState
         if (state.layoutOrbitIndex < 0) return
 
         val attributes = module.getTacticalAttributes()
         val idleRadius = TacticalHUDConstants.getRingRadius(shipRadius, state.layoutOrbitIndex)
 
-        // Kinetic Feedback Logic
         val bloomScale = 1.0f + (state.firePulse * 0.25f)
         val projectedRadius = state.currentRadius * bloomScale
-
-        // TRUTH ON DISK: The module's internal rotation is the primary driver.
         val projectedRotation = state.currentRotation
 
-        // TRUTH ON DISK FIX: Isolated hubPos to prevent tempVec from corrupting the ring center
         val jitterX = if (state.firePulse > 0.1f) MathUtils.random(-0.05f, 0.05f) * state.firePulse else 0f
         val jitterY = if (state.firePulse > 0.1f) MathUtils.random(-0.05f, 0.05f) * state.firePulse else 0f
         hubPos.set(state.worldTargetPos.x + jitterX, state.worldTargetPos.y + jitterY)
@@ -52,19 +50,12 @@ class TacticalRenderer(private val batch: Batch) {
 
         if (isActivelyProjecting) {
             val projectionAlpha = (alphaBase + state.firePulse * 0.4f) * state.aimTransition
-
-            // 1. Nested Rotation Layers
-            // Outer decorative ring stays decorative
             val rotOuter = (stateTime * TacticalHUDConstants.ROTATION_SPEED_OUTER) % 360f
 
-            // Outer decorative ring with ticks
             batch.color = baseColor.cpy().apply { a = projectionAlpha * 0.15f }
             drawPolygonRing(hubPos, state.lastStableAwayAngle, projectedRadius + 0.2f, state.heightSquish, 360f, rotOuter, 0.05f, 64)
             drawCalibrationTicks(hubPos, state.lastStableAwayAngle, projectedRadius + 0.2f, state.heightSquish, rotOuter, baseColor, projectionAlpha * 0.4f)
 
-            // 2. Main Volumetric Perimeter
-            // TRUTH ON DISK FIX: We use projectedRotation directly (no decorative inner spin)
-            // to ensure objects following the orbit (like Drones) perfectly align with the ring.
             batch.color = baseColor.cpy().apply { a = projectionAlpha * (0.2f + state.firePulse * 0.3f) }
             val segments = if (module.category == ModuleCategory.SHIELD) TacticalHUDConstants.HEX_PATTERN_DENSITY else 16
             drawVolumetricRing(hubPos, state.lastStableAwayAngle, projectedRadius, state.heightSquish, 360f, projectedRotation, TacticalHUDConstants.RING_VISUAL_DEPTH, segments)
@@ -73,14 +64,11 @@ class TacticalRenderer(private val batch: Batch) {
                 drawAimCorridor(shipPos, hubPos, state.lastStableAwayAngle, projectedRadius, state.heightSquish, state.aimTransition, baseColor, alphaBase + state.firePulse * 0.5f)
             }
         } else {
-            // 3. Idle State - Breathing/Pulsing effect
             val pulse = (MathUtils.sin(stateTime * 2f) + 1f) * 0.5f
             batch.color = baseColor.cpy().apply { a = alphaBase * (0.2f + 0.2f * pulse) }
-            // Idle ring also respects the module's rotation for consistent drone docking
             drawPolygonRing(shipPos, state.lastStableAwayAngle, idleRadius, 1.0f, 360f, projectedRotation, 0.1f, 64)
         }
 
-        // 4. Tactical Attributes (Indicators)
         attributes.forEach { attr ->
             if (attr.label == "AIM") return@forEach
             val isProjected = attr.projection == TacticalProjection.PROJECTED
@@ -92,7 +80,7 @@ class TacticalRenderer(private val batch: Batch) {
             val attrColor = attr.colorOverride ?: baseColor
 
             when (attr.type) {
-                TacticalAttributeType.CONTINUOUS -> drawContinuousAttr(targetPos, targetAngle, attrRadius, targetSquish, attrRotation, attr, attrColor, alphaBase)
+                TacticalAttributeType.CONTINUOUS -> drawContinuousAttr(targetPos, targetAngle, attrRadius, targetSquish, attrRotation, attr, attrColor, alphaBase, shipRotation)
                 TacticalAttributeType.DISCRETE -> drawDiscreteAttr(targetPos, targetAngle, attrRadius, targetSquish, attrRotation, attr, attrColor, alphaBase)
                 else -> {}
             }
@@ -122,12 +110,39 @@ class TacticalRenderer(private val batch: Batch) {
         }
     }
 
-    private fun drawContinuousAttr(pos: Vector2, angle: Float, radius: Float, squish: Float, rotation: Float, attr: TacticalAttribute, color: Color, alpha: Float) {
+    private fun drawContinuousAttr(pos: Vector2, angle: Float, radius: Float, squish: Float, rotation: Float, attr: TacticalAttribute, color: Color, alpha: Float, shipRotation: Float = 0f) {
         val progress = MathUtils.clamp(attr.current / attr.max, 0f, 1f)
         val arcSpan = 80f
-        val arcStart = (attr.preferredQuadrant * 90f) + 5f + rotation
-        batch.color = color.cpy().apply { a = alpha * 0.9f }
-        drawPolygonRing(pos, angle, radius, squish, arcSpan * progress, arcStart, TacticalHUDConstants.RING_RADIAL_THICKNESS * 0.6f, 32)
+
+        // Truth on Disk: Aligned to cardinal quadrants (0: Front/Top, 1: Left, 2: Rear, 3: Right).
+        // 0 index is Top (0° in this local-up system). CCW order matches the ship system.
+        val arcStart = (attr.preferredQuadrant * 90f) - (arcSpan / 2f) + rotation + shipRotation
+
+        val isShield = attr.label.startsWith("QUAD_")
+        val isCharging = isShield && color.equals(Color.GOLD)
+
+        // 1. Draw "Ghost" Background
+        batch.color = color.cpy().apply { a = alpha * 0.1f }
+        drawPolygonRing(pos, angle, radius, squish, arcSpan, arcStart, TacticalHUDConstants.RING_RADIAL_THICKNESS * 0.4f, 32)
+
+        // 2. Draw Current Value
+        var drawColor = color
+        var drawAlpha = alpha * 0.9f
+        var thicknessMult = 0.6f
+
+        if (isCharging) {
+            val roll = MathUtils.random()
+            if (roll > 0.8f) {
+                drawColor = plasmaColors[MathUtils.random(plasmaColors.size - 1)]
+                drawAlpha *= 0.4f
+            } else if (roll > 0.6f) {
+                drawAlpha *= 1.2f
+            }
+            thicknessMult = 0.4f
+        }
+
+        batch.color = drawColor.cpy().apply { a = drawAlpha }
+        drawPolygonRing(pos, angle, radius, squish, arcSpan * progress, arcStart, TacticalHUDConstants.RING_RADIAL_THICKNESS * thicknessMult, 32)
     }
 
     private fun drawDiscreteAttr(pos: Vector2, angle: Float, radius: Float, squish: Float, rotation: Float, attr: TacticalAttribute, color: Color, alpha: Float) {
@@ -183,7 +198,6 @@ class TacticalRenderer(private val batch: Batch) {
         val rad = angle * MathUtils.degreesToRadians
         val lx = -MathUtils.sin(rad) * r
         val ly = MathUtils.cos(rad) * r
-        // Uses tempVec safely as it is assigned to ringVertices immediately
         tempVec.set(lx, ly * squish)
         tempVec.rotateDeg(rot - 90f)
         ringVertices[offset + 0] = cx + tempVec.x

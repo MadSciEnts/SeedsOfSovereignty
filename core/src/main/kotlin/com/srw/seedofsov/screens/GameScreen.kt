@@ -6,7 +6,6 @@ import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.utils.ScreenUtils
 import com.badlogic.gdx.utils.viewport.ExtendViewport
 import com.srw.seedofsov.SovereigntyGame
-import com.srw.seedofsov.ecs.EntityFactory
 import com.srw.seedofsov.ecs.components.InputComponent
 import com.srw.seedofsov.ecs.systems.*
 import com.srw.seedofsov.ui.hud.Hud
@@ -26,41 +25,49 @@ class GameScreen(
         }
 
     private val camera = OrthographicCamera()
-    // Truth on Disk: Increased from 20f to 48f to provide the requested zoomed-out perspective.
     private val viewport = ExtendViewport(48f, 48f, camera)
-    private val entityFactory = EntityFactory(game.engine)
 
     private var player: Entity? = null
 
     override fun show() {
-        // Full Priority Execution Stack:
-        // 10: Impulse (Logic)
-        // 12: Bay (Unit Deployment)
-        // 14: Seeking (Steering Logic)
-        // 15: Weapons (Logic & Spawning)
-        // 16: Drone Combat (Autonomous AI)
-        // 18: Effects (Visual Lifecycle)
-        // 19: Collision (Impact Logic)
-        // 20: Physics (Integration)
-        // 30: Camera (Tracking)
-        // 40: Starfield (Background)
-        // 45: Tactical (Procedural HUD Animations) - [NEW]
+        // Enacted High-Fidelity Execution Stack:
+        // 10: Impulse (Input)
+        // 11: Shields (Defensive Logic)
+        // 15: Weapons (Logic)
+        // 17: Projectiles (Lifecycle)
+        // 18: Spatial Partition (Broad-phase Optimization)
+        // 20: Physics (Linear Integration)
+        // 25: Collision (Entry-Point / Standoff Logic)
+        // 48: HUD FX (Technical Visualization System)
+        // 49: Trails (Mesh Ribbon Rendering)
         // 50: Render (Entities)
-        // 100: Interface (HUD Sync)
 
         game.engine.addSystem(ImpulseSystem())
-        game.engine.addSystem(BaySystem(entityFactory))
+        game.engine.addSystem(ShieldSystem())
+        game.engine.addSystem(BaySystem(game.entityFactory))
         game.engine.addSystem(SeekingSystem())
         game.engine.addSystem(WeaponSystem(game))
         game.engine.addSystem(DroneCombatSystem())
+        game.engine.addSystem(ProjectileSystem())
         game.engine.addSystem(EffectSystem())
-        game.engine.addSystem(CollisionSystem())
+
+        val spatialSystem = SpatialPartitionSystem()
+        game.engine.addSystem(spatialSystem)
+
+        // Truth on Disk: HudFxSystem now bridges to the UI Hud instance
+        game.engine.addSystem(HudFxSystem(hud))
+
         game.engine.addSystem(PhysicsSystem())
+        game.engine.addSystem(CollisionSystem(spatialSystem))
+
         game.engine.addSystem(TacticalSystem(hud))
         game.engine.addSystem(CameraSystem(camera))
         game.engine.addSystem(StarfieldSystem(game.batch, viewport))
+        game.engine.addSystem(TrailSystem(viewport))
         game.engine.addSystem(RenderSystem(game.batch, viewport))
         game.engine.addSystem(InterfaceSystem(hud))
+        game.engine.addSystem(SimpleEnemyAiSystem())
+        game.engine.addSystem(RadarSystem(hud))
 
         player = spawnPlayer().also {
             hud.linkPlayer(it)
@@ -72,17 +79,17 @@ class GameScreen(
     }
 
     private fun spawnPlayer(): Entity {
-        return entityFactory.createPlayer(0f, 0f)
+        return game.entityFactory.createPlayer(0f, 0f)
     }
 
     private fun spawnTestTargets() {
         val count = 6
-        val radius = 10f
+        val radius = 20f
         for (i in 0 until count) {
             val angle = i * (360f / count)
             val x = Math.cos(Math.toRadians(angle.toDouble())).toFloat() * radius
             val y = Math.sin(Math.toRadians(angle.toDouble())).toFloat() * radius
-            entityFactory.createTrainingDummy(x, y)
+            game.entityFactory.createEnemy(x, y, 1)
         }
     }
 
@@ -106,19 +113,29 @@ class GameScreen(
 
     override fun hide() {
         Gdx.input.inputProcessor = null
-        game.engine.removeSystem(game.engine.getSystem(CameraSystem::class.java))
-        game.engine.removeSystem(game.engine.getSystem(StarfieldSystem::class.java))
-        game.engine.removeSystem(game.engine.getSystem(RenderSystem::class.java))
-        game.engine.removeSystem(game.engine.getSystem(ImpulseSystem::class.java))
-        game.engine.removeSystem(game.engine.getSystem(BaySystem::class.java))
-        game.engine.removeSystem(game.engine.getSystem(SeekingSystem::class.java))
-        game.engine.removeSystem(game.engine.getSystem(WeaponSystem::class.java))
-        game.engine.removeSystem(game.engine.getSystem(DroneCombatSystem::class.java))
-        game.engine.removeSystem(game.engine.getSystem(EffectSystem::class.java))
-        game.engine.removeSystem(game.engine.getSystem(CollisionSystem::class.java))
-        game.engine.removeSystem(game.engine.getSystem(PhysicsSystem::class.java))
-        game.engine.removeSystem(game.engine.getSystem(TacticalSystem::class.java))
-        game.engine.removeSystem(game.engine.getSystem(InterfaceSystem::class.java))
+        val engine = game.engine
+
+        // Final Cleanup Pass
+        engine.removeSystem(engine.getSystem(CameraSystem::class.java))
+        engine.removeSystem(engine.getSystem(StarfieldSystem::class.java))
+        engine.removeSystem(engine.getSystem(RenderSystem::class.java))
+        engine.removeSystem(engine.getSystem(ImpulseSystem::class.java))
+        engine.removeSystem(engine.getSystem(ShieldSystem::class.java))
+        engine.removeSystem(engine.getSystem(BaySystem::class.java))
+        engine.removeSystem(engine.getSystem(SeekingSystem::class.java))
+        engine.removeSystem(engine.getSystem(WeaponSystem::class.java))
+        engine.removeSystem(engine.getSystem(DroneCombatSystem::class.java))
+        engine.removeSystem(engine.getSystem(ProjectileSystem::class.java))
+        engine.removeSystem(engine.getSystem(EffectSystem::class.java))
+        engine.removeSystem(engine.getSystem(SpatialPartitionSystem::class.java))
+        engine.removeSystem(engine.getSystem(CollisionSystem::class.java))
+        engine.removeSystem(engine.getSystem(PhysicsSystem::class.java))
+        engine.removeSystem(engine.getSystem(TacticalSystem::class.java))
+        engine.removeSystem(engine.getSystem(InterfaceSystem::class.java))
+        engine.removeSystem(engine.getSystem(SimpleEnemyAiSystem::class.java))
+        engine.removeSystem(engine.getSystem(RadarSystem::class.java))
+        engine.removeSystem(engine.getSystem(TrailSystem::class.java))
+        engine.removeSystem(engine.getSystem(HudFxSystem::class.java))
     }
 
     override fun dispose() {

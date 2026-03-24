@@ -1,19 +1,24 @@
 package com.srw.seedofsov.ui.hud
 
+import com.badlogic.ashley.core.Entity
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.scenes.scene2d.InputEvent
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
 import com.srw.seedofsov.SovereigntyGame
+import com.srw.seedofsov.ecs.components.HudFxComponent
+import com.srw.seedofsov.ecs.components.ShieldModuleComponent
 import com.srw.seedofsov.ecs.components.WeaponModuleComponent
-import com.srw.seedofsov.model.CoordinateSpace
-import com.srw.seedofsov.model.ModuleSlot
+import com.srw.seedofsov.model.*
 import com.srw.seedofsov.ui.Panel
 import com.srw.seedofsov.ui.UiAssetListener
+import ktx.ashley.entity
+import ktx.ashley.get
+import ktx.ashley.with
 
 /**
  * Reusable Command Matrix UI component.
- * Truth on Disk: Tracks active slot and ensures UI state mirrors module state.
+ * Truth on Disk: Scales interaction areas and bridges modular input to technical HUD effects.
  */
 class CommandMatrix(
     val game: SovereigntyGame,
@@ -22,16 +27,16 @@ class CommandMatrix(
 
     private val controlArea = Panel()
     private var activeJoystick: Joystick? = null
+    private var activeHudFxEntity: Entity? = null
     private var pendingSlot: ModuleSlot? = null
 
-    // Exposed for InterfaceSystem sync
     var activeSlot: ModuleSlot? = null
         private set
 
     private val uiScale = 1.4f
 
     init {
-        setSize(525f, 600f)
+        setSize(650f, 650f)
         controlArea.setSize(width, height)
         controlArea.setPosition(0f, 0f)
         addActor(controlArea)
@@ -49,6 +54,10 @@ class CommandMatrix(
             return
         }
 
+        // Clean up previous HUD FX if any
+        activeHudFxEntity?.let { game.engine.removeEntity(it) }
+        activeHudFxEntity = null
+
         pendingSlot = null
         activeSlot = slot
         val module = slot.equippedModule ?: return
@@ -56,56 +65,57 @@ class CommandMatrix(
         activeJoystick = null
 
         val controls = module.getModuleControls()
-        var maxWidth = 525f
+        var maxWidth = 650f
+
+        // Instantiate new HUD FX if this module supports it (e.g. Shields)
+        val hudFxComp = if (module is ShieldModuleComponent) {
+            val entity = game.engine.entity {
+                with<HudFxComponent> {
+                    type = HudFxType.SHIELD_MANIFOLD
+                }
+            }
+            activeHudFxEntity = entity
+            entity[HudFxComponent.mapper]
+        } else null
 
         controls.forEach { ctrl ->
-            val sx = ctrl.x * uiScale
-            val sy = ctrl.y * uiScale
-            val sw = ctrl.width * uiScale
-            val sh = ctrl.height * uiScale
+            var sx = ctrl.x * uiScale
+            var sy = ctrl.y * uiScale
+            var sw = ctrl.width * uiScale
+            var sh = ctrl.height * uiScale
+
+            if (module is ShieldModuleComponent && ctrl.type == "TOUCHPAD") {
+                sw = 450f
+                sh = 450f
+                sx = (width - sw) / 2f
+                sy = (height - sh) / 2f
+            }
 
             maxWidth = Math.max(maxWidth, sx + sw + 30f)
             val channel = slot.getChannel(ctrl.channelName)
 
             when (ctrl.type) {
                 "JOYSTICK" -> {
-                    val joystick = Joystick(game, sw / 2f, channel).apply {
-                        setPosition(sx, sy)
-                    }
+                    val joystick = Joystick(game, sw / 2f, channel).apply { setPosition(sx, sy) }
                     activeJoystick = joystick
                     controlArea.addActor(joystick)
                 }
                 "TOUCHPAD" -> {
-                    val touchpad = Touchpad(game, channel).apply {
+                    val touchpad = Touchpad(game, channel, module, hudFxComp).apply {
                         setSize(sw, sh)
                         setPosition(sx, sy)
                     }
                     controlArea.addActor(touchpad)
                 }
                 "SLIDER" -> {
-                    val slider = Slider(game, channel).apply {
-                        setSize(sw, sh)
-                        setPosition(sx, sy)
-                    }
+                    val slider = Slider(game, channel).apply { setSize(sw, sh); setPosition(sx, sy) }
                     controlArea.addActor(slider)
                 }
                 "STATS" -> {
-                    val readout = StatsReadout(game, channel, ctrl.channelName.uppercase()).apply {
-                        setPosition(sx, sy)
+                    if (module !is ShieldModuleComponent) {
+                        val readout = StatsReadout(game, channel, ctrl.channelName.uppercase()).apply { setPosition(sx, sy) }
+                        controlArea.addActor(readout)
                     }
-                    controlArea.addActor(readout)
-                }
-                "LABEL" -> {
-                    val text = if (ctrl.channelName == "ammo_type" && module is WeaponModuleComponent) {
-                        module.projectileName
-                    } else {
-                        ctrl.channelName.uppercase()
-                    }
-
-                    val label = game.uiFactory.createLabel(text).apply {
-                        setPosition(sx, sy)
-                    }
-                    controlArea.addActor(label)
                 }
                 "FIRE_BUTTON", "BUTTON" -> {
                     val label = if (ctrl.type == "FIRE_BUTTON") "FIRE" else ctrl.channelName.replace("_", " ").uppercase()
@@ -126,37 +136,25 @@ class CommandMatrix(
                     controlArea.addActor(btn)
                 }
                 "CYCLE_BUTTON" -> {
-                    // Initialize channel from module state if first selection
-                    if (channel.valueEnum == null) {
-                        channel.valueEnum = module.commandSpace
-                    }
-
+                    if (channel.valueEnum == null) channel.valueEnum = module.commandSpace
                     val btn = game.uiFactory.createButton("").apply {
                         setSize(sw, sh)
                         setPosition(sx, sy)
                         addListener(object : ClickListener() {
                             override fun clicked(event: InputEvent?, x: Float, y: Float) {
                                 val current = channel.valueEnum as? CoordinateSpace ?: CoordinateSpace.OBJECT
-                                val next = if (current == CoordinateSpace.OBJECT) CoordinateSpace.WORLD else CoordinateSpace.OBJECT
-                                channel.valueEnum = next
+                                channel.valueEnum = if (current == CoordinateSpace.OBJECT) CoordinateSpace.WORLD else CoordinateSpace.OBJECT
                             }
                         })
                     }
-
-                    // Reactive behavior: Keep button text in sync with DataChannel
-                    if (btn is TextButton) {
-                        btn.addAction(object : com.badlogic.gdx.scenes.scene2d.Action() {
-                            override fun act(delta: Float): Boolean {
-                                val current = channel.valueEnum as? CoordinateSpace ?: CoordinateSpace.OBJECT
-                                val targetText = if (current == CoordinateSpace.OBJECT) "SHIP" else "CAMERA"
-                                if (btn.text.toString() != targetText) {
-                                    btn.setText(targetText)
-                                }
-                                return false // Persistent action
-                            }
-                        })
-                    }
-
+                    btn.addAction(object : com.badlogic.gdx.scenes.scene2d.Action() {
+                        override fun act(delta: Float): Boolean {
+                            val current = channel.valueEnum as? CoordinateSpace ?: CoordinateSpace.OBJECT
+                            val targetText = if (current == CoordinateSpace.OBJECT) "SHIP" else "CAMERA"
+                            if (btn.text.toString() != targetText) btn.setText(targetText)
+                            return false
+                        }
+                    })
                     controlArea.addActor(btn)
                 }
             }
@@ -166,7 +164,5 @@ class CommandMatrix(
         controlArea.width = maxWidth
     }
 
-    fun getNavigationOutput(): Vector2 {
-        return activeJoystick?.output ?: Vector2.Zero
-    }
+    fun getNavigationOutput(): Vector2 = activeJoystick?.output ?: Vector2.Zero
 }

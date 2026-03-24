@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.g2d.Batch
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.srw.seedofsov.assets.FontManager
 import com.srw.seedofsov.assets.StyleRegistry
+import com.srw.seedofsov.ecs.EntityFactory
 import com.srw.seedofsov.screens.*
 import com.srw.seedofsov.ui.UiFactory
 import ktx.app.KtxGame
@@ -17,6 +18,10 @@ class SovereigntyGame : KtxGame<KtxScreen>() {
     val batch: Batch by lazy { SpriteBatch() }
     val assetManager by lazy { AssetManager() }
     val fontManager by lazy { FontManager() }
+    val engine: Engine by lazy { PooledEngine() }
+
+    // Global factory for entities and procedural modules
+    val entityFactory by lazy { EntityFactory(engine) }
 
     private var _uiFactory: UiFactory? = null
 
@@ -44,8 +49,6 @@ class SovereigntyGame : KtxGame<KtxScreen>() {
             }
             return _uiFactory!!
         }
-
-    val engine: Engine by lazy { PooledEngine() }
 
     override fun create() {
         KtxAsync.initiate()

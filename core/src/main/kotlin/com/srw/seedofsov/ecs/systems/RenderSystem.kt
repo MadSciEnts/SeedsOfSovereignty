@@ -37,6 +37,7 @@ class RenderSystem(
         forceSort()
         viewport.apply()
         batch.use(viewport.camera.combined) {
+            tacticalRenderer.update(deltaTime)
             super.update(deltaTime)
         }
     }
@@ -103,7 +104,8 @@ class RenderSystem(
                 flatPos.set(transform.position.x, transform.position.y)
                 ship.slots.forEach { slot ->
                     val module = slot.equippedModule ?: return@forEach
-                    tacticalRenderer.drawModuleHUD(module, flatPos, shipRadius)
+                    // Truth on Disk: Pass ship rotation to align directional attributes
+                    tacticalRenderer.drawModuleHUD(module, flatPos, shipRadius, transform.rotation)
                 }
             }
         }

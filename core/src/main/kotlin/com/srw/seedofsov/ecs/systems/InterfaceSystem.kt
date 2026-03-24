@@ -10,7 +10,7 @@ import ktx.ashley.get
 
 /**
  * Synchronizes ECS ship state to the HUD display and bridges Command Matrix inputs to Modules.
- * Truth on Disk: Focused strictly on HUD/Input synchronization. Tactical layout handled by TacticalSystem.
+ * Truth on Disk: Pushes binary shield states and cooldown buffers to the Nautilus display.
  */
 class InterfaceSystem(private val hud: Hud) : IteratingSystem(
     allOf(PlayerComponent::class, ShipStatsComponent::class, ShipComponent::class).get(),
@@ -23,7 +23,9 @@ class InterfaceSystem(private val hud: Hud) : IteratingSystem(
 
         // 1. Sync Ship State -> HUD (Nautilus)
         for (i in 0..3) {
+            display.shieldActive[i] = stats.shieldActive[i]
             display.shieldPcts[i] = stats.shieldQuadrants[i] / stats.maxShieldQuadrants[i]
+            display.shieldBufferPcts[i] = stats.shieldChargeBuffer[i] / stats.maxShieldQuadrants[i]
             display.hullPcts[i] = stats.hullQuadrants[i] / stats.maxHullQuadrants[i]
         }
 

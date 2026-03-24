@@ -4,12 +4,13 @@ import com.badlogic.gdx.graphics.Color
 
 /**
  * Defines damage types for weapon-shield interaction logic.
+ * Truth on Disk: Categorized for hierarchical ship defense interactions.
  */
 enum class DamageType {
-    KINETIC,   // Strong vs Hull, Weak vs Shields
-    ENERGY,    // Strong vs Shields, Weak vs Hull
-    PLASMA,    // Balanced, Splash Damage
-    EXPLOSIVE  // High AOE, Component Damage
+    KINETIC,   // Balanced
+    ION,       // Strong vs Shields, Weak vs Hull
+    PLASMA,    // Slow, Splash, Balanced
+    LASER      // Strong vs Hull, Weak vs Shields
 }
 
 /**
@@ -20,7 +21,21 @@ enum class EffectType {
     SHIELD_IMPACT,
     DEBRIS,
     MOTION_TRAIL,
-    WPN_TRACE
+    WPN_TRACE,
+    EXPLOSION,
+    ATMOSPHERE_VENT,
+    ELECTRICAL_ARC,
+    RIBBON
+}
+
+/**
+ * High-level categories for HUD-specific visual effects.
+ */
+enum class HudFxType {
+    SHIELD_MANIFOLD,
+    ENGINE_DIAGNOSTIC,
+    POWER_CORE,      // Central energy node visualization
+    NONE
 }
 
 /**

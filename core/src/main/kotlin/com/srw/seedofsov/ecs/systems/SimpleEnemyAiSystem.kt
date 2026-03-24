@@ -3,55 +3,63 @@ package com.srw.seedofsov.ecs.systems
 import com.badlogic.ashley.core.Entity
 import com.badlogic.ashley.systems.IteratingSystem
 import com.badlogic.gdx.math.Vector2
-import com.srw.seedofsov.ecs.components.EnemyComponent
-import com.srw.seedofsov.ecs.components.PlayerComponent
-import com.srw.seedofsov.ecs.components.ShipComponent
-import com.srw.seedofsov.ecs.components.TransformComponent
+import com.srw.seedofsov.ecs.components.*
 import com.srw.seedofsov.model.ModuleCategory
 import ktx.ashley.allOf
 import ktx.ashley.get
-import kotlin.math.pow
 
 /**
- * Basic AI for stationary enemies.
- * Truth on Disk: Implements range-limited targeting (10x radius).
+ * Advanced AI for autonomous platforms and enemies.
+ * Truth on Disk: Implements First-Order Linear Lead targeting factoring in target velocity and projectile speed.
  */
 class SimpleEnemyAiSystem : IteratingSystem(
-    allOf(EnemyComponent::class, ShipComponent::class, TransformComponent::class).get(),
-    5 // Priority 5: Runs before WeaponSystem
+    allOf(EnemyComponent::class, ShipComponent::class, TransformComponent::class, PhysicsComponent::class).get(),
+    5
 ) {
-    private val playerFamily = allOf(PlayerComponent::class, TransformComponent::class).get()
+    private val playerFamily = allOf(PlayerComponent::class, TransformComponent::class, PhysicsComponent::class).get()
     private val aimVec = Vector2()
     private val tempVec = Vector2()
+    private val targetFuturePos = Vector2()
 
     override fun processEntity(entity: Entity, deltaTime: Float) {
         val transform = entity[TransformComponent.mapper] ?: return
         val ship = entity[ShipComponent.mapper] ?: return
+        val physics = entity[PhysicsComponent.mapper] ?: return
 
-        // 1. Locate Player
+        // 1. Locate Target (Player)
         val player = engine.getEntitiesFor(playerFamily).firstOrNull() ?: return
         val playerTransform = player[TransformComponent.mapper] ?: return
+        val playerPhysics = player[PhysicsComponent.mapper] ?: return
 
-        // 2. Check Range (Requirement: 10x enemy ship radius)
+        // 2. Resolve Active Weapon Parameters
+        val weaponSlot = ship.getSlot(ModuleCategory.WEAPON_PRIMARY) ?: return
+        val weaponMod = weaponSlot.equippedModule as? WeaponModuleComponent ?: return
+        val projectileSpeed = weaponMod.projectileSpeed
+
+        // 3. Tactical Analysis
         val radius = (transform.size.x + transform.size.y) / 4f
-        val engagementRange = radius * 10f
+        val engagementRange = radius * 20f
 
-        val distToPlayer = tempVec.set(playerTransform.position.x, playerTransform.position.y)
+        val distToTarget = tempVec.set(playerTransform.position.x, playerTransform.position.y)
             .dst(transform.position.x, transform.position.y)
 
-        if (distToPlayer > engagementRange) {
-            // Out of range, clear aim
-            val weaponSlot = ship.getSlot(ModuleCategory.WEAPON_PRIMARY)
-            weaponSlot?.getChannel("weapon_aim")?.valueVector2?.set(0f, 0f)
+        if (distToTarget > engagementRange) {
+            weaponSlot.getChannel("weapon_aim").valueVector2.set(0f, 0f)
             return
         }
 
-        // 3. Calculate direction to player
-        aimVec.set(playerTransform.position.x - transform.position.x,
-                   playerTransform.position.y - transform.position.y).nor()
+        // 4. Predictive Lead Calculation
+        // Time to impact = Distance / Projectile Speed
+        val timeToImpact = distToTarget / projectileSpeed
 
-        // 4. Command the modular weapon slot
-        val weaponSlot = ship.getSlot(ModuleCategory.WEAPON_PRIMARY)
-        weaponSlot?.getChannel("weapon_aim")?.valueVector2?.set(aimVec)
+        // Relative velocity lead
+        tempVec.set(playerPhysics.velocity).sub(physics.velocity).scl(timeToImpact)
+        targetFuturePos.set(playerTransform.position.x, playerTransform.position.y).add(tempVec)
+
+        // 5. Command Aim
+        aimVec.set(targetFuturePos.x - transform.position.x,
+                   targetFuturePos.y - transform.position.y).nor()
+
+        weaponSlot.getChannel("weapon_aim").valueVector2.set(aimVec)
     }
 }
