@@ -31,15 +31,6 @@ class SimpleEnemyAiSystem : IteratingSystem(
         val playerTransform = player[TransformComponent.mapper] ?: return
         val playerPhysics = player[PhysicsComponent.mapper] ?: return
 
-        // 2. Resolve Active Weapon Parameters
-        val weaponSlot = ship.getSlot(ModuleCategory.WEAPON_PRIMARY) ?: return
-        val weaponMod = weaponSlot.equippedModule as? WeaponModuleComponent ?: return
-        val projectileSpeed = weaponMod.projectileSpeed
-
-        // 3. Tactical Analysis
-        val radius = (transform.size.x + transform.size.y) / 4f
-        val engagementRange = radius * 20f
-
         val distToTarget = tempVec.set(playerTransform.position.x, playerTransform.position.y)
             .dst(transform.position.x, transform.position.y)
 

@@ -80,14 +80,14 @@ class HudFxSystem(private val hud: Hud) : IteratingSystem(allOf(HudFxComponent::
             // Emits across the entire width of the terminal bracket
             val settleKey = "settle_${parentId}_$i"
             val settle = hud.fxLayer.getRibbon(settleKey) { r ->
-                r.maxSegments = 256
+                r.maxSegments = 32
                 r.targetColor = shield_col_dst
                 r.color = shield_col_src
             }
             settle.clipBounds = bounds
             settle.magneticTarget = hudFx.screenPosition
-            settle.magneticStrength = 9.2f
-            settle.dissipationRate = 3.0f
+            settle.magneticStrength = 1.2f
+            settle.dissipationRate = 0.5f
             settle.noiseScale = 1.5f
 
             // Emission Logic
@@ -120,11 +120,13 @@ class HudFxSystem(private val hud: Hud) : IteratingSystem(allOf(HudFxComponent::
         if (distToTarget > 20f) {
             val surgeKey = "interact_${parentId}"
             val ribbon = hud.fxLayer.getRibbon(surgeKey) { r ->
-                r.maxSegments = 256
-                r.dissipationRate = .7f
-                r.color = Color.CYAN.cpy().apply { a = 0.5f }
-                r.targetColor = Color.SKY.cpy().apply { a = 0.1f }
+                r.maxSegments = 64
+                r.dissipationRate = 1f
+                r.color = core_col_dst1
+                r.targetColor = core_col_dst1
                 r.noiseScale = 0.2f
+                r.basePush = 100f * 1
+                r.ageAcceleration = 400f * 4
             }
 
             ribbon.origin.set(hudFx.screenPosition)

@@ -14,7 +14,7 @@ import com.srw.seedofsov.model.ShipModule
 
 /**
  * Interactive area that maps touch coordinates to a DataChannel.
- * Truth on Disk: Decoupled input widget that drives external HudFx systems with wide structural absorbers.
+ * Truth on Disk: Decoupled input widget that drives external HudFx systems with solid "Induction Plate" manifolds.
  */
 class Touchpad(
     val game: SovereigntyGame,
@@ -27,7 +27,7 @@ class Touchpad(
     private val knobSize = 32f
     private val coreSize = 120f
     private val terminalWidth = 220f
-    private val terminalHeight = 30f
+    private val terminalHeight = 48f
     private val tempColor = Color()
 
     init {
@@ -106,11 +106,11 @@ class Touchpad(
             batch.draw(pixel, x + width/2f - coreSize/2f, y + height/2f - coreSize/2f, 2f, coreSize)
             batch.draw(pixel, x + width/2f + coreSize/2f, y + height/2f - coreSize/2f, 2f, coreSize)
 
-            // 4. THE WIDE ABSORBER TERMINALS
-            drawTerminal(batch, pixel, x + width/2f, y + height - 15f, true, hudFx?.weights?.get(0) ?: 0.25f, parentAlpha) // Top
-            drawTerminal(batch, pixel, x + 15f, y + height/2f, false, hudFx?.weights?.get(1) ?: 0.25f, parentAlpha) // Left
-            drawTerminal(batch, pixel, x + width/2f, y + 15f, true, hudFx?.weights?.get(2) ?: 0.25f, parentAlpha) // Bottom
-            drawTerminal(batch, pixel, x + width - 15f, y + height/2f, false, hudFx?.weights?.get(3) ?: 0.25f, parentAlpha) // Right
+            // 4. THE REINFORCED ABSORBER TERMINALS
+            drawTerminal(batch, pixel, x + width/2f, y + height - 25f, true, hudFx?.weights?.get(0) ?: 0.25f, parentAlpha) // Top
+            drawTerminal(batch, pixel, x + 25f, y + height/2f, false, hudFx?.weights?.get(1) ?: 0.25f, parentAlpha) // Left
+            drawTerminal(batch, pixel, x + width/2f, y + 25f, true, hudFx?.weights?.get(2) ?: 0.25f, parentAlpha) // Bottom
+            drawTerminal(batch, pixel, x + width - 25f, y + height/2f, false, hudFx?.weights?.get(3) ?: 0.25f, parentAlpha) // Right
         }
 
         // 5. Interaction Handle (The Knob)
@@ -123,34 +123,82 @@ class Touchpad(
 
     private fun drawTerminal(batch: Batch, pixel: com.badlogic.gdx.graphics.g2d.TextureRegion, cx: Float, cy: Float, isHorizontal: Boolean, weight: Float, alpha: Float) {
         val intensity = 0.2f + (weight * 0.8f)
-        tempColor.set(0.2f, 0.6f, 1.0f, intensity * alpha)
-        batch.color = tempColor
+        val overdrive = (weight - 0.25f).coerceAtLeast(0f) * 1.33f
 
         val w = if (isHorizontal) terminalWidth else terminalHeight
         val h = if (isHorizontal) terminalHeight else terminalWidth
         val hw = w / 2f
         val hh = h / 2f
 
-        // Draw structural brackets
-        batch.draw(pixel, cx - hw, cy - hh, w, 2f) // Bottom line
-        batch.draw(pixel, cx - hw, cy + hh - 2f, w, 2f) // Top line
-        batch.draw(pixel, cx - hw, cy - hh, 2f, h) // Left line
-        batch.draw(pixel, cx + hw - 2f, cy - hh, 2f, h) // Right line
+        // Truth on Disk: Heavy Industrial Induction Plate Design
 
-        // Inner Power Fill (pulsing)
-        tempColor.a *= 0.2f
+        // 1. SOLID CHASSIS BASE (Metal Plate)
+        tempColor.set(0.05f, 0.15f, 0.3f, 0.6f * alpha)
         batch.color = tempColor
-        batch.draw(pixel, cx - hw + 4f, cy - hh + 4f, w - 8f, h - 8f)
+        batch.draw(pixel, cx - hw, cy - hh, w, h)
 
-        // Edge Accents (Caps)
-        tempColor.a = intensity * alpha
+        // 2. BOLTED FRAME (Bold Silhouette)
+        tempColor.set(0.2f, 0.5f, 0.9f, (0.4f + overdrive * 0.6f) * alpha)
         batch.color = tempColor
+        // Far outer edges
         if (isHorizontal) {
-            batch.draw(pixel, cx - hw, cy - hh, 4f, h)
-            batch.draw(pixel, cx + hw - 4f, cy - hh, 4f, h)
+            batch.draw(pixel, cx - hw, cy - hh, w, 3f)
+            batch.draw(pixel, cx - hw, cy + hh - 3f, w, 3f)
+            batch.draw(pixel, cx - hw, cy - hh, 3f, h)
+            batch.draw(pixel, cx + hw - 3f, cy - hh, 3f, h)
         } else {
-            batch.draw(pixel, cx - hw, cy - hh, w, 4f)
-            batch.draw(pixel, cx - hw, cy + hh - 4f, w, 4f)
+            batch.draw(pixel, cx - hw, cy - hh, 3f, h)
+            batch.draw(pixel, cx + hw - 3f, cy - hh, 3f, h)
+            batch.draw(pixel, cx - hw, cy - hh, w, 3f)
+            batch.draw(pixel, cx - hw, cy + hh - 3f, w, 3f)
+        }
+
+        // 3. INTERNAL VENT / INDUCTOR MESH
+        tempColor.set(0.4f, 0.8f, 1.0f, (0.1f + overdrive * 0.4f) * alpha)
+        batch.color = tempColor
+        val meshCount = 10
+        val meshSpacing = (if (isHorizontal) w - 20f else h - 20f) / meshCount
+        for (i in 0..meshCount) {
+            val offset = (i * meshSpacing) - (if (isHorizontal) (w - 20f) / 2f else (h - 20f) / 2f)
+            if (isHorizontal) {
+                batch.draw(pixel, cx + offset - 1f, cy - hh + 6f, 2f, h - 12f)
+            } else {
+                batch.draw(pixel, cx - hw + 6f, cy + offset - 1f, w - 12f, 2f)
+            }
+        }
+
+        // 4. ACTIVE OVERDRIVE GLOW (The Energy Process)
+        if (weight > 0.3f) {
+            tempColor.set(Color.WHITE).lerp(Color.SKY, 0.5f).apply { a = overdrive * 0.8f * alpha }
+            batch.color = tempColor
+            // Solid center glow for active plates
+            val glowW = if (isHorizontal) w - 12f else w - 8f
+            val glowH = if (isHorizontal) h - 8f else h - 12f
+            batch.draw(pixel, cx - glowW / 2f, cy - glowH / 2f, glowW, glowH)
+        }
+
+        // 5. CONDUCTIVE BUSBARS (The Internal Core)
+        tempColor.set(Color.SKY).lerp(Color.WHITE, overdrive).apply { a = intensity * alpha }
+        batch.color = tempColor
+        for (railOffset in listOf(-10f, 0f, 10f)) {
+            val railW = if (isHorizontal) w - 30f else 3f
+            val railH = if (isHorizontal) 3f else h - 30f
+            val rx = if (isHorizontal) cx - (w-30f)/2f else cx + railOffset - 1.5f
+            val ry = if (isHorizontal) cy + railOffset - 1.5f else cy - (h-30f)/2f
+            batch.draw(pixel, rx, ry, railW, railH)
+        }
+
+        // 6. END-CAP HARDWARE (Piston / Mounting Brackets)
+        tempColor.set(0.6f, 0.9f, 1.0f, 0.9f * alpha)
+        batch.color = tempColor
+        val bracketW = if (isHorizontal) 14f else 32f
+        val bracketH = if (isHorizontal) 32f else 14f
+        if (isHorizontal) {
+            batch.draw(pixel, cx - hw - 6f, cy - bracketH / 2f, 6f, bracketH) // Left
+            batch.draw(pixel, cx + hw, cy - bracketH / 2f, 6f, bracketH) // Right
+        } else {
+            batch.draw(pixel, cx - bracketW / 2f, cy - hh - 6f, bracketW, 6f) // Bottom
+            batch.draw(pixel, cx - bracketW / 2f, cy + hh, bracketW, 6f) // Top
         }
     }
 
