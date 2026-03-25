@@ -1,21 +1,23 @@
-# SOVEREIGN BOOTSTRAP PROTOCOL
+# AGENT BOOTSTRAP PROTOCOL: READ BEFORE CODING
 
-## STEP 1: ENVIRONMENT SYNC
-1. Read `AGENTS.md` to establish behavioral constraints.
-2. Read `CONTEXT.md` and `BLUEPRINT.kt` to lock in technical DNA.
-3. Read `REGISTRY.json` for physics and scaling constants.
+## 1. THE ARCHITECTURAL MISSION
+You are developing a Pure Kotlin/Android Canvas game. No external libraries (LibGDX, Unity, etc.) are permitted. You are responsible for the raw SurfaceView life cycle and the threaded Game Loop.
 
-## STEP 2: STATE RECOVERY
-1. Open `LEDGER.md`.
-2. Identify the `LAST_COMPLETED_TASK_ID`.
-3. Open `PROJECT_MANIFEST.md` and find the next unchecked `[ ]` task.
+## 2. IMMUTABLE FILES (READ-ONLY)
+The following files are the project's "Constitution." You are strictly forbidden from modifying them:
+- `PROJECT_MANIFEST.md`
+- `DESIGN_SPECS.md`
+- `BLUEPRINT.kt`
+- `CONTEXT.md`
+- `BOOTSTRAP.md`
+- `TEXTURE_GUIDELINES.md`
+- `COMMS_PROTOCOL.md`
 
-## STEP 3: SCRIPT EXECUTION
-1. Open `PROMPT_STACK.md`.
-2. Find the instruction block corresponding to the next task ID.
-3. **Execute that instruction immediately.**
+## 3. PROCEDURAL DIRECTIVES
+- **Coordinate Discipline:** Always use logical coordinates (0-360 vertical). Convert all touch inputs immediately.
+- **Rendering Efficiency:** You MUST implement the Texture Cache (Phase 09). Redrawing complex paths every frame is a failure.
+- **Input Routing:** Do not allow NAV touches to bleed into TAC zones. Check the Pointer ID and X-coordinate against the `InputRouter` zones.
 
-## STEP 4: SESSION PERSISTENCE (Android Studio Mode)
-- Before starting code, explicitly state: "RESUMING TASK [ID]: [NAME]".
-- After finishing code, update `LEDGER.md` and `PROJECT_MANIFEST.md` on disk.
-- Wait for User confirmation before attempting the next task in the stack.
+## 4. PIXEL ART INTEGRITY
+- Point Filtering (Nearest Neighbor) is mandatory.
+- Ensure that the `logicalW` fill logic does not result in "wide" or "stretched" pixels. All pixels must be perfectly square.

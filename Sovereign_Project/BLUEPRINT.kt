@@ -2,33 +2,56 @@ package com.sovereign.core
 
 import android.graphics.PointF
 import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Bitmap
 
-// 1. HIGH-PRECISION MATH
-data class Vector2D(var x: Double, var y: Double)
+/**
+ * SOVEREIGN CORE BLUEPRINT V4: PURE KOTLIN / ANDROID CANVAS
+ * This file represents the immutable technical contracts of the engine.
+ */
 
-// 2. THE UNIT CONTRACT
-interface IUnit {
-    val id: String
-    var worldPos: Vector2D
-    var velocity: Vector2D
-    var rotation: Double // Radians
-    val tier: Int
-    val modules: MutableList<IModule>
+object ViewportManager {
+    const val LOGICAL_H = 360f
+    var logicalW = 640f // Calculated based on device aspect ratio
+    var scaleFactor = 1f
 
-    fun onUpdate(dt: Double)
-    fun onRender(canvas: Canvas, camera: Vector2D)
+    fun update(physicalW: Float, physicalH: Float) {
+        scaleFactor = physicalH / LOGICAL_H
+        logicalW = physicalW / scaleFactor
+    }
+
+    fun toLogicalX(screenX: Float) = screenX / scaleFactor
+    fun toLogicalY(screenY: Float) = screenY / scaleFactor
+    fun toPhysical(logicalVal: Float) = logicalVal * scaleFactor
 }
 
-// 3. THE MODULE CONTRACT
+enum class Quadrant(val index: Int) {
+    FORE(0), AFT(1), PORT(2), STAR(3)
+}
+
 interface IModule {
-    val type: ModuleType
-    var powerRatio: Float // 0.0 to 1.0
-    val enginePoints: List<PointF> // Max 4 total per Unit
+    val id: String
+    val tier: Int
+    val powerDraw: Float
+    val placement: Quadrant
+    var tacticalPosition: PointF // Persistent coordinate handle
+    var cachedTexture: Bitmap?   // Phase 09 requirement
 
-    fun processAction(inputX: Float, inputY: Float)
-    fun getPowerDraw(): Float
+    /**
+     * Efficiency = The weakest link in the metabolism.
+     */
+    fun calculateEfficiency(coreHealth: Float, quadrantHealth: Float, powerAllocation: Float): Float {
+        return minOf(coreHealth, quadrantHealth, powerAllocation)
+    }
+
+    fun update(deltaTime: Float)
+    fun draw(canvas: Canvas, paint: Paint)
 }
 
-enum class ModuleType {
-    PROPULSION, SHIELD, WEAPON, TACTICAL, HANGAR, SALVAGE
-}
+data class ShipIntegrity(
+    var coreHealth: Float = 1.0f,
+    var quadrantHull: FloatArray = floatArrayOf(1.0f, 1.0f, 1.0f, 1.0f),
+    var categoryPower: MutableMap<String, Float> = mutableMapOf(
+        "NAV" to 1.0f, "WEA" to 1.0f, "SHI" to 1.0f, "TAC" to 1.0f
+    )
+)

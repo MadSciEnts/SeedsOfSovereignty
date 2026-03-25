@@ -1,10 +1,12 @@
-# SOVEREIGN ENGINE: PROMPT STACK
+# SOVEREIGN PROMPT STACK: EXECUTION KEYS
 
-## [PROMPT 0.1]
-"Initialize Project. Generate package folders: /core, /entities, /systems, /ui, /debug. Verify Blueprint interfaces are placed in /core. Update LEDGER.md with the directory tree."
+## PROMPT 01: INITIALIZATION & TOPOLOGY
+"Read all files in the `Sovereign_Project` directory. You are acting as the Phase 1 Lead Architect.
+Implement **Phase 01 and 02**:
+1. Create `ViewportManager.kt` using the 360-unit Vertical Anchor math.
+2. Create `SovereignView.kt` (SurfaceView) with a 60FPS threaded Game Loop.
+3. Render four 32x32 pixel squares at the logical corners: (0,0), (logicalW-32, 0), (0, 328), (logicalW-32, 328).
+   Confirm the `logicalW` value and verify 1:1 pixel integrity with a screenshot or console log of coordinates."
 
-## [PROMPT 1.1]
-"Implement Task 1.1: SurfaceView Setup. Create a Thread-based Loop (60FPS). Implement the 'Virtual Canvas' (640x360) with Nearest Neighbor scaling. Update LEDGER.md."
-
-## [PROMPT 1.2]
-"Implement Task 1.2: CameraManager. Support Vector2D (Double) positions. Implement projection: (WorldPos - CamPos = ScreenPos). Apply Zoom from Registry. Update LEDGER.md."
+## PROMPT 02: INPUT ROUTING
+"With the Viewport verified, implement **Phase 03**: `InputRouter.kt`. Assign Pointer IDs to the NAV, WORLD, and TAC zones. Print console logs when each zone is touched to prove independent multi-touch delegation."

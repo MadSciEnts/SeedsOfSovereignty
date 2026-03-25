@@ -1,15 +1,12 @@
-# SOVEREIGN ENGINE: PROJECT CONTEXT
+# PROJECT CONTEXT: SOVEREIGN V4 (EVOLUTIONARY HISTORY)
 
-## 1. THE VISION
-Tactical naval space RPG. 48 tiers (4 Epochs). High inertia, "Ender's Game" HUD, 16-bit retro aesthetic.
+## WHY VERSION 4?
+V1-V3 failed due to "Library Drift" and inconsistent scaling logic (pillarboxing). V4 is a "Ground-Up" reboot using native Android Canvas to ensure absolute control over the coordinate system and multi-touch routing.
 
-## 2. WORLD RULES
-- **SECTOR SIZE:** 20,000 x 20,000 World Units (`Double`).
-- **SOFT BOUNDARIES:** "Danger Zone" at 18,000 units. Crossing applies escalating damage.
-- **DIFFICULTY:** Enemy tier scales with distance from (0,0).
+## THE CORE LOOP
+This is not a "Space Shooter." It is a "Tactical Management Simulator." The challenge comes from managing power and damage in a persistent cockpit (The Command Matrix).
 
-## 3. TECHNICAL CONSTRAINTS
-- **PLATFORM:** Native Android (Kotlin) via `SurfaceView`.
-- **RESOLUTION:** 640x360 internal target (16:9). Nearest Neighbor scaling.
-- **ZOOM:** Camera zooms out as Tier increases, keeping the ship's screen-size relative.
-- **RIBBONS:** 64-segment engine trails with birth-assigned Perlin noise.
+## DESIGN PHILOSOPHY
+- **Visibility:** The player should feel they are "inside" the ship's software.
+- **Functional Damage:** When a quadrant is hit, the corresponding UI elements should flicker or stutter.
+- **Tactical Depth:** The persistent state of modules (like Drone Orbits) allows for complex multi-tasking.

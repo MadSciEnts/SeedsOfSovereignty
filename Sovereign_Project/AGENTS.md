@@ -1,18 +1,15 @@
-# AGENT OPERATING PROTOCOL: SOVEREIGN ENGINE
+# AGENT IMPLEMENTATION LOG
 
-## 1. MANDATORY BOOT SEQUENCE
-Before writing ANY code, you must read the files via `BOOTSTRAP.md`.
+## SYSTEM ARCHITECTURE
+- **Renderer:** Custom `SurfaceView` utilizing `lockCanvas()` and `unlockCanvasAndPost()`.
+- **Logic:** Fixed-timestep Game Loop (60 Hz).
+- **Scale:** `ViewportManager` performs all coordinate transformations.
 
-## 2. THE CORE COMMANDMENTS
-- **SINGLE TASKING:** Complete exactly ONE task from the Manifest per session.
-- **PRECISION RIGIDITY:** All World-Space math MUST use `Double`. Render math MUST use `Float` (WorldPos - CameraPos).
-- **NAVAL PACING:** Ships have high inertia. No instant stops. No "twitch" rotations.
-- **RENDER-TO-CACHE:** Units are rendered ONCE to a Bitmap cache at birth/evolution.
-- **NO HALLUCINATION:** If a variable is not in the `LEDGER.md`, do not invent new global state.
+## MANDATORY DIRECTIVES
+1. READ all Sovereign_Project files before coding.
+2. CACHE textures to `Bitmap` memory objects (Phase 09).
+3. Do NOT modify Immutable documentation.
 
-## 3. CONTEXT MANAGEMENT (Persistent Sessions)
-- If the chat history exceeds 5 tasks, alert the user: "CONTEXT DEGRADATION WARNING."
-- To 'flush' state: summarize the current codebase into `LEDGER.md` and state: "INTERNAL CACHE RESET: Relying strictly on Disk Files."
-
-## 4. SESSION TERMINATION
-Update `LEDGER.md` with a technical summary (Active Registry Keys, Math Formulas, and Handoff Notes).
+## ACTIVE WORK
+- **Status:** Ready for Phase 01.
+- **Goal:** Render four 32x32 squares at the absolute logical corners to prove scaling.
