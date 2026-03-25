@@ -1,0 +1,26 @@
+{
+  "engine_constants": {
+    "MAX_EMISSION_POINTS": 4,
+    "BASE_INERTIA": 0.95,
+    "ROTATION_DAMPING": 0.8
+  },
+  "world_constants": {
+    "SECTOR_SIZE": 20000.0,
+    "SOFT_WALL_THRESHOLD": 18000.0,
+    "DANGER_DAMAGE_MULT": 0.05
+  },
+  "tier_scaling": {
+    "BASE_ZOOM": 1.0,
+    "ZOOM_PER_TIER": 0.05,
+    "SIZE_PER_TIER": 0.1
+  },
+  "power_distribution": {
+    "TOTAL_CORE_OUTPUT": 100.0,
+    "DEFAULT_RATIOS": {
+      "PROPULSION": 0.25,
+      "SHIELD": 0.25,
+      "WEAPONS": 0.25,
+      "TACTICAL": 0.25
+    }
+  }
+}
